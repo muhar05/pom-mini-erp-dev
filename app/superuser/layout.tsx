@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import Logout from "@/components/auth/logout";
 import Link from "next/link";
 
 export default async function SuperuserLayout({

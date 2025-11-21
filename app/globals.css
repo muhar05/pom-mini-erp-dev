@@ -90,7 +90,7 @@
 
   /* SIDEBAR */
   --sidebar: oklch(0.2 0 0); /* Dark sidebar #1E1F20 */
-  --sidebar-foreground: oklch(0.98 0 0);
+  --sidebar-foreground: oklch(0% 0 0);
   --sidebar-primary: oklch(0.77 0.17 142.8); /* Primary green */
   --sidebar-primary-foreground: oklch(0.98 0 0);
   --sidebar-accent: oklch(0.45 0.09 142.8); /* Dark green */
@@ -144,7 +144,7 @@
 
   /* SIDEBAR */
   --sidebar: oklch(0.14 0 0); /* dark */
-  --sidebar-foreground: oklch(0.98 0 0);
+  --sidebar-foreground: oklch(100% 0.00011 271.152);
 
   --sidebar-primary: oklch(0.77 0.17 142.8);
   --sidebar-primary-foreground: oklch(0.18 0 0);

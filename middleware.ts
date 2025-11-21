@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { auth } from "./auth";
+import { getToken } from "next-auth/jwt";
+
+export const runtime = "experimental-edge";
 
 const publicRoutes = [
   "/auth/login",
@@ -9,7 +11,8 @@ const publicRoutes = [
   "/auth/create-password",
 ];
 
-// Mapping role ke path
+const globalAllowedRoutes = ["/dashboard"];
+
 const roleAccess: Record<string, string[]> = {
   "1": ["/superuser"],
   "2": ["/sales"],
@@ -21,7 +24,6 @@ const roleAccess: Record<string, string[]> = {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Abaikan static files
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
@@ -32,48 +34,42 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Ambil session
-  let session = null;
-  try {
-    session = await auth();
-  } catch (_) {
-    return NextResponse.redirect(new URL("/auth/login", req.url));
-  }
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET }); // <-- GANTI auth() JADI getToken()
 
-  // Cek route publik
   const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
 
-  // Kalau belum login, lempar ke login
-  if (!session?.user && !isPublic) {
+  if (!token && !isPublic) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
-  // Kalau sudah login tapi sedang akses halaman public, lempar ke halaman role
-  if (session?.user && isPublic) {
-    const role = session.user.role_id;
-    const allowedPath = roleAccess[role]?.[0] || "/";
-    return NextResponse.redirect(new URL(allowedPath, req.url));
+  if (token && isPublic) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // Cek role access ke folder tertentu
-  if (session?.user) {
-    const role = session.user.role_id;
+  if (
+    token &&
+    globalAllowedRoutes.some((route) => pathname.startsWith(route))
+  ) {
+    return NextResponse.next();
+  }
+
+  if (token) {
+    const role = token.role_id;
     const allowedRoutes = roleAccess[role] || [];
 
     const isRestricted =
       pathname.startsWith("/") &&
-      !allowedRoutes.some((route) => pathname.startsWith(route)) &&
-      !isPublic;
+      !allowedRoutes.some((route) => pathname.startsWith(route));
 
     if (isRestricted) {
-      const redirectTo = allowedRoutes[0] || "/";
-      return NextResponse.redirect(new URL(redirectTo, req.url));
+      return NextResponse.redirect(
+        new URL(allowedRoutes[0] || "/dashboard", req.url)
+      );
     }
   }
 
   return NextResponse.next();
 }
-
 
 export const config = {
   matcher: ["/((?!_next|api|images|favicon.ico|manifest.json).*)"],

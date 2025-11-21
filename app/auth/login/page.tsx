@@ -19,7 +19,7 @@ const forgotPassImage: StaticImg = {
 
 const Login = () => {
   return (
-    <section className="bg-white dark:bg-slate-400 flex flex-wrap min-h-screen">
+    <section className="bg-white dark:bg-slate-600 flex flex-wrap min-h-screen">
       {/* Left Image */}
       <div className="lg:w-1/2 hidden lg:block">
         <div className="flex items-center justify-center h-screen flex-col">
