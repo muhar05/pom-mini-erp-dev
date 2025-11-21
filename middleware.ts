@@ -1,3 +1,4 @@
+// middleware.ts
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
@@ -11,19 +12,10 @@ const publicRoutes = [
   "/auth/create-password",
 ];
 
-const globalAllowedRoutes = ["/dashboard"];
-
-const roleAccess: Record<string, string[]> = {
-  "1": ["/superuser"],
-  "2": ["/sales"],
-  "3": ["/warehouse"],
-  "4": ["/finance"],
-  "5": ["/purchasing"],
-};
-
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Bebasin asset & API
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
@@ -34,40 +26,21 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET }); // <-- GANTI auth() JADI getToken()
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
   const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
 
+  // Jika belum login dan bukan halaman public → redirect login
   if (!token && !isPublic) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
+  // Jika sudah login dan mencoba masuk login/register → redirect dashboard
   if (token && isPublic) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  if (
-    token &&
-    globalAllowedRoutes.some((route) => pathname.startsWith(route))
-  ) {
-    return NextResponse.next();
-  }
-
-  if (token) {
-    const role = token.role_id;
-    const allowedRoutes = roleAccess[role] || [];
-
-    const isRestricted =
-      pathname.startsWith("/") &&
-      !allowedRoutes.some((route) => pathname.startsWith(route));
-
-    if (isRestricted) {
-      return NextResponse.redirect(
-        new URL(allowedRoutes[0] || "/dashboard", req.url)
-      );
-    }
-  }
-
+  // Semua selain itu dilepas, biar NextJS handle sendiri
   return NextResponse.next();
 }
 

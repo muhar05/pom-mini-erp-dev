@@ -94,7 +94,7 @@
   --sidebar-primary: oklch(0.77 0.17 142.8); /* Primary green */
   --sidebar-primary-foreground: oklch(0.98 0 0);
   --sidebar-accent: oklch(0.45 0.09 142.8); /* Dark green */
-  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --sidebar-accent-foreground: oklch(0% 0 0);
   --sidebar-border: oklch(0.25 0 0);
   --sidebar-ring: oklch(0.77 0.17 142.8);
 }

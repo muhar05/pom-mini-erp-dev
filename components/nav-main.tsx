@@ -92,7 +92,7 @@ export function NavMain({ items }: { items: SidebarItem[] }) {
                             <SidebarMenuSubButton
                               asChild
                               className={cn(
-                                "py-5.5 px-3 text-base text-[#4b5563] dark:text-white hover:bg-primary/10 active:bg-primary/10 dark:hover:bg-slate-700",
+                                "py-5.5 px-3 text-base text-[#4b5563] dark:text-white hover:bg-primary/10 active:bg-primary/10 dark:hover:bg-slate-700 hover:text-black",
                                 isSubActive
                                   ? "bg-primary/10 font-bold dark:bg-slate-600"
                                   : ""

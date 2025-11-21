@@ -12,7 +12,7 @@ interface User {
   created_at: string;
 }
 
-const roles: Role[] = [
+export const roles: Role[] = [
   { id: "1", role_name: "Superuser" },
   { id: "2", role_name: "Sales" },
   { id: "3", role_name: "Warehouse" },

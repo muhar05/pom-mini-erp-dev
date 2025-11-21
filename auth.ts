@@ -4,7 +4,7 @@ import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import { ZodError } from "zod";
 import { loginSchema } from "./lib/zod";
-import { getUserFromDb } from "./utils/db";
+import { getUserFromDb, roles } from "./utils/db";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -26,6 +26,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             name: user.name,
             email: user.email,
             role_id: user.role_id,
+            role_name: roles.find((r) => r.id === user.role_id)?.role_name,
           };
         } catch (error) {
           if (error instanceof ZodError) return null;
@@ -63,11 +64,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.role_id = user.role_id;
+        token.role_name = user.role_name; // <= tambahkan
       }
       return token;
     },
     async session({ session, token }) {
-      session.user.role_id = token.role_id as string;
+      session.user.role_id = token.role_id;
+      session.user.role_name = token.role_name; // <= tambahkan
       return session;
     },
   },
