@@ -1,10 +1,10 @@
-import NextAuth from "next-auth"
-import Credentials from "next-auth/providers/credentials"
-import GitHub from "next-auth/providers/github"
-import Google from "next-auth/providers/google"
-import { ZodError } from "zod"
-import { loginSchema } from "./lib/zod"
-import { getUserFromDb } from "./utils/db"
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import GitHub from "next-auth/providers/github";
+import Google from "next-auth/providers/google";
+import { ZodError } from "zod";
+import { loginSchema } from "./lib/zod";
+import { getUserFromDb } from "./utils/db";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -15,24 +15,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       authorize: async (credentials) => {
         try {
-          const { email, password } = await loginSchema.parseAsync(credentials)
+          const { email, password } = await loginSchema.parseAsync(credentials);
+          const user = await getUserFromDb(email, password);
 
-          const user = await getUserFromDb(email, password)
+          if (!user) return null;
 
-          if (!user) {
-            return null
-          }
-          return user
-        } 
-        catch (error) {
-          if (error instanceof ZodError) {
-            return null
-          }
-          return null
+          // Penting: format return user sesuai NextAuth
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role_id: user.role_id,
+          };
+        } catch (error) {
+          if (error instanceof ZodError) return null;
+          return null;
         }
-      }
+      },
     }),
-    
+
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -56,4 +57,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-})
+
+  // Tambahkan callback agar role tertanam di session JWT
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.role_id = user.role_id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      session.user.role_id = token.role_id as string;
+      return session;
+    },
+  },
+
+  session: {
+    strategy: "jwt",
+  },
+});

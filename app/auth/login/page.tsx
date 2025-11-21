@@ -8,9 +8,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 
 const metadata: Metadata = {
-  title: "Register & Create Account | WowDash Admin Dashboard",
+  title: "Register & Create Account | POM MINI ERP",
   description:
-    "Create a new user account and get started with the WowDash Admin Dashboard built with Next.js and Tailwind CSS.",
+    "Create a new account to access POM MINI ERP and manage your business efficiently.",
 };
 
 const forgotPassImage: StaticImg = {
