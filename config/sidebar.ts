@@ -35,7 +35,7 @@ export type MenuItem = {
 
 export const sidebarMenuByRole: Record<string, MenuItem[]> = {
   superuser: [
-    { title: "Dashboard CRM", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     { title: "Lead", url: "/crm/lead", icon: FileText },
     { title: "Opportunity", url: "/crm/opportunity", icon: ClipboardList },
     { title: "Quotation", url: "/crm/quotation", icon: FileCheck },
