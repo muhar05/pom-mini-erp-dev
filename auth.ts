@@ -59,6 +59,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
 
+  pages: {
+    signIn: "/auth/login",
+    signOut: "/auth/login",
+    error: "/auth/login", // bisa custom error page
+    // callback: "/auth/callback", // jika perlu
+  },
+
   // Tambahkan callback agar role tertanam di session JWT
   callbacks: {
     async jwt({ token, user }) {
@@ -77,5 +84,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
   session: {
     strategy: "jwt",
+  },
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
 });
