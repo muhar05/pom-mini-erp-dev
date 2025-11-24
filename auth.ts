@@ -70,13 +70,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.role_id = user.role_id;
-        token.role_name = user.role_name; 
+        token.role_name = user.role_name;
       }
       return token;
     },
     async session({ session, token }) {
-      session.user.role_id = token.role_id;
-      session.user.role_name = token.role_name; 
+      session.user.role_id = (token as any).role_id as string;
+      session.user.role_name = (token as any).role_name as string | undefined;
       return session;
     },
   },
