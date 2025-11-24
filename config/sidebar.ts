@@ -36,10 +36,10 @@ export type MenuItem = {
 export const sidebarMenuByRole: Record<string, MenuItem[]> = {
   superuser: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Lead", url: "/crm/lead", icon: FileText },
-    { title: "Opportunity", url: "/crm/opportunity", icon: ClipboardList },
-    { title: "Quotation", url: "/crm/quotation", icon: FileCheck },
-    { title: "Customer", url: "/crm/customer", icon: Users },
+    { title: "Lead", url: "/superuser/lead", icon: FileText },
+    { title: "Opportunity", url: "/superuser/opportunity", icon: ClipboardList },
+    { title: "Quotation", url: "/superuser/quotation", icon: FileCheck },
+    { title: "Customer", url: "/superuser/customer", icon: Users },
 
     {
       title: "PMS",

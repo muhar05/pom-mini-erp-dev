@@ -12,15 +12,15 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 const metadata: Metadata = {
-  title: "AI Dashboard | WowDash Admin Panel",
+  title: "Super Admin Dashboard | POM MINI ERP",
   description:
-    "Explore AI analytics, monitor model performance, and track intelligent automation workflows in the AI Dashboard of WowDash Admin Template.",
+    "Super Admin dashboard provides an overview of key metrics and insights for effective management and decision-making.   ",
 };
 
 export default async function DashboardPage() {
   return (
     <>
-      <DashboardBreadcrumb title="AI" text="AI" />
+      <DashboardBreadcrumb title="Super Admin" text="Super Admin" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-6">
         <Suspense
