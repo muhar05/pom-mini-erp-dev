@@ -27,6 +27,7 @@ export async function middleware(req: NextRequest) {
 
   // Tambahkan log token untuk debug di Vercel log
   console.log("TOKEN DI MIDDLEWARE:", token);
+  console.log("COOKIES:", req.cookies.getAll());
 
   const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
 
