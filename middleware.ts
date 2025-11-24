@@ -13,9 +13,8 @@ const publicRoutes = [
 ];
 
 export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const { pathname, origin } = req.nextUrl;
 
-  // Bebasin asset & API
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
@@ -27,20 +26,16 @@ export async function middleware(req: NextRequest) {
   }
 
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-
   const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
 
-  // Jika belum login dan bukan halaman public → redirect login
   if (!token && !isPublic) {
-    return NextResponse.redirect(new URL("/auth/login", req.url));
+    return NextResponse.redirect(`${origin}/auth/login`);
   }
 
-  // Jika sudah login dan mencoba masuk login/register → redirect dashboard
   if (token && isPublic) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    return NextResponse.redirect(`${origin}/dashboard`);
   }
 
-  // Semua selain itu dilepas, biar NextJS handle sendiri
   return NextResponse.next();
 }
 
