@@ -62,22 +62,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/auth/login",
     signOut: "/auth/login",
-    error: "/auth/login", // bisa custom error page
+    error: "/auth/login",
     // callback: "/auth/callback", // jika perlu
   },
 
-  // Tambahkan callback agar role tertanam di session JWT
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.role_id = user.role_id;
-        token.role_name = user.role_name; // <= tambahkan
+        token.role_name = user.role_name; 
       }
       return token;
     },
     async session({ session, token }) {
       session.user.role_id = token.role_id;
-      session.user.role_name = token.role_name; // <= tambahkan
+      session.user.role_name = token.role_name; 
       return session;
     },
   },

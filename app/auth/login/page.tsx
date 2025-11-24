@@ -2,7 +2,7 @@
 
 import LoginForm from "@/components/auth/login-form";
 import ThemeLogo from "@/components/shared/theme-logo";
-import AuthImage from "@/public/assets/images/auth/auth-img.png";
+import AuthImage from "@/public/assets/images/bg_pom_ilustrator_v1.png";
 import { StaticImg } from "@/types/static-image";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -22,7 +22,7 @@ const Login = () => {
     <section className="bg-white dark:bg-slate-600 flex flex-wrap min-h-screen">
       {/* Left Image */}
       <div className="lg:w-1/2 hidden lg:block">
-        <div className="flex items-center justify-center h-screen flex-col">
+        <div className="flex items-center justify-center h-screen flex-col p-10">
           <Image
             src={forgotPassImage.image}
             alt="Auth Illustration"

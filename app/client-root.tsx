@@ -23,7 +23,7 @@ export function ClientRoot({
     <SessionProvider session={session}>
       <ThemeProvider
         attribute="class"
-        defaultTheme="system"
+        defaultTheme="light"
         enableSystem
         disableTransitionOnChange
       >

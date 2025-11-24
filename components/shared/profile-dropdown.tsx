@@ -14,7 +14,6 @@ import Link from "next/link";
 
 const ProfileDropdown = () => {
   const { data: session, status } = useSession();
-  console.log("session", session?.user?.image);
   console.log("CLIENT STATUS:", status);
   console.log("CLIENT SESSION:", session);
 
@@ -56,7 +55,7 @@ const ProfileDropdown = () => {
         <div className="py-3 px-4 rounded-lg bg-primary/10 dark:bg-primar flex items-center justify-between">
           <div>
             <h6 className="text-lg text-neutral-900 dark:text-white font-semibold mb-0">
-              {session?.user?.name}   
+              {session?.user?.name}
             </h6>
             <span className="text-sm text-neutral-500 dark:text-neutral-300">
               {session?.user?.role_name}

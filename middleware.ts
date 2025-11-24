@@ -3,8 +3,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-export const runtime = "experimental-edge";
-
 const publicRoutes = [
   "/auth/login",
   "/auth/register",
@@ -26,6 +24,10 @@ export async function middleware(req: NextRequest) {
   }
 
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+  // Tambahkan log token untuk debug di Vercel log
+  console.log("TOKEN DI MIDDLEWARE:", token);
+
   const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
 
   if (!token && !isPublic) {
