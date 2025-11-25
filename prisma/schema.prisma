@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "windows"]
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model companies {
+  id         Int          @id @default(autoincrement())
+  group_name String?      @db.VarChar(50)
+  name       String       @db.VarChar(150)
+  company    String?      @db.VarChar(200)
+  phone      String?      @db.VarChar(50)
+  email      String?      @db.VarChar(150)
+  address    String?
+  npwp       String?      @db.VarChar(50)
+  level      String?      @db.VarChar(50)
+  disc1      Decimal?     @db.Decimal(10, 2)
+  disc2      Decimal?     @db.Decimal(10, 2)
+  note       String?
+  status     Boolean?     @default(true)
+  created_at DateTime?    @default(now()) @db.Timestamp(6)
+  updated_at DateTime?    @default(now()) @db.Timestamp(6)
+  quotations quotations[]
+}
+
+model leads {
+  id                             Int       @id @default(autoincrement())
+  reference_no                   String?   @db.VarChar(100)
+  lead_name                      String    @db.VarChar(150)
+  contact                        String?   @db.VarChar(150)
+  email                          String?   @db.VarChar(150)
+  phone                          String?   @db.VarChar(50)
+  type                           String?   @db.VarChar(100)
+  company                        String?   @db.VarChar(150)
+  location                       String?   @db.VarChar(150)
+  product_interest               String?   @db.VarChar(200)
+  source                         String?   @db.VarChar(100)
+  note                           String?
+  id_user                        Int?
+  created_at                     DateTime? @default(now()) @db.Timestamp(6)
+  assigned_to                    Int?
+  status                         String?   @default("Open") @db.VarChar(50)
+  users_leads_assigned_toTousers users?    @relation("leads_assigned_toTousers", fields: [assigned_to], references: [id])
+  users_leads_id_userTousers     users?    @relation("leads_id_userTousers", fields: [id_user], references: [id])
+}
+
+model products {
+  id           Int       @id @default(autoincrement())
+  product_code String    @unique @db.VarChar(100)
+  item_group   String?   @db.VarChar(100)
+  name         String    @db.VarChar(200)
+  unit         String?   @db.VarChar(50)
+  part_number  String?   @db.VarChar(150)
+  description  String?
+  price        Decimal?  @default(0) @db.Decimal(18, 2)
+  stock        Int?      @default(0)
+  brand        String?   @db.VarChar(100)
+  rack         String?   @db.VarChar(100)
+  images       Json?
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+  updated_at   DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model quotations {
+  id               Int       @id @default(autoincrement())
+  quotation_no     String    @db.VarChar(50)
+  company_id       Int
+  quotation_detail Json
+  total            Decimal?  @default(0) @db.Decimal(18, 2)
+  shipping         Decimal?  @default(0) @db.Decimal(18, 2)
+  discount         Decimal?  @default(0) @db.Decimal(18, 2)
+  tax              Decimal?  @default(0) @db.Decimal(18, 2)
+  grand_total      Decimal?  @default(0) @db.Decimal(18, 2)
+  status           String?   @default("draft") @db.VarChar(50)
+  stage            String?   @db.VarChar(50)
+  note             String?
+  target_date      DateTime? @db.Date
+  top              String?   @db.VarChar(50)
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  updated_at       DateTime? @default(now()) @db.Timestamp(6)
+  companies        companies @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model roles {
+  id        Int     @id @default(autoincrement())
+  role_name String  @db.VarChar(100)
+  users     users[]
+}
+
+model user_otp {
+  id         Int      @id @default(autoincrement())
+  user_id    Int?
+  otp_code   String   @db.VarChar(10)
+  expires_at DateTime @db.Timestamp(6)
+  is_used    Boolean? @default(false)
+  users      users?   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model users {
+  id                             Int        @id @default(autoincrement())
+  name                           String     @db.VarChar(150)
+  email                          String     @unique @db.VarChar(150)
+  password_hash                  String
+  role_id                        Int?
+  created_at                     DateTime?  @default(now()) @db.Timestamp(6)
+  leads_leads_assigned_toTousers leads[]    @relation("leads_assigned_toTousers")
+  leads_leads_id_userTousers     leads[]    @relation("leads_id_userTousers")
+  user_otp                       user_otp[]
+  roles                          roles?     @relation(fields: [role_id], references: [id])
+}
