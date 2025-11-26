@@ -22,11 +22,13 @@ const Login = () => {
     <section className="bg-white dark:bg-green-600 flex flex-wrap min-h-screen">
       {/* Left Image */}
       <div className="lg:w-1/2 hidden lg:block">
-        <div className="flex items-center justify-center h-screen flex-col p-10">
+        <div className="flex items-center justify-center h-screen flex-col p-10 relative w-full">
           <Image
             src={forgotPassImage.image}
             alt="Auth Illustration"
-            className="object-cover w-full h-full"
+            fill
+            className="object-contain"
+            priority
           />
         </div>
       </div>
