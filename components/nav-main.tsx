@@ -46,8 +46,11 @@ function RenderSidebarItems({ items }: { items: SidebarItem[] }) {
                 <SidebarMenuButton
                   tooltip={item.title}
                   className={cn(
-                    "cursor-pointer py-5.5 px-3 text-base text-[#4b5563] dark:text-white hover:bg-primary/10 active:bg-primary/10 dark:hover:bg-slate-700",
-                    isActive ? "font-bold" : ""
+                    "cursor-pointer py-5.5 px-3 text-base transition-colors duration-200",
+                    "text-[#2A2A2A] dark:text-white",
+                    "hover:bg-[#006533] hover:text-white",
+                    "active:bg-[#35CD2C] active:text-white",
+                    isActive ? "font-bold bg-[#35CD2C] text-white" : ""
                   )}
                 >
                   {item.icon && <item.icon className="w-4.5! h-4.5!" />}
@@ -72,10 +75,11 @@ function RenderSidebarItems({ items }: { items: SidebarItem[] }) {
                 asChild
                 tooltip={item.title}
                 className={cn(
-                  "cursor-pointer py-5.5 px-3 text-base text-[#4b5563] dark:text-white hover:bg-primary/10 active:bg-primary/10 dark:hover:bg-slate-700",
-                  isActive
-                    ? "bg-primary hover:bg-primary text-white dark:hover:bg-primary hover:text-white"
-                    : ""
+                  "cursor-pointer py-5.5 px-3 text-base transition-colors duration-200",
+                  "text-[#2A2A2A] dark:text-white",
+                  "hover:bg-[#006533] hover:text-white",
+                  "active:bg-[#35CD2C] active:text-white",
+                  isActive ? "font-bold bg-[#35CD2C] text-white" : ""
                 )}
               >
                 <Link href={item.url} className="flex items-center gap-2">

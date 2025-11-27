@@ -1,4 +1,4 @@
-'use client";'
+"use client";
 
 import Logout from "@/components/auth/logout";
 import { Button } from "@/components/ui/button";
@@ -10,14 +10,13 @@ import {
 import { cn } from "@/lib/utils";
 import userImg from "@/public/assets/images/user.png";
 import { Mail, Settings, User } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/contexts/session-context";
 import Image from "next/image";
 import Link from "next/link";
 
 const ProfileDropdown = () => {
-  const { data: session, status } = useSession();
-  console.log("CLIENT STATUS:", status);
-  console.log("CLIENT SESSION:", session);
+  const session = useSession();
+  console.log("PROFILE DROPDOWN SESSION:", session);      
 
   return (
     <DropdownMenu>
@@ -50,7 +49,7 @@ const ProfileDropdown = () => {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
-        className="sm:w-[300px] min-w-[250px] right-[40px] absolute p-4 rounded-2xl overflow-hidden shadow-lg"
+        className="sm:w-[300px] min-w-[250px] right-10 absolute p-4 rounded-2xl overflow-hidden shadow-lg"
         side="bottom"
         align="end"
       >

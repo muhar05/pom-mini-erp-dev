@@ -11,7 +11,7 @@ export default async function DashboardLayout({
     const cookieStore = await cookies();
     const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
 
-    const session = await auth(); // Ambil session
+    const session = await auth(); // Ambil session 
 
     return (
       <ClientRoot defaultOpen={defaultOpen} session={session}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/contexts/session-context";
 import {
   Sidebar,
   SidebarContent,
@@ -34,13 +34,13 @@ function convertMenuToSidebar(items: MenuItem[]): SidebarItem[] {
       title: item.title,
       url: item.url,
       icon: item.icon,
-      circleColor: "bg-primary", 
+      circleColor: "bg-primary",
     };
   });
 }
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
-  const { data: session } = useSession();
+  const session = useSession();
 
   const roleMap: Record<string, keyof typeof sidebarMenuByRole> = {
     "1": "superuser",
@@ -53,7 +53,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const roleName = roleMap[session?.user?.role_id ?? "2"];
   const menuItems = sidebarMenuByRole[roleName];
 
-  // Tambahkan konversi di sini
   const sidebarItems = convertMenuToSidebar(menuItems);
 
   return (

@@ -60,7 +60,10 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       icon: ShoppingCart,
       items: [
         { title: "Sales Order List", url: "/crm/sales-orders" },
-        { title: "Create SO from Quotation", url: "/crm/sales-orders/from-quotation" },
+        {
+          title: "Create SO from Quotation",
+          url: "/crm/sales-orders/from-quotation",
+        },
         { title: "SO Approval", url: "/crm/sales-orders/approval" },
       ],
     },
@@ -78,7 +81,10 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       icon: FileBox,
       items: [
         { title: "PO List", url: "/purchasing/purchase-orders" },
-        { title: "Create PO from PR", url: "/purchasing/purchase-orders/from-pr" },
+        {
+          title: "Create PO from PR",
+          url: "/purchasing/purchase-orders/from-pr",
+        },
       ],
     },
     {
@@ -98,7 +104,10 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
           title: "Stock Reservation (SR)",
           items: [
             { title: "SR List", url: "/warehouse/reservations" },
-            { title: "Create SR for Sales Order", url: "/warehouse/reservations/new" },
+            {
+              title: "Create SR for Sales Order",
+              url: "/warehouse/reservations/new",
+            },
             { title: "Approve SR", url: "/warehouse/reservations/approval" },
           ],
         },
@@ -106,7 +115,10 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
           title: "Material Receiving",
           items: [
             { title: "Material Receiving List", url: "/warehouse/receiving" },
-            { title: "Goods Receipt (GR)", url: "/warehouse/receiving/goods-receipt" },
+            {
+              title: "Goods Receipt (GR)",
+              url: "/warehouse/receiving/goods-receipt",
+            },
             { title: "Quality Control (QC)", url: "/warehouse/receiving/qc" },
             { title: "Reject Handling", url: "/warehouse/receiving/reject" },
           ],
@@ -114,7 +126,10 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
         {
           title: "Delivery Order",
           items: [
-            { title: "Delivery Request (DR)", url: "/warehouse/delivery/requests" },
+            {
+              title: "Delivery Request (DR)",
+              url: "/warehouse/delivery/requests",
+            },
             { title: "Approve DR", url: "/warehouse/delivery/approval" },
             { title: "Delivery Order (DO)", url: "/warehouse/delivery/orders" },
             { title: "Shipment Tracking", url: "/warehouse/delivery/tracking" },
@@ -125,11 +140,32 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
           items: [
             { title: "Stock List", url: "/warehouse/inventory/stocks" },
             { title: "Stock Movements", url: "/warehouse/inventory/movements" },
-            { title: "Stock In / Stock Out", url: "/warehouse/inventory/inout" },
-            { title: "Minimum Stock Alerts", url: "/warehouse/inventory/alerts" },
-            { title: "Inventory Valuation", url: "/warehouse/inventory/valuation" },
+            {
+              title: "Stock In / Stock Out",
+              url: "/warehouse/inventory/inout",
+            },
+            {
+              title: "Minimum Stock Alerts",
+              url: "/warehouse/inventory/alerts",
+            },
+            {
+              title: "Inventory Valuation",
+              url: "/warehouse/inventory/valuation",
+            },
           ],
         },
+      ],
+    },
+    {
+      title: "Settings",
+      icon: Settings,
+      items: [
+        {
+          title: "Users",
+          url: "/settings/users",
+          icon: Users,
+        },
+        // Tambahkan menu settings lain jika perlu
       ],
     },
   ],

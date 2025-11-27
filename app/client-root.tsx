@@ -1,6 +1,9 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
+import {
+  SessionProvider as CustomSessionProvider,
+  SessionProvider,
+} from "@/contexts/session-provider";
 import { AppSidebar } from "@/components/app-sidebar";
 import Footer from "@/components/layout/footer";
 import Header from "@/components/layout/header";
@@ -20,7 +23,7 @@ export function ClientRoot({
   session: any;
 }) {
   return (
-    <SessionProvider session={session}>
+    <CustomSessionProvider value={session}>
       <ThemeProvider
         attribute="class"
         defaultTheme="light"
@@ -44,6 +47,6 @@ export function ClientRoot({
           <Toaster position="top-center" reverseOrder={false} />
         </SidebarProvider>
       </ThemeProvider>
-    </SessionProvider>
+    </CustomSessionProvider>
   );
 }
