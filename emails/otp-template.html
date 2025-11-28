@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <body style="font-family: Arial, sans-serif; color: #222">
+    <div style="text-align: center; margin-bottom: 24px">
+      <img src="{{logo_url}}" alt="Logo POM" style="height: 48px" />
+    </div>
+    <p>Halo <b>{{name}}</b>,</p>
+    <p>
+      Terima kasih telah Login Aplikasi <b>POM</b>. Untuk melanjutkan, silakan
+      gunakan kode verifikasi (OTP) di bawah ini:
+    </p>
+    <div
+      style="
+        font-size: 2rem;
+        font-weight: bold;
+        letter-spacing: 6px;
+        margin: 24px 0;
+        color: #006533;
+      "
+    >
+      {{otp}}
+    </div>
+    <p>
+      Kode ini akan kedaluwarsa dalam <b>10 menit</b>. Mohon untuk tidak
+      membagikan kode ini kepada siapa pun demi keamanan akun Anda.
+    </p>
+    <p style="color: #888; font-size: 0.95em; margin-top: 32px">
+      Jika Anda tidak merasa melakukan pendaftaran ini, silakan abaikan email
+      ini.
+    </p>
+  </body>
+</html>

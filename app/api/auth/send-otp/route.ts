@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import nodemailer from "nodemailer";
 import { cookies } from "next/headers";
+import fs from "fs";
+import path from "path";
 
 const emailSchema = z.object({
   email: z.string().email(),
@@ -20,7 +22,7 @@ export async function POST(req: Request) {
 
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 menit
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 menit
 
     // Simpan OTP
     await prisma.user_otp.create({
@@ -34,11 +36,38 @@ export async function POST(req: Request) {
 
     // Kirim email (pakai nodemailer)
     const transporter = nodemailer.createTransport(process.env.EMAIL_SERVER!);
+    const templatePath = path.join(
+      process.cwd(),
+      "emails",
+      "otp-template.html"
+    );
+    let html = fs.readFileSync(templatePath, "utf8");
+
+    // Ambil domain dari ENV
+    const domain = process.env.NEXTAUTH_URL || "http://localhost:3000";
+
+    const logoUrl = `${domain}/assets/images/LogoPOM.png`;
+    // Replace {{name}}, {{otp}}}, dan domain logo
+    html = html
+      .replace("{{name}}", user.name)
+      .replace("{{otp}}", otp)
+      .replace("{{logo_url}}", logoUrl);
+
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: email,
-      subject: "Your OTP Code",
-      text: `Your OTP code is: ${otp}`,
+      subject: "Kode Verifikasi OTP POM",
+      html,
+      text: `Halo ${user.name},
+
+Terima kasih telah Login Aplikasi POM. Untuk melanjutkan, silakan gunakan kode verifikasi (OTP) di bawah ini:
+
+${otp}
+
+Kode ini akan kedaluwarsa dalam 10 menit. Mohon untuk tidak membagikan kode ini kepada siapa pun demi keamanan akun Anda.
+
+Jika Anda tidak merasa melakukan pendaftaran ini, silakan abaikan email ini.
+`,
     });
 
     return NextResponse.json({ success: true });
@@ -48,10 +77,7 @@ export async function POST(req: Request) {
       typeof err === "object" && err !== null && "message" in err
         ? (err as any).message
         : "Failed to send OTP";
-    return NextResponse.json(
-      { error: message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
 
@@ -108,9 +134,6 @@ export async function PUT(req: Request) {
       typeof err === "object" && err !== null && "message" in err
         ? (err as any).message
         : "Failed to verify OTP";
-    return NextResponse.json(
-      { error: message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
