@@ -16,6 +16,7 @@ import { useRef, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
 
 const emailSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -26,6 +27,7 @@ const LoginForm = () => {
   const { loading, setLoading } = useLoading();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
@@ -40,10 +42,19 @@ const LoginForm = () => {
 
     startTransition(async () => {
       try {
-        // TODO: Kirim OTP ke email di sini
+        const res = await fetch("/api/auth/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: values.email }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to send OTP");
         toast.success("OTP sent to your email!");
-      } catch (error) {
-        toast.error("Something went wrong. Please try again.");
+        router.push(
+          `/auth/verify-otp?email=${encodeURIComponent(values.email)}`
+        );
+      } catch (error: any) {
+        toast.error(error.message || "Something went wrong. Please try again.");
       } finally {
         setLoading(false);
         setIsSubmitting(false);
