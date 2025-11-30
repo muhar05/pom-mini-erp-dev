@@ -11,14 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Edit, Eye, Trash2 } from "lucide-react";
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role_id?: number | null;
-  created_at?: string;
-  roles?: { role_name: string } | null; // <-- perbaiki di sini
-}
+import { User } from "@/types/models";
 
 export default function UserTable() {
   const [users, setUsers] = useState<User[]>([]);
