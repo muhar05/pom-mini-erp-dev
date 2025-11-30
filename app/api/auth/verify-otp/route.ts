@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { signIn } from "next-auth/react";
 
 const otpSchema = z.object({
   email: z.string().email(),
@@ -25,6 +26,8 @@ export async function POST(req: Request) {
       },
     });
 
+    console.log("otpRecord", otpRecord);
+
     if (!otpRecord)
       return NextResponse.json(
         { error: "Invalid or expired OTP" },
@@ -37,7 +40,22 @@ export async function POST(req: Request) {
       data: { is_used: true },
     });
 
-    // TODO: Buat session/login user di sini (misal generate JWT atau panggil NextAuth signIn)
+    // Tambahkan log user login
+    await prisma.user_logs.create({
+      data: {
+        user_id: user.id,
+        activity: "Login",
+        method: "POST",
+        endpoint: "/api/auth/verify-otp",
+        ip_address: (req.headers.get("x-forwarded-for") || "")
+          .split(",")[0]
+          .trim(), // atau ambil dari req
+        user_agent: req.headers.get("user-agent") || "",
+        created_at: new Date(),
+      },
+    });
+
+    // Jangan panggil signIn di sini!
 
     return NextResponse.json({
       success: true,

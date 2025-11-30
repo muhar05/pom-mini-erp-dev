@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import ThemeLogo from "@/components/shared/theme-logo"; // pastikan path sesuai
+import { signIn } from "next-auth/react";
 
 export default function VerifyOtpPage() {
   const [otp, setOtp] = useState("");
@@ -27,7 +28,15 @@ export default function VerifyOtpPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "OTP invalid");
       toast.success("Login success!");
-      router.replace("/dashboard");
+      const result = await signIn("credentials", {
+        email,
+        password: otp,
+        redirect: false, // penting!
+        callbackUrl: "/dashboard",
+      });
+      if (result.ok && result.url) {
+        router.replace(result.url);
+      }
     } catch (err: any) {
       toast.error(err.message || "OTP invalid");
     } finally {

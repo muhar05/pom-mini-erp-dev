@@ -4,6 +4,7 @@ import UserOverviewChart from "@/components/charts/user-overview-chart";
 import RevenueGrowthChart from "@/components/charts/revenue-growth-chart";
 import TopCustomerList from "@/components/shared/top-customer-list";
 import NotificationDropdown from "@/components/shared/notification-dropdown";
+import UserTable from "@/components/table/users-list-table";
 
 export default function UsersSettingsPage() {
   return (
@@ -25,8 +26,8 @@ export default function UsersSettingsPage() {
         </div>
         <div className="flex flex-col gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Top Users</h2>
-            <TopCustomerList />
+            <h2 className="text-lg font-semibold mb-4">List User</h2>
+            <UserTable/>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold mb-4">Notifications</h2>
