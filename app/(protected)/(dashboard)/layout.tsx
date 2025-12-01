@@ -1,20 +1,39 @@
 import { cookies } from "next/headers";
 import { ClientRoot } from "@/app/client-root";
-import { auth } from "@/auth";
+import { getToken } from "next-auth/jwt";
+
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+}
 
 export default async function DashboardLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: DashboardLayoutProps) {
   try {
+    // cookies() PAKAI await di Next.js versi terbaru
     const cookieStore = await cookies();
+
     const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
 
-    const session = await auth(); // Ambil session 
+    // Convert cookie store ke format header cookie
+    const allCookies = cookieStore.getAll();
+    const cookieHeader = allCookies
+      .map((c: { name: string; value: string }) => `${c.name}=${c.value}`)
+      .join("; ");
+
+    const fakeReq = new Request("http://localhost", {
+      headers: {
+        cookie: cookieHeader,
+      },
+    });
+
+    const token = await getToken({
+      req: fakeReq,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
 
     return (
-      <ClientRoot defaultOpen={defaultOpen} session={session}>
+      <ClientRoot defaultOpen={defaultOpen} session={token}>
         {children}
       </ClientRoot>
     );
