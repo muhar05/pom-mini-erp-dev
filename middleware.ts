@@ -48,6 +48,7 @@ export async function middleware(request: NextRequest) {
       // Kamu bisa akses payload lain di sini jika perlu
     } catch (e) {
       // JWT tidak valid
+      console.error("JWT error:", e);
       return NextResponse.redirect(new URL("/auth/login", request.url));
     }
   }
