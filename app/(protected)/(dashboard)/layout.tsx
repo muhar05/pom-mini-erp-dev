@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { ClientRoot } from "@/app/client-root";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/auth";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -11,25 +11,13 @@ export default async function DashboardLayout({
 }: DashboardLayoutProps) {
   try {
     const cookieStore = await cookies();
-
     const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
 
-    const allCookies = cookieStore.getAll();
-    const cookieHeader = allCookies
-      .map((c: { name: string; value: string }) => `${c.name}=${c.value}`)
-      .join("; ");
-
-    const fakeReq = new Request("http://localhost", {
-      headers: { cookie: cookieHeader },
-    });
-
-    const token = await getToken({
-      req: fakeReq,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    // ambil session langsung dari Auth.js v5
+    const session = await auth();
 
     return (
-      <ClientRoot defaultOpen={defaultOpen} session={token}>
+      <ClientRoot defaultOpen={defaultOpen} session={session}>
         {children}
       </ClientRoot>
     );
