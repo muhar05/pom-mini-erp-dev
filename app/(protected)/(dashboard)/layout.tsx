@@ -10,21 +10,17 @@ export default async function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
   try {
-    // cookies() PAKAI await di Next.js versi terbaru
     const cookieStore = await cookies();
 
     const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
 
-    // Convert cookie store ke format header cookie
     const allCookies = cookieStore.getAll();
     const cookieHeader = allCookies
       .map((c: { name: string; value: string }) => `${c.name}=${c.value}`)
       .join("; ");
 
     const fakeReq = new Request("http://localhost", {
-      headers: {
-        cookie: cookieHeader,
-      },
+      headers: { cookie: cookieHeader },
     });
 
     const token = await getToken({
