@@ -31,12 +31,9 @@ export default function VerifyOtpPage() {
       const result = await signIn("credentials", {
         email,
         password: otp,
-        redirect: false, // penting!
+        redirect: true,
         callbackUrl: "/dashboard",
       });
-      if (result.ok && result.url) {
-        router.replace(result.url);
-      }
     } catch (err: any) {
       toast.error(err.message || "OTP invalid");
     } finally {
