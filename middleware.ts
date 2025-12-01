@@ -1,27 +1,24 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/auth";
 
-export async function middleware(req: NextRequest) {
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+export default auth((req: NextRequest & { auth?: any }) => {
+  const session = req.auth;
+  
+  const url = req.nextUrl.pathname;
+  const isDashboard = url.startsWith("/dashboard");
+  const isSettings = url.startsWith("/settings");
 
-  const path = req.nextUrl.pathname;
-  const isDashboard = path.startsWith("/dashboard");
-  const isSettings = path.startsWith("/settings");
-
-  if (!token && (isDashboard || isSettings)) {
+  if (!session && (isDashboard || isSettings)) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
-  if (isSettings && token?.role_name !== "admin") {
+  if (isSettings && session?.user?.role_name !== "admin") {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: ["/dashboard/:path*", "/settings/:path*"],

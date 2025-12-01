@@ -2,19 +2,14 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./lib/prisma";
 
-export const { handlers } = NextAuth({
+export const { handlers, auth } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
 
-  session: {
-    strategy: "jwt",
-  },
+  session: { strategy: "jwt" },
 
   providers: [
     Credentials({
-      credentials: {
-        email: {},
-        password: {},
-      },
+      credentials: { email: {}, password: {} },
       authorize: async (credentials) => {
         const email = credentials.email as string;
         const otp = credentials.password as string;
@@ -45,7 +40,7 @@ export const { handlers } = NextAuth({
           id: String(user.id),
           name: user.name,
           email: user.email,
-          role_id: user.role_id ? String(user.role_id) : "",
+          role_id: String(user.role_id ?? ""),
           role_name: user.roles?.role_name,
         };
       },
@@ -61,7 +56,6 @@ export const { handlers } = NextAuth({
       }
       return token;
     },
-
     async session({ session, token }) {
       session.user.id = token.id;
       session.user.role_id = token.role_id;
