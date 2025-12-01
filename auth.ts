@@ -3,22 +3,11 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./lib/prisma";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  secret: process.env.NEXTAUTH_SECRET,
+  // pakai ENV yang sama dengan middleware
+  secret: process.env.AUTH_SECRET,
 
   session: {
     strategy: "jwt",
-  },
-
-  cookies: {
-    sessionToken: {
-      name: "__Secure-authjs.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: true,
-      },
-    },
   },
 
   providers: [
@@ -31,22 +20,38 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const email = credentials.email as string;
         const otp = credentials.password as string;
 
+        console.log("Authorize with:", { email, otp });
+
+        // cari user
         const user = await prisma.users.findUnique({
           where: { email },
           include: { roles: true },
         });
+        console.log("User found:", user);
+
         if (!user) return null;
 
+        // cari OTP yang belum dipakai dan belum expired
         const otpRecord = await prisma.user_otp.findFirst({
           where: {
             user_id: user.id,
             otp_code: otp,
-            is_used: true,
+            is_used: false,
             expires_at: { gt: new Date() },
           },
+          orderBy: { expires_at: "desc" },
         });
+        console.log("OTP record found in authorize:", otpRecord);
+
         if (!otpRecord) return null;
 
+        // tandai OTP sebagai sudah dipakai
+        await prisma.user_otp.update({
+          where: { id: otpRecord.id },
+          data: { is_used: true },
+        });
+
+        // return data user ke JWT
         return {
           id: String(user.id),
           name: user.name,
@@ -60,6 +65,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
   callbacks: {
     async jwt({ token, user }) {
+      // jalan pas pertama kali login
       if (user) {
         token.id = user.id;
         token.role_id = user.role_id;
@@ -69,9 +75,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     async session({ session, token }) {
-      session.user.id = token.id;
-      session.user.role_id = token.role_id;
-      session.user.role_name = token.role_name;
+      session.user.id = (token.id as string) ?? "";
+      session.user.role_id = (token.role_id as string) ?? "";
+      session.user.role_name = (token.role_name as string) ?? "";
       return session;
     },
   },
