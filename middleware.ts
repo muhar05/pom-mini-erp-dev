@@ -6,6 +6,14 @@ const JWT_SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
 
 export async function middleware(request: NextRequest) {
   const cookies = request.cookies.getAll();
+
+  console.log(
+    "Cookies in middleware:",
+    cookies.map((c) => ({
+      name: c.name,
+      value: c.value.slice(0, 10) + "...",
+    }))
+  );
   const sessionCookie = cookies.find(
     (cookie) =>
       typeof cookie.value === "string" && cookie.value.split(".").length === 3
