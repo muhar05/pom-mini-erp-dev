@@ -1,17 +1,18 @@
-export function formatDate(dateString?: string | Date): string {
-  if (!dateString) return "-";
-  const date =
-    typeof dateString === "string" ? new Date(dateString) : dateString;
-  if (isNaN(date.getTime())) return "-";
-  return date
-    .toLocaleString("id-ID", {
-      day: "2-digit",
-      month: "2-digit",
+export function formatDate(date: string | Date | null | undefined): string {
+  if (!date) return "-";
+
+  try {
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+
+    // Check if date is valid
+    if (isNaN(dateObj.getTime())) return "-";
+
+    return dateObj.toLocaleDateString("en-US", {
       year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    })
-    .replace(/\./g, "."); // hasil: 25/11/2025, 20.32.12
+      month: "short",
+      day: "numeric",
+    });
+  } catch (error) {
+    return "-";
+  }
 }

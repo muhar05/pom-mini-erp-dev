@@ -3,12 +3,14 @@ import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import UserOverviewChart from "@/components/charts/user-overview-chart";
 import RevenueGrowthChart from "@/components/charts/revenue-growth-chart";
 import { Button } from "@/components/ui/button";
-// import TopCustomerList from "@/components/shared/top-customer-list";
-// import NotificationDropdown from "@/components/shared/notification-dropdown";
 import UserTable from "@/components/table/users-list-table";
 import AddUserButton from "@/components/user/add-user-button";
+import { getAllUsers, getAllRoles } from "@/app/actions/user-actions";
 
-export default function UsersSettingsPage() {
+export default async function UsersSettingsPage() {
+  // Fetch data di server-side
+  const [users, roles] = await Promise.all([getAllUsers(), getAllRoles()]);
+
   return (
     <>
       <DashboardBreadcrumb
@@ -24,7 +26,7 @@ export default function UsersSettingsPage() {
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold mb-4">List User</h2>
-            <UserTable />
+            <UserTable users={users} roles={roles} />
           </div>
         </div>
         <div className="flex flex-col gap-6">
@@ -32,10 +34,6 @@ export default function UsersSettingsPage() {
             <h2 className="text-lg font-semibold mb-4">Revenue Growth</h2>
             <RevenueGrowthChart chartColor="#487fff" />
           </div>
-          {/* <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Notifications</h2>
-            <NotificationDropdown />
-          </div> */}
         </div>
       </div>
     </>
