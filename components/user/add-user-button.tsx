@@ -1,19 +1,23 @@
-'use client';
+"use client";
 import { Button } from "../ui/button";
+import { useRouter } from "next/navigation";
 
 const AddUserButton = () => {
-    const handleAddUser = () => {       
-        console.log("Add User button clicked");     
-    };
-    return (
-        <Button
-            type="button"   
-            className="h-[46px] bg-primary hover:bg-blue-700 text-white rounded-lg px-5 py-[11px]"      
-            onClick={handleAddUser}                 
-        >
-            Tambah User
-        </Button>
-    );
+  const router = useRouter();
+
+  const handleAddUser = () => {
+    router.push("/settings/users/new");
+  };
+
+  return (
+    <Button
+      type="button"
+      className="h-[46px] bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-5 py-[11px] transition-colors"
+      onClick={handleAddUser}
+    >
+      Add User
+    </Button>
+  );
 };
 
 export default AddUserButton;
