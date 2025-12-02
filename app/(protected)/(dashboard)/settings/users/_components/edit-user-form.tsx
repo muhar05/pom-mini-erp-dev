@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { User, Role } from "@/types/models";
-import { updateUser } from "@/app/actions/user-actions";
+import { updateUserAction } from "@/app/actions/users";
 import { useRouter } from "next/navigation";
 
 interface EditUserFormProps {
@@ -31,7 +31,7 @@ export default function EditUserForm({ user, roles }: EditUserFormProps) {
   const handleSubmit = async (formData: FormData) => {
     startTransition(async () => {
       try {
-        await updateUser(formData);
+        await updateUserAction(formData);
         router.push(`/settings/users/${user.id}`);
       } catch (error: any) {
         setError(error.message || "Failed to update user");
@@ -123,16 +123,6 @@ export default function EditUserForm({ user, roles }: EditUserFormProps) {
                 {user.roles?.role_name || "No Role"}
               </p>
               <p className="text-sm text-blue-700 mt-1">
-                <strong>Account Created:</strong>{" "}
-                {user.created_at
-                  ? new Date(user.created_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })
-                  : "N/A"}
-              </p>
-              <p className="text-sm text-blue-700 mt-1">
                 <strong>Note:</strong> User will continue to login using OTP
                 sent to their email address.
               </p>
@@ -156,44 +146,6 @@ export default function EditUserForm({ user, roles }: EditUserFormProps) {
           </form>
         </CardContent>
       </Card>
-
-      {/* User Info Display - Moved Outside the Card */}
-      <div className="max-w-2xl">
-        <h2 className="text-lg font-semibold mb-4">User Information</h2>
-        <div className="bg-white shadow rounded-lg p-4 space-y-4">
-          {/* Name */}
-          <div>
-            <span className="font-medium">Full Name:</span>{" "}
-            <span>{user.name}</span>
-          </div>
-
-          {/* Email */}
-          <div>
-            <span className="font-medium">Email Address:</span>{" "}
-            <span>{user.email}</span>
-          </div>
-
-          {/* Role */}
-          <div>
-            <span className="font-medium">Role:</span>{" "}
-            <span>{user.roles?.role_name || "No Role"}</span>
-          </div>
-
-          {/* Created At */}
-          <div>
-            <span className="font-medium">Created At:</span>{" "}
-            <span className="text-base">
-              {user.created_at
-                ? new Date(user.created_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
-                : "-"}
-            </span>
-          </div>
-        </div>
-      </div>
     </>
   );
 }

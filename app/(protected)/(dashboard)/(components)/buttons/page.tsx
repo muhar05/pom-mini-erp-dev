@@ -531,7 +531,7 @@ const ButtonPage = () => {
             <Button
               type="button"
               className={cn(
-                "h-[46px] bg-yellow-500 hover:bg-yellow-600 text-white w-[60px] h-[50px] flex items-center justify-center gap-2"
+                "h-[46px] bg-yellow-500 hover:bg-yellow-600 text-white w-[60px] flex items-center justify-center gap-2"
               )}
             >
               <ArrowUpSquare className="text-xl" />
@@ -539,7 +539,7 @@ const ButtonPage = () => {
             <Button
               type="button"
               className={cn(
-                "h-[46px] border bg-transparent border-primary text-primary hover:bg-primary hover:text-white w-[60px] h-[50px] flex items-center justify-center gap-2"
+                "h-[46px] border bg-transparent border-primary text-primary hover:bg-primary hover:text-white w-[60px] flex items-center justify-center gap-2"
               )}
             >
               <ArrowDownSquare className="text-xl" />
@@ -587,7 +587,7 @@ const ButtonPage = () => {
             <Button
               type="button"
               className={cn(
-                "h-[46px] bg-yellow-500 hover:bg-yellow-600 text-white rounded-full w-[60px] h-[50px] flex items-center justify-center gap-2"
+                "h-[46px] bg-yellow-500 hover:bg-yellow-600 text-white rounded-full w-[60px] flex items-center justify-center gap-2"
               )}
             >
               <ArrowUpSquare className="text-xl" />
@@ -595,7 +595,7 @@ const ButtonPage = () => {
             <Button
               type="button"
               className={cn(
-                "h-[46px] bg-transparent border border-primary text-primary hover:bg-primary hover:text-white rounded-full w-[60px] h-[50px] flex items-center justify-center gap-2"
+                "h-[46px] bg-transparent border border-primary text-primary hover:bg-primary hover:text-white rounded-full w-[60px] flex items-center justify-center gap-2"
               )}
             >
               <ArrowDownSquare className="text-xl" />

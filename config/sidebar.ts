@@ -32,140 +32,74 @@ export type MenuItem = {
 
 export const sidebarMenuByRole: Record<string, MenuItem[]> = {
   superuser: [
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+
+    // Lead Management
+    { title: "Lead List", url: "/crm/leads", icon: FileText },
+    // { title: "New Lead", url: "/crm/leads/new" },
+    // { title: "Convert Lead to Opportunity", url: "/crm/leads/convert" },
+
+    // Sales Quotation (SQ)
+    { title: "Create Quotation", url: "/crm/quotations/new", icon: FileCheck },
+    // { title: "Approve Quotation", url: "/crm/quotations/approve" },
+    // { title: "Quotation History", url: "/crm/quotations/history" },
+
+    // Sales Order (SO)
+    { title: "Sales Order List", url: "/crm/sales-orders", icon: ShoppingCart },
+    // { title: "Create SO from Quotation", url: "/crm/sales-orders/from-quotation" },
+    // { title: "SO Approval", url: "/crm/sales-orders/approval" },
+
+    // Purchase Request (PR)
+    { title: "PR List", url: "/purchasing/purchase-requests", icon: FileBox },
+    // { title: "New PR", url: "/purchasing/purchase-requests/new" },
+    // { title: "PR Approval", url: "/purchasing/purchase-requests/approval" },
+
+    // Purchase Order (PO)
+    { title: "PO List", url: "/purchasing/purchase-orders", icon: FileBox },
+    // { title: "Create PO from PR", url: "/purchasing/purchase-orders/from-pr" },
+
+    // Finance & Tax
+    { title: "Submit FAR", url: "/finance/far/submit", icon: Wallet },
+    // { title: "Approve/Reject FAR", url: "/finance/far/approval" },
+    // { title: "FAR History", url: "/finance/far/history" },
+
+    // Warehouse & Logistics
     {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      title: "Lead Management",
-      icon: FileText,
-      items: [
-        { title: "Lead List", url: "/crm/leads" },
-        { title: "New Lead", url: "/crm/leads/new" },
-        { title: "Convert Lead to Opportunity", url: "/crm/leads/convert" },
-      ],
-    },
-    {
-      title: "Sales Quotation (SQ)",
-      icon: FileCheck,
-      items: [
-        { title: "Create Quotation", url: "/crm/quotations/new" },
-        { title: "Approve Quotation", url: "/crm/quotations/approve" },
-        { title: "Quotation History", url: "/crm/quotations/history" },
-      ],
-    },
-    {
-      title: "Sales Order (SO)",
-      icon: ShoppingCart,
-      items: [
-        { title: "Sales Order List", url: "/crm/sales-orders" },
-        {
-          title: "Create SO from Quotation",
-          url: "/crm/sales-orders/from-quotation",
-        },
-        { title: "SO Approval", url: "/crm/sales-orders/approval" },
-      ],
-    },
-    {
-      title: "Purchase Request (PR)",
-      icon: FileBox,
-      items: [
-        { title: "PR List", url: "/purchasing/purchase-requests" },
-        { title: "New PR", url: "/purchasing/purchase-requests/new" },
-        { title: "PR Approval", url: "/purchasing/purchase-requests/approval" },
-      ],
-    },
-    {
-      title: "Purchase Order (PO)",
-      icon: FileBox,
-      items: [
-        { title: "PO List", url: "/purchasing/purchase-orders" },
-        {
-          title: "Create PO from PR",
-          url: "/purchasing/purchase-orders/from-pr",
-        },
-      ],
-    },
-    {
-      title: "Finance & Tax",
-      icon: Wallet,
-      items: [
-        { title: "Submit FAR", url: "/finance/far/submit" },
-        { title: "Approve/Reject FAR", url: "/finance/far/approval" },
-        { title: "FAR History", url: "/finance/far/history" },
-      ],
-    },
-    {
-      title: "Warehouse & Logistics",
+      title: "Stock Reservation",
+      url: "/warehouse/reservations",
       icon: Warehouse,
-      items: [
-        {
-          title: "Stock Reservation (SR)",
-          items: [
-            { title: "SR List", url: "/warehouse/reservations" },
-            {
-              title: "Create SR for Sales Order",
-              url: "/warehouse/reservations/new",
-            },
-            { title: "Approve SR", url: "/warehouse/reservations/approval" },
-          ],
-        },
-        {
-          title: "Material Receiving",
-          items: [
-            { title: "Material Receiving List", url: "/warehouse/receiving" },
-            {
-              title: "Goods Receipt (GR)",
-              url: "/warehouse/receiving/goods-receipt",
-            },
-            { title: "Quality Control (QC)", url: "/warehouse/receiving/qc" },
-            { title: "Reject Handling", url: "/warehouse/receiving/reject" },
-          ],
-        },
-        {
-          title: "Delivery Order",
-          items: [
-            {
-              title: "Delivery Request (DR)",
-              url: "/warehouse/delivery/requests",
-            },
-            { title: "Approve DR", url: "/warehouse/delivery/approval" },
-            { title: "Delivery Order (DO)", url: "/warehouse/delivery/orders" },
-            { title: "Shipment Tracking", url: "/warehouse/delivery/tracking" },
-          ],
-        },
-        {
-          title: "Inventory",
-          items: [
-            { title: "Stock List", url: "/warehouse/inventory/stocks" },
-            { title: "Stock Movements", url: "/warehouse/inventory/movements" },
-            {
-              title: "Stock In / Stock Out",
-              url: "/warehouse/inventory/inout",
-            },
-            {
-              title: "Minimum Stock Alerts",
-              url: "/warehouse/inventory/alerts",
-            },
-            {
-              title: "Inventory Valuation",
-              url: "/warehouse/inventory/valuation",
-            },
-          ],
-        },
-      ],
     },
+    // --- Subitems acuan:
+    // { title: "Create SR for Sales Order", url: "/warehouse/reservations/new" },
+    // { title: "Approve SR", url: "/warehouse/reservations/approval" },
+
+    { title: "Material Receiving", url: "/warehouse/receiving", icon: Package },
+    // { title: "Goods Receipt (GR)", url: "/warehouse/receiving/goods-receipt" },
+    // { title: "Quality Control (QC)", url: "/warehouse/receiving/qc" },
+    // { title: "Reject Handling", url: "/warehouse/receiving/reject" },
+
+    {
+      title: "Delivery Request (DR)",
+      url: "/warehouse/delivery/requests",
+      icon: Truck,
+    },
+    // { title: "Approve DR", url: "/warehouse/delivery/approval" },
+    // { title: "Delivery Order (DO)", url: "/warehouse/delivery/orders" },
+    // { title: "Shipment Tracking", url: "/warehouse/delivery/tracking" },
+
+    { title: "Stock List", url: "/warehouse/inventory/stocks", icon: Boxes },
+    // { title: "Stock Movements", url: "/warehouse/inventory/movements" },
+    // { title: "Stock In / Stock Out", url: "/warehouse/inventory/inout" },
+    // { title: "Minimum Stock Alerts", url: "/warehouse/inventory/alerts" },
+    // { title: "Inventory Valuation", url: "/warehouse/inventory/valuation" },
+
+    // Settings (tetap nested)
     {
       title: "Settings",
       icon: Settings,
       items: [
-        {
-          title: "Users",
-          url: "/settings/users",
-          icon: Users,
-        },
-        // Tambahkan menu settings lain jika perlu
+        { title: "Users", url: "/settings/users", icon: Users },
+        { title: "Company", url: "/settings/company", icon: UserCog },
       ],
     },
   ],

@@ -1,5 +1,4 @@
 "use client";
-import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -13,19 +12,11 @@ import { Eye, Edit, Trash2 } from "lucide-react";
 import { Lead } from "@/types/models";
 import { formatDate } from "@/utils/formatDate";
 
-export default function LeadsTable() {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
+interface LeadsTableProps {
+  leads: Lead[];
+}
 
-  useEffect(() => {
-    fetch("/api/leads")
-      .then((res) => res.json())
-      .then((data) => setLeads(data))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div>Loading...</div>;
-
+export default function LeadsTable({ leads }: LeadsTableProps) {
   return (
     <Table>
       <TableHeader>

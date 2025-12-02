@@ -1,7 +1,7 @@
 import React from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import EditUserForm from "@/components/user/edit-user-form";
-import { getUserById, getAllRoles } from "@/app/actions/user-actions";
+import EditUserForm from "@/app/(protected)/(dashboard)/settings/users/_components/edit-user-form";
+import { getUserByIdAction, getAllRolesAction } from "@/app/actions/users";
 import { notFound } from "next/navigation";
 
 interface EditUserPageProps {
@@ -13,8 +13,8 @@ interface EditUserPageProps {
 export default async function EditUserPage({ params }: EditUserPageProps) {
   try {
     const [user, roles] = await Promise.all([
-      getUserById(parseInt(params.id)),
-      getAllRoles(),
+      getUserByIdAction(parseInt(params.id)),
+      getAllRolesAction(),
     ]);
 
     if (!user) {

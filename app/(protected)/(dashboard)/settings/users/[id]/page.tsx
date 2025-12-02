@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
-import { getUserById } from "@/app/actions/user-actions";
+import { getUserByIdAction } from "@/app/actions/users";
 import { notFound } from "next/navigation";
 
 interface UserDetailPageProps {
@@ -16,7 +16,7 @@ interface UserDetailPageProps {
 
 export default async function UserDetailPage({ params }: UserDetailPageProps) {
   try {
-    const user = await getUserById(parseInt(params.id));
+    const user = await getUserByIdAction(parseInt(params.id));
 
     if (!user) {
       notFound();
@@ -152,32 +152,84 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           <div>
             <Card>
               <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Recent Activity</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {user.user_logs?.length || 0} logs
+                  </Badge>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {user.user_logs && user.user_logs.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4 max-h-[500px] overflow-y-auto">
                     {user.user_logs.map((log, index) => (
                       <div
-                        key={index}
-                        className="border-l-2 border-primary/20 pl-4 pb-3"
+                        key={log.id || index}
+                        className="border-l-2 border-primary/20 pl-4 pb-3 hover:border-primary/40 transition-colors"
                       >
-                        <p className="text-sm font-medium">{log.activity}</p>
-                        <p className="text-xs text-muted-foreground">
+                        {/* Activity Title */}
+                        <p className="text-sm font-medium text-gray-900">
+                          {log.activity}
+                        </p>
+
+                        {/* Timestamp */}
+                        <p className="text-xs text-muted-foreground mt-1">
                           {log.created_at
-                            ? new Date(log.created_at).toLocaleDateString()
+                            ? new Date(log.created_at).toLocaleString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
                             : "-"}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {log.endpoint} - {log.method}
-                        </p>
+
+                        {/* Method and Endpoint */}
+                        {(log.method || log.endpoint) && (
+                          <div className="flex items-center gap-2 mt-2">
+                            {log.method && (
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${
+                                  log.method === "POST"
+                                    ? "bg-green-50 text-green-700 border-green-200"
+                                    : log.method === "PUT"
+                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                    : log.method === "DELETE"
+                                    ? "bg-red-50 text-red-700 border-red-200"
+                                    : "bg-gray-50 text-gray-700 border-gray-200"
+                                }`}
+                              >
+                                {log.method}
+                              </Badge>
+                            )}
+                            {log.endpoint && (
+                              <span className="text-xs text-gray-500 font-mono truncate">
+                                {log.endpoint}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* IP Address (optional) */}
+                        {log.ip_address && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            IP: {log.ip_address}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No recent activity found.
-                  </p>
+                  <div className="text-center py-8">
+                    <p className="text-sm text-muted-foreground">
+                      No recent activity found.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      User actions will appear here
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>

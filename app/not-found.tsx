@@ -10,7 +10,7 @@ export default function NotFound() {
   return (
     <>
       <Card className="border-0 overflow-hidden shadow-none bg-white dark:bg-[#273142]">
-        <CardContent className="py-10 lg:py-[60px] xl:py-[80px] px-8 text-center">
+        <CardContent className="py-10 lg:py-[60px] xl:py-20 px-8 text-center">
           <Image
             src={ErrorThumbnail}
             alt="Logo"

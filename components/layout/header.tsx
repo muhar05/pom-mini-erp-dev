@@ -15,9 +15,9 @@ const Header = () => {
             </div>
             <div className="flex items-center gap-3">
                 <ModeToggle />
-                <LanguageSelect />
+                {/* <LanguageSelect />
                 <MessageDropdown />
-                <NotificationDropdown />
+                <NotificationDropdown /> */}
                 <ProfileDropdown />
             </div>
         </header>

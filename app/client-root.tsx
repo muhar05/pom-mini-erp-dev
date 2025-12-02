@@ -32,7 +32,7 @@ export function ClientRoot({
       >
         <SidebarProvider defaultOpen={defaultOpen}>
           <AppSidebar />
-          <main className="dashboard-body-wrapper grow-[1] flex flex-col">
+          <main className="dashboard-body-wrapper grow flex flex-col">
             <SidebarInset>
               <Header />
             </SidebarInset>
