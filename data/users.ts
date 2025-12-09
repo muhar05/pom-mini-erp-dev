@@ -1,5 +1,6 @@
 // src/data/users.ts
 import { prisma } from "@/lib/prisma";
+import type { user_logs } from "@prisma/client";
 
 export async function createUserDb(input: {
   name: string;
@@ -94,7 +95,7 @@ export async function getUserByIdDb(id: number) {
 
   return {
     ...user,
-    user_logs: user.user_logs.map((log) => ({
+    user_logs: user.user_logs.map((log: user_logs) => ({
       ...log,
       id: log.id.toString(),
     })),
