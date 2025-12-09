@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { getUserByIdAction } from "@/app/actions/users";
 import { notFound } from "next/navigation";
+import { UserLog } from "@/types/models";
 
 interface UserDetailPageProps {
   params: {
@@ -162,7 +163,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
               <CardContent>
                 {user.user_logs && user.user_logs.length > 0 ? (
                   <div className="space-y-4 max-h-[500px] overflow-y-auto">
-                    {user.user_logs.map((log, index) => (
+                    {user.user_logs.map((log: UserLog, index: number) => (
                       <div
                         key={log.id || index}
                         className="border-l-2 border-primary/20 pl-4 pb-3 hover:border-primary/40 transition-colors"

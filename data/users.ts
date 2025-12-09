@@ -1,5 +1,6 @@
 // src/data/users.ts
 import { prisma } from "@/lib/prisma";
+import { UserLog } from "@/types/models";
 
 export async function createUserDb(input: {
   name: string;

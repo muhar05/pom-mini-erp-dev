@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
   createLeadDb,
@@ -9,107 +8,116 @@ import {
   getLeadByIdDb,
   getAllLeadsDb,
 } from "@/data/leads";
+import { validateLeadFormData, extractLeadId } from "@/lib/schemas";
+import { ZodError } from "zod";
 
 // CREATE
 export async function createLeadAction(formData: FormData) {
-  const lead_name = formData.get("lead_name") as string;
-  const contact = formData.get("contact") as string | undefined;
-  const email = formData.get("email") as string | undefined;
-  const phone = formData.get("phone") as string | undefined;
-  const type = formData.get("type") as string | undefined;
-  const company = formData.get("company") as string | undefined;
-  const location = formData.get("location") as string | undefined;
-  const product_interest = formData.get("product_interest") as
-    | string
-    | undefined;
-  const source = formData.get("source") as string | undefined;
-  const note = formData.get("note") as string | undefined;
-  const id_user = formData.get("id_user")
-    ? Number(formData.get("id_user"))
-    : undefined;
-  const assigned_to = formData.get("assigned_to")
-    ? Number(formData.get("assigned_to"))
-    : undefined;
-  const status = formData.get("status") as string | undefined;
+  try {
+    // Validate form data - this ensures lead_name is required and present
+    const validatedData = validateLeadFormData(formData, "create");
 
-  if (!lead_name) {
-    throw new Error("Lead name is required");
+    // Type assertion is safe here because createLeadSchema guarantees lead_name exists
+    await createLeadDb(validatedData as Parameters<typeof createLeadDb>[0]);
+
+    revalidatePath("/crm/leads");
+
+    return { success: true, message: "Lead created successfully" };
+  } catch (error) {
+    console.error("Error creating lead:", error);
+
+    // Handle validation errors specifically
+    if (error instanceof ZodError) {
+      const errorMessages = error.errors.map((err) => err.message).join(", ");
+      throw new Error(`Validation error: ${errorMessages}`);
+    }
+
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+
+    throw new Error(
+      "Failed to create lead. Please check your input and try again."
+    );
   }
-
-  await createLeadDb({
-    lead_name,
-    contact,
-    email,
-    phone,
-    type,
-    company,
-    location,
-    product_interest,
-    source,
-    note,
-    id_user,
-    assigned_to,
-    status,
-  });
-
-  revalidatePath("/crm/leads");
-  redirect("/crm/leads");
 }
 
 // UPDATE
 export async function updateLeadAction(formData: FormData) {
-  const id = formData.get("id") as string;
-  if (!id) throw new Error("Lead ID is required");
+  try {
+    // Extract and validate ID separately
+    const id = extractLeadId(formData);
 
-  const data: any = {};
-  [
-    "lead_name",
-    "contact",
-    "email",
-    "phone",
-    "type",
-    "company",
-    "location",
-    "product_interest",
-    "source",
-    "note",
-    "id_user",
-    "assigned_to",
-    "status",
-  ].forEach((key) => {
-    const value = formData.get(key);
-    if (value !== null && value !== undefined && value !== "") {
-      data[key] =
-        key === "id_user" || key === "assigned_to" ? Number(value) : value;
+    // Validate form data (without ID) - all fields optional for update
+    const validatedData = validateLeadFormData(formData, "update");
+
+    // Type assertion is safe here because updateLeadSchema matches the expected type
+    await updateLeadDb(id, validatedData as Parameters<typeof updateLeadDb>[1]);
+
+    revalidatePath("/crm/leads");
+    revalidatePath(`/crm/leads/${id}`);
+
+    return { success: true, message: "Lead updated successfully" };
+  } catch (error) {
+    console.error("Error updating lead:", error);
+
+    // Handle validation errors specifically
+    if (error instanceof ZodError) {
+      const errorMessages = error.errors.map((err) => err.message).join(", ");
+      throw new Error(`Validation error: ${errorMessages}`);
     }
-  });
 
-  await updateLeadDb(Number(id), data);
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
 
-  revalidatePath("/crm/leads");
-  revalidatePath(`/crm/leads/${id}`);
-
-  return { success: true, message: "Lead updated successfully" };
+    throw new Error(
+      "Failed to update lead. Please check your input and try again."
+    );
+  }
 }
 
 // DELETE
 export async function deleteLeadAction(formData: FormData) {
-  const id = formData.get("id") as string;
-  if (!id) throw new Error("Lead ID is required");
+  try {
+    const id = formData.get("id") as string;
+    if (!id) throw new Error("Lead ID is required");
 
-  await deleteLeadDb(Number(id));
+    await deleteLeadDb(Number(id));
 
-  revalidatePath("/crm/leads");
+    revalidatePath("/crm/leads");
 
-  return { success: true, message: "Lead deleted successfully" };
+    return { success: true, message: "Lead deleted successfully" };
+  } catch (error) {
+    console.error("Error deleting lead:", error);
+
+    if (error instanceof Error) {
+      return { success: false, message: error.message };
+    }
+
+    return {
+      success: false,
+      message: "Failed to delete lead. Please try again.",
+    };
+  }
 }
 
 // GET BY ID
 export async function getLeadByIdAction(id: number) {
-  return getLeadByIdDb(id);
+  try {
+    return await getLeadByIdDb(id);
+  } catch (error) {
+    console.error("Error fetching lead:", error);
+    throw new Error("Lead not found");
+  }
 }
 
 // GET ALL
 export async function getAllLeadsAction() {
-  return getAllLeadsDb();
+  try {
+    return await getAllLeadsDb();
+  } catch (error) {
+    console.error("Error fetching leads:", error);
+    throw new Error("Failed to fetch leads");
+  }
 }

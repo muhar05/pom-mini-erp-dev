@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
-// CREATE
-export async function createLeadDb(input: {
+// Define interfaces to match our exact needs
+interface CreateLeadInput {
   lead_name: string;
   contact?: string;
   email?: string;
@@ -15,34 +15,46 @@ export async function createLeadDb(input: {
   id_user?: number;
   assigned_to?: number;
   status?: string;
-}) {
+}
+
+interface UpdateLeadInput {
+  lead_name?: string;
+  contact?: string;
+  email?: string;
+  phone?: string;
+  type?: string;
+  company?: string;
+  location?: string;
+  product_interest?: string;
+  source?: string;
+  note?: string;
+  id_user?: number;
+  assigned_to?: number;
+  status?: string;
+}
+
+// CREATE - lead_name is required
+export async function createLeadDb(input: CreateLeadInput) {
+  // Filter out undefined values
+  const cleanInput = Object.fromEntries(
+    Object.entries(input).filter(([_, value]) => value !== undefined)
+  ) as CreateLeadInput;
+
   return prisma.leads.create({
-    data: input,
+    data: cleanInput,
   });
 }
 
-// UPDATE
-export async function updateLeadDb(
-  id: number,
-  data: Partial<{
-    lead_name: string;
-    contact?: string;
-    email?: string;
-    phone?: string;
-    type?: string;
-    company?: string;
-    location?: string;
-    product_interest?: string;
-    source?: string;
-    note?: string;
-    id_user?: number;
-    assigned_to?: number;
-    status?: string;
-  }>
-) {
+// UPDATE - all fields optional
+export async function updateLeadDb(id: number, data: UpdateLeadInput) {
+  // Filter out undefined values to avoid overwriting with null
+  const cleanData = Object.fromEntries(
+    Object.entries(data).filter(([_, value]) => value !== undefined)
+  );
+
   return prisma.leads.update({
     where: { id },
-    data,
+    data: cleanData,
   });
 }
 
