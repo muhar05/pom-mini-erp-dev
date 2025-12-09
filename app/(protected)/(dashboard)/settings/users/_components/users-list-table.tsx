@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { User, Role } from "@/types/models";
+import { users, roles } from "@/types/models";
 import { deleteUserAction } from "@/app/actions/users";
 import Link from "next/link";
 import UserDetailDialog from "./user-detail-dialog";
@@ -17,25 +17,25 @@ import UserDeleteDialog from "./user-delete-dialog";
 import { Edit, Eye, Trash2 } from "lucide-react";
 
 interface UserTableProps {
-  users: User[];
-  roles: Role[];
+  users: users[];
+  roles: roles[];
 }
 
 export default function UserTable({ users, roles }: UserTableProps) {
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<users | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
 
   // Detail User
-  const handleViewDetail = (user: User) => {
+  const handleViewDetail = (user: users) => {
     setSelectedUser(user);
     setIsDetailOpen(true);
   };
 
   // Delete User
-  const handleDelete = (user: User) => {
+  const handleDelete = (user: users) => {
     setSelectedUser(user);
     setIsDeleteOpen(true);
     setError("");

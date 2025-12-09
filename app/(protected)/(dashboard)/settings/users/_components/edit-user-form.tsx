@@ -14,13 +14,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { User, Role } from "@/types/models";
+import { users, roles } from "@/types/models";
 import { updateUserAction } from "@/app/actions/users";
 import { useRouter } from "next/navigation";
 
 interface EditUserFormProps {
-  user: User;
-  roles: Role[];
+  user: users;
+  roles: roles[];
 }
 
 export default function EditUserForm({ user, roles }: EditUserFormProps) {

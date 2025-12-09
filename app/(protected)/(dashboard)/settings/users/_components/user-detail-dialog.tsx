@@ -9,12 +9,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { User } from "@/types/models";
+import { users } from "@/types/models";
 
 interface UserDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  user: User | null;
+  user: users | null;
 }
 
 export default function UserDetailDialog({

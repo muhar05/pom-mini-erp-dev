@@ -7,12 +7,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { User } from "@/types/models";
+import { users } from "@/types/models";
 
 interface UserDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  user: User | null;
+  user: users | null;
   isPending: boolean;
   error: string;
   onDeleteConfirm: (formData: FormData) => void;
