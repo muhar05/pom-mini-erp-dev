@@ -61,7 +61,7 @@ export default function LeadDeleteDialog({
           },
         });
 
-        setOpen(false);
+        setTimeout(() => setOpen(false), 100); // beri delay kecil
       } else {
         // Show error toast if result indicates failure
         toast.error(result?.message || "Failed to delete lead", {

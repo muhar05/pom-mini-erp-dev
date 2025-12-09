@@ -83,58 +83,50 @@ const locationSchema = z
     }
   );
 
-// String schemas for database compatibility (instead of strict enums)
+// Type: accept common strings, validate length (and letters/spaces/_-)
 const typeSchema = z
   .string()
   .optional()
   .refine(
     (val) => {
       if (!val || val.trim() === "") return true;
-      return ["individual", "company", "government"].includes(val);
+      const trimmed = val.trim();
+      // allow up to 100 chars
+      return trimmed.length <= 100;
     },
     {
-      message: "Please select a valid type",
+      message: "Please enter a valid type (max 100 characters)",
     }
   );
 
+// Source: accept freeform source names (Website, LinkedIn, Google Search...), validate length
 const sourceSchema = z
   .string()
   .optional()
   .refine(
     (val) => {
       if (!val || val.trim() === "") return true;
-      return [
-        "website",
-        "social_media",
-        "referral",
-        "cold_call",
-        "event",
-      ].includes(val);
+      const trimmed = val.trim();
+      return trimmed.length <= 100;
     },
     {
-      message: "Please select a valid source",
+      message: "Please enter a valid source (max 100 characters)",
     }
   );
 
+// Status: accept both canonical options and freeform values from DB (e.g., "Open", "Follow Up")
+// Validate length and prevent overly long/invalid values
 const statusSchema = z
   .string()
   .optional()
   .refine(
     (val) => {
       if (!val || val.trim() === "") return true;
-      return [
-        "new",
-        "contacted",
-        "qualified",
-        "proposal",
-        "negotiation",
-        "closed_won",
-        "closed_lost",
-        "Open", // Default from database
-      ].includes(val);
+      const trimmed = val.trim();
+      return trimmed.length <= 50;
     },
     {
-      message: "Please select a valid status",
+      message: "Please enter a valid status (max 50 characters)",
     }
   );
 

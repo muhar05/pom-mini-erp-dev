@@ -15,11 +15,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { Role } from "@/types/models";
+import { roles } from "@/types/models";
 import { useRouter } from "next/navigation";
 
 export default function NewUserPage() {
-  const [roles, setRoles] = useState<Role[]>([]);
+  const [roles, setRoles] = useState<roles[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();

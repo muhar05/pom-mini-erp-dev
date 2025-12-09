@@ -7,11 +7,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Lead } from "@/types/models";
+import { leads } from "@/types/models";
 import { formatDate } from "@/utils/formatDate";
 
 interface LeadViewDialogProps {
-  lead: Lead;
+  lead: leads;
   trigger: React.ReactNode;
 }
 

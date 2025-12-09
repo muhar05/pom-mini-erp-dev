@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash2 } from "lucide-react";
-import { Lead } from "@/types/models";
+import { leads } from "@/types/models";
 import { formatDate } from "@/utils/formatDate";
 import { formatStatusDisplay } from "@/utils/formatStatus";
 import Link from "next/link";
@@ -18,7 +18,7 @@ import LeadDeleteDialog from "./lead-delete-dialog";
 import { deleteLeadAction } from "@/app/actions/leads";
 
 interface LeadsTableProps {
-  leads: Lead[];
+  leads: leads[];
 }
 
 // Helper function to get status badge styling

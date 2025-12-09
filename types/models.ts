@@ -1,20 +1,25 @@
-// User
-export interface User {
+// companies
+export interface companies {
   id: number;
+  group_name?: string | null;
   name: string;
-  email: string;
-  password_hash: string;
-  role_id?: number | null;
-  created_at?: Date | null; // Changed from string to Date | null
-  leads_leads_assigned_toTousers?: Lead[];
-  leads_leads_id_userTousers?: Lead[];
-  user_logs?: UserLog[];
-  user_otp?: UserOtp[];
-  roles?: Role | null;
+  company?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  npwp?: string | null;
+  level?: string | null;
+  disc1?: number | null;
+  disc2?: number | null;
+  note?: string | null;
+  status?: boolean | null;
+  created_at?: Date | null;
+  updated_at?: Date | null;
+  quotations?: quotations[];
 }
 
-// Lead
-export interface Lead {
+// leads
+export interface leads {
   id: number;
   reference_no?: string | null;
   lead_name: string;
@@ -28,33 +33,15 @@ export interface Lead {
   source?: string | null;
   note?: string | null;
   id_user?: number | null;
-  created_at?: Date | null; // Changed from string
+  created_at?: Date | null;
   assigned_to?: number | null;
   status?: string | null;
-  users_leads_assigned_toTousers?: User | null;
-  users_leads_id_userTousers?: User | null;
+  users_leads_assigned_toTousers?: users | null;
+  users_leads_id_userTousers?: users | null;
 }
 
-export interface Company {
-  id: number;
-  group_name?: string | null;
-  name: string;
-  company?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  address?: string | null;
-  npwp?: string | null;
-  level?: string | null;
-  disc1?: number | null; // Changed from string to number (Decimal in Prisma)
-  disc2?: number | null; // Changed from string to number
-  note?: string | null;
-  status?: boolean | null;
-  created_at?: Date | null; // Changed from string
-  updated_at?: Date | null; // Changed from string
-  quotations?: Quotation[];
-}
-
-export interface Product {
+// products
+export interface products {
   id: number;
   product_code: string;
   item_group?: string | null;
@@ -62,71 +49,92 @@ export interface Product {
   unit?: string | null;
   part_number?: string | null;
   description?: string | null;
-  price?: number | null; // Changed from string to number (Decimal in Prisma)
+  price?: number | null;
   stock?: number | null;
   brand?: string | null;
   rack?: string | null;
   images?: any;
-  created_at?: Date | null; // Changed from string
-  updated_at?: Date | null; // Changed from string
+  created_at?: Date | null;
+  updated_at?: Date | null;
 }
 
-export interface Quotation {
+// quotations
+export interface quotations {
   id: number;
   quotation_no: string;
   company_id: number;
   quotation_detail: any;
-  total?: number | null; // Changed from string to number (Decimal)
-  shipping?: number | null; // Changed from string to number
-  discount?: number | null; // Changed from string to number
-  tax?: number | null; // Changed from string to number
-  grand_total?: number | null; // Changed from string to number
+  total?: number | null;
+  shipping?: number | null;
+  discount?: number | null;
+  tax?: number | null;
+  grand_total?: number | null;
   status?: string | null;
   stage?: string | null;
   note?: string | null;
-  target_date?: Date | null; // Changed from string
+  target_date?: Date | null;
   top?: string | null;
-  created_at?: Date | null; // Changed from string
-  updated_at?: Date | null; // Changed from string
-  companies?: Company;
+  created_at?: Date | null;
+  updated_at?: Date | null;
+  companies?: companies;
 }
 
-export interface Role {
+// roles
+export interface roles {
   id: number;
   role_name: string;
-  users?: User[];
+  users?: users[];
 }
 
-export interface UserOtp {
+// user_otp
+export interface user_otp {
   id: number;
   user_id?: number | null;
   otp_code: string;
-  expires_at: Date; // Changed from string (DateTime in Prisma)
+  expires_at: Date;
   is_used?: boolean | null;
-  users?: User | null;
+  users?: users | null;
 }
 
-export interface CompanyLevel {
-  id_level: number;
-  level_name: string;
-  disc1?: number | null; // Changed from string to number (Decimal)
-  disc2?: number | null; // Changed from string to number
-  company?: Company[];
+// users
+export interface users {
+  id: number;
+  name: string;
+  email: string;
+  password_hash: string;
+  role_id?: number | null;
+  created_at?: Date | null;
+  leads_leads_assigned_toTousers?: leads[];
+  leads_leads_id_userTousers?: leads[];
+  user_logs?: user_logs[];
+  user_otp?: user_otp[];
+  roles?: roles | null;
 }
 
-export interface Company_ {
+// company
+export interface company {
   id: number;
   company_name: string;
   address?: string | null;
   npwp?: string | null;
   id_level?: number | null;
   note?: string | null;
-  created_at?: Date | null; // Changed from string
-  company_level?: CompanyLevel | null;
-  customers?: Customer[];
+  created_at?: Date | null;
+  company_level?: company_level | null;
+  customers?: customers[];
 }
 
-export interface Customer {
+// company_level
+export interface company_level {
+  id_level: number;
+  level_name: string;
+  disc1?: number | null;
+  disc2?: number | null;
+  company?: company[];
+}
+
+// customers
+export interface customers {
   id: number;
   customer_name: string;
   address?: string | null;
@@ -135,11 +143,12 @@ export interface Customer {
   type?: string | null;
   company_id?: number | null;
   note?: string | null;
-  created_at?: Date | null; // Changed from string
-  company?: Company_ | null;
+  created_at?: Date | null;
+  company?: company | null;
 }
 
-export interface UserLog {
+// user_logs
+export interface user_logs {
   id: string; // BigInt as string
   user_id: number;
   activity: string;
@@ -149,15 +158,16 @@ export interface UserLog {
   user_agent?: string | null;
   old_data?: any;
   new_data?: any;
-  created_at?: Date | null; // Changed from string
-  users?: User;
+  created_at?: Date | null;
+  users?: users;
 }
 
-export interface Warehouse {
+// warehouse
+export interface warehouse {
   id: number;
   code: string;
   name: string;
   location?: string | null;
-  created_at?: Date | null; // Changed from string
-  updated_at?: Date | null; // Changed from string
+  created_at?: Date | null;
+  updated_at?: Date | null;
 }

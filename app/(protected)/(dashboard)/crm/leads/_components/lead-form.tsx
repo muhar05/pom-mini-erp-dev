@@ -12,16 +12,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Lead } from "@/types/models";
+import { leads } from "@/types/models";
 import { useRouter } from "next/navigation";
 import { createLeadSchema, updateLeadSchema } from "@/lib/schemas";
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import { STATUS_OPTIONS, formatStatusDisplay } from "@/utils/formatStatus";
+import { formatDate } from "@/utils/formatDate";
 
 interface LeadFormProps {
   mode: "create" | "edit";
-  lead?: Lead;
+  lead?: leads;
   onSubmit: (
     formData: FormData
   ) => Promise<void> | Promise<{ success: boolean; message: string }>;
@@ -30,6 +31,20 @@ interface LeadFormProps {
 interface FormErrors {
   [key: string]: string;
 }
+
+const TYPE_OPTIONS = [
+  { value: "individual", label: "Individual" },
+  { value: "company", label: "Company" },
+  { value: "government", label: "Government" },
+];
+
+const SOURCE_OPTIONS = [
+  { value: "website", label: "Website" },
+  { value: "social_media", label: "Social Media" },
+  { value: "referral", label: "Referral" },
+  { value: "cold_call", label: "Cold Call" },
+  { value: "event", label: "Event" },
+];
 
 export default function LeadForm({ mode, lead, onSubmit }: LeadFormProps) {
   const [loading, setLoading] = useState(false);
@@ -93,6 +108,13 @@ export default function LeadForm({ mode, lead, onSubmit }: LeadFormProps) {
       const formData = new FormData(e.currentTarget);
       if (mode === "edit" && lead) {
         formData.append("id", lead.id.toString());
+      }
+
+      // Ensure status is not empty: set sensible default if missing
+      const statusValue = (formData.get("status") as string) ?? "";
+      if (statusValue.trim() === "") {
+        const defaultStatus = mode === "create" ? "new" : lead?.status ?? "new";
+        formData.set("status", defaultStatus);
       }
 
       // Client-side validation
@@ -177,6 +199,34 @@ export default function LeadForm({ mode, lead, onSubmit }: LeadFormProps) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function findOptionValue(
+    raw?: string | null,
+    options?: ReadonlyArray<{ value: string; label: string }>,
+    fallback = ""
+  ) {
+    if (!raw) return fallback;
+    const s = String(raw);
+
+    // 1) exact match by value
+    if (options?.some((o) => o.value === s)) return s;
+
+    // 2) match by value lowercased
+    const lower = s.toLowerCase();
+    if (options?.some((o) => o.value.toLowerCase() === lower)) {
+      return options!.find((o) => o.value.toLowerCase() === lower)!.value;
+    }
+
+    // 3) match by label case-insensitive
+    const byLabel = options?.find((o) => o.label.toLowerCase() === lower);
+    if (byLabel) return byLabel.value;
+
+    // 4) normalized (spaces -> underscore, lower)
+    const normalized = lower.replace(/\s+/g, "_");
+    if (options?.some((o) => o.value === normalized)) return normalized;
+
+    return fallback;
   }
 
   return (
@@ -281,72 +331,186 @@ export default function LeadForm({ mode, lead, onSubmit }: LeadFormProps) {
           )}
         </div>
 
+        {/* Type */}
         <div className="space-y-2">
           <Label htmlFor="type">Type</Label>
-          <Select
-            name="type"
-            defaultValue={lead?.type || ""}
-            disabled={loading}
-          >
-            <SelectTrigger className={formErrors.type ? "border-red-500" : ""}>
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="individual">Individual</SelectItem>
-              <SelectItem value="company">Company</SelectItem>
-              <SelectItem value="government">Government</SelectItem>
-            </SelectContent>
-          </Select>
+          {(() => {
+            let defaultVal = findOptionValue(
+              lead?.type ?? "",
+              TYPE_OPTIONS,
+              ""
+            );
+            const raw = lead?.type;
+            if (!defaultVal && raw) {
+              defaultVal = String(raw);
+            }
+
+            const hasMatch =
+              !!raw &&
+              TYPE_OPTIONS.some(
+                (o) =>
+                  o.value.toLowerCase() === String(raw).toLowerCase() ||
+                  o.label.toLowerCase() === String(raw).toLowerCase()
+              );
+            const extraOption =
+              !hasMatch && raw
+                ? {
+                    value: String(raw),
+                    label: formatStatusDisplay(String(raw)),
+                  }
+                : null;
+
+            return (
+              <Select name="type" defaultValue={defaultVal} disabled={loading}>
+                <SelectTrigger
+                  className={formErrors.type ? "border-red-500" : ""}
+                >
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {extraOption && (
+                    <SelectItem
+                      key={`extra-type-${extraOption.value}`}
+                      value={extraOption.value}
+                    >
+                      {extraOption.label}
+                    </SelectItem>
+                  )}
+                  {TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            );
+          })()}
           {formErrors.type && (
             <p className="text-sm text-red-500">{formErrors.type}</p>
           )}
         </div>
 
+        {/* Source */}
         <div className="space-y-2">
           <Label htmlFor="source">Source</Label>
-          <Select
-            name="source"
-            defaultValue={lead?.source || ""}
-            disabled={loading}
-          >
-            <SelectTrigger
-              className={formErrors.source ? "border-red-500" : ""}
-            >
-              <SelectValue placeholder="Select source" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="website">Website</SelectItem>
-              <SelectItem value="social_media">Social Media</SelectItem>
-              <SelectItem value="referral">Referral</SelectItem>
-              <SelectItem value="cold_call">Cold Call</SelectItem>
-              <SelectItem value="event">Event</SelectItem>
-            </SelectContent>
-          </Select>
+          {(() => {
+            let defaultVal = findOptionValue(
+              lead?.source ?? "",
+              SOURCE_OPTIONS,
+              ""
+            );
+            const raw = lead?.source;
+            if (!defaultVal && raw) {
+              defaultVal = String(raw);
+            }
+
+            const hasMatch =
+              !!raw &&
+              SOURCE_OPTIONS.some(
+                (o) =>
+                  o.value.toLowerCase() === String(raw).toLowerCase() ||
+                  o.label.toLowerCase() === String(raw).toLowerCase()
+              );
+            const extraOption =
+              !hasMatch && raw
+                ? {
+                    value: String(raw),
+                    label: formatStatusDisplay(String(raw)),
+                  }
+                : null;
+
+            return (
+              <Select
+                name="source"
+                defaultValue={defaultVal}
+                disabled={loading}
+              >
+                <SelectTrigger
+                  className={formErrors.source ? "border-red-500" : ""}
+                >
+                  <SelectValue placeholder="Select source" />
+                </SelectTrigger>
+                <SelectContent>
+                  {extraOption && (
+                    <SelectItem
+                      key={`extra-source-${extraOption.value}`}
+                      value={extraOption.value}
+                    >
+                      {extraOption.label}
+                    </SelectItem>
+                  )}
+                  {SOURCE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            );
+          })()}
           {formErrors.source && (
             <p className="text-sm text-red-500">{formErrors.source}</p>
           )}
         </div>
 
+        {/* Status */}
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
-          <Select
-            name="status"
-            defaultValue={lead?.status || "new"}
-            disabled={loading}
-          >
-            <SelectTrigger
-              className={formErrors.status ? "border-red-500" : ""}
-            >
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {(() => {
+            let defaultVal = findOptionValue(
+              lead?.status ?? (mode === "create" ? "new" : ""),
+              STATUS_OPTIONS,
+              mode === "create" ? "new" : ""
+            );
+            const raw = lead?.status;
+            if (!defaultVal && raw) {
+              defaultVal = String(raw);
+            }
+
+            const hasMatch =
+              !!raw &&
+              STATUS_OPTIONS.some(
+                (o) =>
+                  o.value.toLowerCase() === String(raw).toLowerCase() ||
+                  o.label.toLowerCase() === String(raw).toLowerCase()
+              );
+            const extraOption =
+              !hasMatch && raw
+                ? {
+                    value: String(raw),
+                    label: formatStatusDisplay(String(raw)),
+                  }
+                : null;
+
+            return (
+              <Select
+                name="status"
+                defaultValue={defaultVal}
+                disabled={loading}
+              >
+                <SelectTrigger
+                  className={formErrors.status ? "border-red-500" : ""}
+                >
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {extraOption && (
+                    <SelectItem
+                      key={`extra-status-${extraOption.value}`}
+                      value={extraOption.value}
+                    >
+                      {extraOption.label}
+                    </SelectItem>
+                  )}
+                  {STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            );
+          })()}
           {formErrors.status && (
             <p className="text-sm text-red-500">{formErrors.status}</p>
           )}

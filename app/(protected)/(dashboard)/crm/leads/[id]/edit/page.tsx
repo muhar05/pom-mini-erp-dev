@@ -4,11 +4,13 @@ import { getLeadByIdAction, updateLeadAction } from "@/app/actions/leads";
 import LeadForm from "../../_components/lead-form";
 
 interface EditLeadPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default async function EditLeadPage({ params }: EditLeadPageProps) {
-  const lead = await getLeadByIdAction(Number(params.id));
+export default async function EditLeadPage(props: Promise<EditLeadPageProps>) {
+  const { params } = await props;
+  const resolvedParams = await params;
+  const lead = await getLeadByIdAction(Number(resolvedParams.id));
 
   return (
     <>
