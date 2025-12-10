@@ -60,6 +60,7 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
           <TableHead>Email</TableHead>
           <TableHead>Phone</TableHead>
           <TableHead>Company</TableHead>
+          <TableHead>Sales</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Created At</TableHead>
           <TableHead>Action</TableHead>
@@ -73,6 +74,10 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
             <TableCell>{lead.email ?? "-"}</TableCell>
             <TableCell>{lead.phone ?? "-"}</TableCell>
             <TableCell>{lead.company ?? "-"}</TableCell>
+            <TableCell>
+              {/* Tampilkan nama Sales dari relasi */}
+              {lead.users_leads_id_userTousers?.name ?? "-"}
+            </TableCell>
             <TableCell>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusBadgeClass(
@@ -130,7 +135,7 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
         {leads.length === 0 && (
           <TableRow>
             <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-              No leads found.{" "}
+              No leads found.
               <Link
                 href="/crm/leads/new"
                 className="text-blue-600 hover:underline"
