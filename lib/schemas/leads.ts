@@ -133,11 +133,13 @@ const statusSchema = z
 // Main lead schema for CREATE (lead_name is required)
 export const createLeadSchema = z.object({
   lead_name: leadNameSchema, // Required for create
+  company: companySchema.refine((val) => !!val && val.trim() !== "", {
+    message: "Company is required",
+  }),
   contact: contactSchema,
   email: emailSchema,
   phone: phoneSchema,
   type: typeSchema,
-  company: companySchema,
   location: locationSchema,
   product_interest: z
     .string()
@@ -167,7 +169,10 @@ export const createLeadSchema = z.object({
   id_user: z.number().optional(),
   assigned_to: z.number().optional(),
   status: statusSchema,
-});
+}).refine(
+  (data) => !!data.email || !!data.phone,
+  { message: "At least one of email or phone is required", path: ["email"] }
+);
 
 // Schema untuk update (all fields optional including lead_name)
 export const updateLeadSchema = z.object({
