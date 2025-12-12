@@ -1,14 +1,19 @@
 type OpportunityEditFormProps = {
-  opportunity: any;
+  mode: "add" | "edit";
+  opportunity?: any;
+  onClose?: () => void;
+  // onSuccess?: () => void;
 };
 
 export default function OpportunityEditForm({
+  mode,
   opportunity,
+  onClose,
 }: OpportunityEditFormProps) {
   return (
     <button>
-      Edit
-      {/* Modal/Form edit opportunity */}
+      {mode === "edit" ? "Edit" : "Add"} Opportunity
+      {/* Modal/Form {mode} opportunity */}
     </button>
   );
 }

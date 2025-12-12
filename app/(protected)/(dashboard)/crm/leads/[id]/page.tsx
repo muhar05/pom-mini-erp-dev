@@ -36,7 +36,8 @@ function getStatusBadgeClass(status: string | null | undefined): string {
 }
 
 export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
-  const lead = await getLeadByIdAction(Number(params.id));
+  const { id } = await params;
+  const lead = await getLeadByIdAction(Number(id));
 
   return (
     <>

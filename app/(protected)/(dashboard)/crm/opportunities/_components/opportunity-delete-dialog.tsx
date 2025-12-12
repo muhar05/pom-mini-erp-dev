@@ -1,5 +1,7 @@
 type OpportunityDeleteDialogProps = {
   opportunity: any;
+  onClose?: () => void;
+  // onSuccess?: () => void;
 };
 
 export default function OpportunityDeleteDialog({

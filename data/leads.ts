@@ -1,41 +1,19 @@
 import { prisma } from "@/lib/prisma";
+import { users, leads } from "@/types/models";
+import { isSuperuser, isSales } from "@/utils/leadHelpers";
 
-// Define interfaces to match our exact needs
-interface CreateLeadInput {
-  lead_name: string;
-  contact?: string;
-  email?: string;
-  phone?: string;
-  type?: string;
-  company?: string;
-  location?: string;
-  product_interest?: string;
-  source?: string;
-  note?: string;
-  id_user?: number;
-  assigned_to?: number;
-  status?: string;
-}
+export interface CreateLeadInput
+  extends Omit<
+    leads,
+    | "id"
+    | "created_at"
+    | "users_leads_assigned_toTousers"
+    | "users_leads_id_userTousers"
+  > {}
+export interface UpdateLeadInput extends Partial<CreateLeadInput> {}
 
-interface UpdateLeadInput {
-  lead_name?: string;
-  contact?: string;
-  email?: string;
-  phone?: string;
-  type?: string;
-  company?: string;
-  location?: string;
-  product_interest?: string;
-  source?: string;
-  note?: string;
-  id_user?: number;
-  assigned_to?: number;
-  status?: string;
-}
-
-// CREATE - lead_name is required
+// CREATE
 export async function createLeadDb(input: CreateLeadInput) {
-  // Filter out undefined values
   const cleanInput = Object.fromEntries(
     Object.entries(input).filter(([_, value]) => value !== undefined)
   ) as CreateLeadInput;
@@ -45,13 +23,11 @@ export async function createLeadDb(input: CreateLeadInput) {
   });
 }
 
-// UPDATE - all fields optional
+// UPDATE
 export async function updateLeadDb(id: number, data: UpdateLeadInput) {
-  // Filter out undefined values to avoid overwriting with null
   const cleanData = Object.fromEntries(
     Object.entries(data).filter(([_, value]) => value !== undefined)
   );
-
   return prisma.leads.update({
     where: { id },
     data: cleanData,
@@ -79,12 +55,28 @@ export async function getLeadByIdDb(id: number) {
 }
 
 // GET ALL
-export async function getAllLeadsDb() {
-  return prisma.leads.findMany({
-    include: {
-      users_leads_assigned_toTousers: true,
-      users_leads_id_userTousers: true,
-    },
-    orderBy: { created_at: "desc" },
-  });
+export async function getAllLeadsDb(user?: users | { id: string | number; role_name?: string }) {
+  if (!user) throw new Error("Unauthorized");
+  if (isSuperuser(user)) {
+    return prisma.leads.findMany({
+      include: {
+        users_leads_assigned_toTousers: true,
+        users_leads_id_userTousers: true,
+      },
+      orderBy: { created_at: "desc" },
+    });
+  }
+  if (isSales(user)) {
+    // Konversi id ke number jika perlu
+    const userId = typeof user.id === "string" ? Number(user.id) : user.id;
+    return prisma.leads.findMany({
+      where: { id_user: userId },
+      include: {
+        users_leads_assigned_toTousers: true,
+        users_leads_id_userTousers: true,
+      },
+      orderBy: { created_at: "desc" },
+    });
+  }
+  throw new Error("Unauthorized");
 }

@@ -21,7 +21,7 @@ export default function OpportunityNewPage() {
   return (
     <div className="max-w-3xl mx-auto py-8">
       <h1 className="text-2xl font-bold mb-4">Create New Opportunity</h1>
-      <OpportunityEditForm opportunity={opportunity} />
+      <OpportunityEditForm mode="add" opportunity={opportunity} />
     </div>
   );
 }

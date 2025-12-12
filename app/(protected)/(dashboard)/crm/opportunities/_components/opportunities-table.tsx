@@ -26,11 +26,17 @@ type Opportunity = {
 type OpportunitiesTableProps = {
   isSuperadmin?: boolean;
   data?: Opportunity[];
+  onRowClick?: (item: Opportunity) => void;
+  onEdit?: (item: Opportunity) => void;
+  onDelete?: (item: Opportunity) => void;
 };
 
 export default function OpportunitiesTable({
   isSuperadmin,
   data = [],
+  onRowClick,
+  onEdit,
+  onDelete,
 }: OpportunitiesTableProps) {
   return (
     <Table>
@@ -52,7 +58,11 @@ export default function OpportunitiesTable({
       <TableBody>
         {data.length > 0 ? (
           data.map((item, idx) => (
-            <TableRow key={item.no}>
+            <TableRow
+              key={item.no}
+              onClick={() => onRowClick?.(item)}
+              className="cursor-pointer"
+            >
               <TableCell>{item.no}</TableCell>
               <TableCell>{item.date}</TableCell>
               <TableCell>{item.customer}</TableCell>
@@ -64,7 +74,12 @@ export default function OpportunitiesTable({
               <TableCell>{item.status}</TableCell>
               <TableCell>{item.lastUpdate}</TableCell>
               <TableCell>
-                <OpportunityActions item={item} isSuperadmin={isSuperadmin} />
+                <OpportunityActions
+                  item={item}
+                  isSuperadmin={isSuperadmin}
+                  onEdit={() => onEdit?.(item)}
+                  onDelete={() => onDelete?.(item)}
+                />
               </TableCell>
             </TableRow>
           ))

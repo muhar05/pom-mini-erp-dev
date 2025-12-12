@@ -1,5 +1,8 @@
 type OpportunityDetailDrawerProps = {
   opportunity: any;
+  onClose?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 };
 
 export default function OpportunityDetailDrawer({
