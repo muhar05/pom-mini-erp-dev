@@ -3,41 +3,60 @@
 import React, { useState } from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import SalesOrdersTable from "./_components/sales-orders-table";
-import Filters from "./_components/filters";
+import AddSalesOrderButton from "./_components/add-sales-order-button";
+import SalesOrderFilters from "./_components/sales-order-filters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSession } from "@/contexts/session-context";
 import SalesOrderDetailDrawer from "./_components/sales-order-detail-drawer";
 import Pagination from "@/components/ui/pagination";
 
-const dummyData = [
+// Mock data for now - replace with actual API call
+const mockSalesOrders = [
   {
-    id: 1,
+    id: "1",
     so_no: "SO-001",
-    created_at: "2025-12-13",
-    customer: "PT. ABC",
-    email: "abc@email.com",
     quotation_no: "QT-001",
-    items: 3,
-    total: 15000000,
+    customer_name: "PT. ABC Technology",
+    customer_email: "contact@abctech.com",
+    sales_pic: "John Sales",
+    items_count: 3,
+    total_amount: 50000000,
+    payment_term: "Net 30",
+    delivery_date: "2025-12-20",
     status: "Open",
-    lastUpdate: "2025-12-13",
+    created_at: "2025-12-13",
+    updated_at: "2025-12-13",
   },
-  // Tambahkan data lain sesuai kebutuhan
+  {
+    id: "2",
+    so_no: "SO-002",
+    quotation_no: "QT-002",
+    customer_name: "CV. Digital Solutions",
+    customer_email: "info@digitalsol.co.id",
+    sales_pic: "Jane Sales",
+    items_count: 5,
+    total_amount: 75000000,
+    payment_term: "Net 45",
+    delivery_date: "2025-12-25",
+    status: "Confirmed",
+    created_at: "2025-12-10",
+    updated_at: "2025-12-12",
+  },
 ];
 
 export default function SalesOrdersPage() {
   const { user } = useSession();
   const isSuperadmin = user?.role === "superadmin";
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Filter & search logic dummy
-  const filteredData = dummyData.filter(
+  const filteredData = mockSalesOrders.filter(
     (so) =>
       so.so_no.toLowerCase().includes(search.toLowerCase()) ||
-      so.customer.toLowerCase().includes(search.toLowerCase())
+      so.customer_name.toLowerCase().includes(search.toLowerCase())
   );
 
   const pageSize = 10;
@@ -50,14 +69,11 @@ export default function SalesOrdersPage() {
   return (
     <>
       <DashboardBreadcrumb
-        title="Sales Order"
-        text="Manage your sales orders here."
+        title="Sales Orders"
+        text="Manage and monitor your sales orders"
       />
-      {isSuperadmin && (
-        <Button asChild>
-          <a href="/crm/sales-orders/new">Add Sales Order</a>
-        </Button>
-      )}
+      <AddSalesOrderButton />
+      <SalesOrderFilters />
       <div className="grid grid-cols-1 gap-6 mt-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">List Sales Orders</h2>
@@ -68,21 +84,18 @@ export default function SalesOrdersPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-xs"
             />
-            <Filters />
           </div>
-          <SalesOrdersTable
-            data={pagedData}
-            isSuperadmin={isSuperadmin}
-            onRowClick={(id: number) => setSelected(id)}
-          />
+          <SalesOrdersTable salesOrders={pagedData} />
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
           <SalesOrderDetailDrawer
-            open={!!selected}
-            salesOrder={dummyData.find((so) => so.id === selected)}
+            salesOrder={
+              mockSalesOrders.find((so) => so.id === selected) || null
+            }
+            isOpen={!!selected}
             onClose={() => setSelected(null)}
           />
         </div>

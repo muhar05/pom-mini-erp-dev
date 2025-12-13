@@ -3,39 +3,39 @@
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
-import SalesOrderDeleteDialog from "./sales-order-delete-dialog";
+import CustomerDeleteDialog from "./customer-delete-dialog";
 
-type SalesOrder = {
+type Customer = {
   id: string;
-  so_no: string;
-  quotation_no: string;
   customer_name: string;
-  customer_email: string;
-  sales_pic: string;
-  items_count: number;
-  total_amount: number;
-  payment_term: string;
-  delivery_date: string;
+  email: string;
+  phone: string;
+  company: string;
+  contact_person: string;
+  address: string;
+  city: string;
+  country: string;
+  customer_type: string;
   status: string;
   created_at: string;
   updated_at: string;
 };
 
-interface SalesOrderActionsProps {
-  salesOrder: SalesOrder;
+interface CustomerActionsProps {
+  customer: Customer;
   onEdit?: () => void;
   onDelete?: () => void;
 }
 
-export default function SalesOrderActions({
-  salesOrder,
+export default function CustomerActions({
+  customer,
   onEdit,
   onDelete,
-}: SalesOrderActionsProps) {
+}: CustomerActionsProps) {
   return (
     <div className="flex gap-2">
       {/* View */}
-      <Link href={`/crm/sales-orders/${salesOrder.id}`}>
+      <Link href={`/crm/customers/${customer.id}`}>
         <Button
           size="icon"
           variant="ghost"
@@ -47,7 +47,7 @@ export default function SalesOrderActions({
       </Link>
 
       {/* Edit */}
-      <Link href={`/crm/sales-orders/${salesOrder.id}/edit`}>
+      <Link href={`/crm/customers/${customer.id}/edit`}>
         <Button
           size="icon"
           variant="ghost"
@@ -59,8 +59,8 @@ export default function SalesOrderActions({
       </Link>
 
       {/* Delete */}
-      <SalesOrderDeleteDialog
-        salesOrder={salesOrder}
+      <CustomerDeleteDialog
+        customer={customer}
         trigger={
           <Button
             size="icon"

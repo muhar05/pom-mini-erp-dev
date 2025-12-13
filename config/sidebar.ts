@@ -73,8 +73,9 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       ],
     },
 
+    // --- Warehouse & Logistics split into three groups ---
     {
-      title: "Warehouse & Logistics",
+      title: "Warehouse",
       icon: Warehouse,
       items: [
         {
@@ -87,11 +88,23 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
           url: "/warehouse/receiving",
           icon: Package,
         },
+      ],
+    },
+    {
+      title: "Logistics",
+      icon: Truck,
+      items: [
         {
           title: "Delivery Request (DR)",
           url: "/warehouse/delivery/requests",
           icon: Truck,
         },
+      ],
+    },
+    {
+      title: "Inventory",
+      icon: Boxes,
+      items: [
         {
           title: "Stock List",
           url: "/warehouse/inventory/stocks",
