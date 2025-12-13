@@ -2,32 +2,31 @@
 
 import React, { useState } from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import QuotationsTable from "./_components/quotations-table";
+import SalesOrdersTable from "./_components/sales-orders-table";
 import Filters from "./_components/filters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSession } from "@/contexts/session-context";
-import QuotationDetailDrawer from "./_components/quotation-detail-drawer";
+import SalesOrderDetailDrawer from "./_components/sales-order-detail-drawer";
 import Pagination from "@/components/ui/pagination";
 
 const dummyData = [
   {
     id: 1,
+    so_no: "SO-001",
+    created_at: "2025-12-13",
+    customer: "PT. ABC",
+    email: "abc@email.com",
     quotation_no: "QT-001",
-    created_at: "2025-12-10",
-    customer: "PT. XYZ",
-    email: "xyz@email.com",
-    sales: "Sales 1",
-    type: "Perusahaan",
-    company: "PT. XYZ",
-    total: 20000000,
+    items: 3,
+    total: 15000000,
     status: "Open",
-    lastUpdate: "2025-12-11",
+    lastUpdate: "2025-12-13",
   },
   // Tambahkan data lain sesuai kebutuhan
 ];
 
-export default function QuotationsPage() {
+export default function SalesOrdersPage() {
   const { user } = useSession();
   const isSuperadmin = user?.role === "superadmin";
   const [search, setSearch] = useState("");
@@ -36,9 +35,9 @@ export default function QuotationsPage() {
 
   // Filter & search logic dummy
   const filteredData = dummyData.filter(
-    (q) =>
-      q.quotation_no.toLowerCase().includes(search.toLowerCase()) ||
-      q.customer.toLowerCase().includes(search.toLowerCase())
+    (so) =>
+      so.so_no.toLowerCase().includes(search.toLowerCase()) ||
+      so.customer.toLowerCase().includes(search.toLowerCase())
   );
 
   const pageSize = 10;
@@ -51,27 +50,27 @@ export default function QuotationsPage() {
   return (
     <>
       <DashboardBreadcrumb
-        title="Quotation"
-        text="Manage your sales quotations here."
+        title="Sales Order"
+        text="Manage your sales orders here."
       />
       {isSuperadmin && (
         <Button asChild>
-          <a href="/crm/quotations/new">Add Quotation</a>
+          <a href="/crm/sales-orders/new">Add Sales Order</a>
         </Button>
       )}
       <div className="grid grid-cols-1 gap-6 mt-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">List Quotations</h2>
+          <h2 className="text-lg font-semibold mb-4">List Sales Orders</h2>
           <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
             <Input
-              placeholder="Search quotation or customer..."
+              placeholder="Search SO No / Customer..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-xs"
             />
             <Filters />
           </div>
-          <QuotationsTable
+          <SalesOrdersTable
             data={pagedData}
             isSuperadmin={isSuperadmin}
             onRowClick={(id: number) => setSelected(id)}
@@ -81,9 +80,9 @@ export default function QuotationsPage() {
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
-          <QuotationDetailDrawer
+          <SalesOrderDetailDrawer
             open={!!selected}
-            quotation={dummyData.find((q) => q.id === selected)}
+            salesOrder={dummyData.find((so) => so.id === selected)}
             onClose={() => setSelected(null)}
           />
         </div>

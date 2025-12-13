@@ -7,14 +7,17 @@ const globalForPrisma = globalThis as unknown as {
   pool?: Pool;
 };
 
-// Create pool only once with SSL configuration
+// Buat Pool sekali saja, gunakan connection string khusus runtime (tanpa sslmode)
 if (!globalForPrisma.pool) {
   globalForPrisma.pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    // Use SSL with self-signed certificate support for all environments
+    connectionString: process.env.DATABASE_URL_POOL ?? process.env.DATABASE_URL,
     ssl: {
+      // Tanpa CA: matikan verifikasi agar self-signed chain tidak memblok koneksi
       rejectUnauthorized: false,
     },
+    // Optional: pastikan SNI servername benar (kadang membantu)
+    // host di connectionString sudah benar; jika perlu, bisa tambahkan:
+    // ssl: { rejectUnauthorized: false, servername: "db-postgresql-sgp1-79578-do-user-15434388-0.d.db.ondigitalocean.com" }
   });
 }
 

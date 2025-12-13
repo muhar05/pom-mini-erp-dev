@@ -1,10 +1,7 @@
-"use client";
-
-import React from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash2 } from "lucide-react";
 
-type QuotationActionsProps = {
+type SalesOrderActionsProps = {
   item: any;
   isSuperadmin?: boolean;
   onView?: () => void;
@@ -12,16 +9,15 @@ type QuotationActionsProps = {
   onDelete?: () => void;
 };
 
-export default function QuotationActions({
+export default function SalesOrderActions({
   item,
   isSuperadmin,
   onView,
   onEdit,
   onDelete,
-}: QuotationActionsProps) {
+}: SalesOrderActionsProps) {
   return (
     <div className="flex gap-2">
-      {/* View */}
       <Button
         size="icon"
         variant="ghost"
@@ -31,7 +27,6 @@ export default function QuotationActions({
       >
         <Eye className="w-4 h-4" />
       </Button>
-      {/* Edit */}
       <Button
         size="icon"
         variant="ghost"
@@ -42,7 +37,6 @@ export default function QuotationActions({
       >
         <Edit className="w-4 h-4" />
       </Button>
-      {/* Delete */}
       <Button
         size="icon"
         variant="ghost"

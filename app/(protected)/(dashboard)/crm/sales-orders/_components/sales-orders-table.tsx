@@ -6,29 +6,28 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import QuotationActions from "./quotation-actions";
+import SalesOrderActions from "./sales-order-actions";
 
-type Quotation = {
+type SalesOrder = {
   id: number;
-  quotation_no: string;
+  so_no: string;
   created_at: string;
   customer: string;
   email: string;
-  sales: string;
-  type: string;
-  company: string;
+  quotation_no: string;
+  items: number;
   total: number;
   status: string;
   lastUpdate: string;
 };
 
 type Props = {
-  data: Quotation[];
+  data: SalesOrder[];
   isSuperadmin?: boolean;
   onRowClick?: (id: number) => void;
 };
 
-export default function QuotationsTable({
+export default function SalesOrdersTable({
   data,
   isSuperadmin,
   onRowClick,
@@ -37,14 +36,13 @@ export default function QuotationsTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>No Quotation</TableHead>
+          <TableHead>No SO</TableHead>
           <TableHead>Tanggal Input</TableHead>
-          <TableHead>Nama Customer</TableHead>
+          <TableHead>Customer</TableHead>
           <TableHead>Email</TableHead>
-          <TableHead>Sales PIC</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Perusahaan</TableHead>
-          <TableHead>Total Harga</TableHead>
+          <TableHead>No Quotation</TableHead>
+          <TableHead>Jumlah Item</TableHead>
+          <TableHead>Total</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Last Update</TableHead>
           <TableHead>Action</TableHead>
@@ -58,30 +56,28 @@ export default function QuotationsTable({
               className="cursor-pointer"
               onClick={() => onRowClick?.(item.id)}
             >
-              <TableCell>{item.quotation_no}</TableCell>
+              <TableCell>{item.so_no}</TableCell>
               <TableCell>{item.created_at}</TableCell>
               <TableCell>{item.customer}</TableCell>
               <TableCell>{item.email}</TableCell>
-              <TableCell>{item.sales}</TableCell>
-              <TableCell>{item.type}</TableCell>
-              <TableCell>{item.company}</TableCell>
+              <TableCell>{item.quotation_no}</TableCell>
+              <TableCell>{item.items}</TableCell>
               <TableCell>{item.total.toLocaleString()}</TableCell>
               <TableCell>{item.status}</TableCell>
               <TableCell>{item.lastUpdate}</TableCell>
               <TableCell>
-                <QuotationActions
+                <SalesOrderActions
                   item={item}
                   isSuperadmin={isSuperadmin}
-                  onView={() => onRowClick?.(item.id)}
-                  // onEdit, onDelete bisa diisi sesuai kebutuhan
+                  // onView, onEdit, onDelete bisa diisi sesuai kebutuhan
                 />
               </TableCell>
             </TableRow>
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={11} className="text-center py-8 text-gray-500">
-              No quotations found.
+            <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+              No sales orders found.
             </TableCell>
           </TableRow>
         )}

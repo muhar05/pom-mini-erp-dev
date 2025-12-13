@@ -737,7 +737,7 @@ const TypographyPage = () => {
             </li>
             <li className="page-item">
               <Link
-                className="page-link bg-blue-50 dark:bg-primary/25 text-neutral-900 dark:text-white font-medium border-0 flex items-center justify-center h-[48px] w-[48px] rounded-e-full"
+                className="page-link bg-blue-50 dark:bg-primary/25 text-neutral-900 dark:text-white font-medium border-0 flex items-center justify-center h-[48px] w-12 rounded-e-full"
                 href="#"
               >
                 <ChevronRight className="w-6" />
