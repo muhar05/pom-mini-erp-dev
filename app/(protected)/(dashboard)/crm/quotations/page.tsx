@@ -7,6 +7,8 @@ import AddQuotationButton from "./_components/add-quotation-button";
 import QuotationFilters from "./_components/quotation-filters";
 import QuotationDetailDrawer from "./_components/quotation-detail-drawer";
 import Pagination from "@/components/ui/pagination";
+import QuotationForm from "./_components/quotation-form";
+import { useRouter } from "next/navigation";
 
 // Mock data for now - replace with actual API call
 const mockQuotations = [
@@ -14,6 +16,7 @@ const mockQuotations = [
     id: "1",
     quotation_no: "QT-001",
     created_at: "2025-12-10",
+    updated_at: "2025-12-11", // tambahkan ini
     customer_name: "PT. XYZ",
     customer_email: "xyz@email.com",
     sales_pic: "Sales 1",
@@ -28,6 +31,7 @@ const mockQuotations = [
     id: "2",
     quotation_no: "QT-002",
     created_at: "2025-12-12",
+    updated_at: "2025-12-13", // tambahkan ini
     customer_name: "PT. ABC",
     customer_email: "abc@email.com",
     sales_pic: "Sales 2",
@@ -44,6 +48,7 @@ export default function QuotationsPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const router = useRouter();
 
   // Filter & search logic dummy
   const filteredData = mockQuotations.filter(
@@ -58,6 +63,14 @@ export default function QuotationsPage() {
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
+
+  const handleSuccess = () => {
+    router.push("/crm/quotations");
+  };
+
+  const handleClose = () => {
+    router.back();
+  };
 
   return (
     <>

@@ -15,28 +15,31 @@ import {
   Calendar,
   Package,
   DollarSign,
-  Truck,
+  Building2,
   CreditCard,
+  Truck,
 } from "lucide-react";
 import { formatDate } from "@/utils/formatDate";
 import Link from "next/link";
-import SalesOrderRelatedData from "../_components/sales-order-related-data";
+import PurchaseOrderRelatedData from "../_components/purchase-order-related-data";
 
 // Mock data - replace with actual API call
-const mockSalesOrder = {
+const mockPurchaseOrder = {
   id: "1",
-  so_no: "SO-001",
-  quotation_no: "QT-001",
-  customer_name: "PT. ABC Technology",
-  customer_email: "contact@abctech.com",
-  sales_pic: "John Sales",
-  items_count: 3,
-  total_amount: 50000000,
+  po_no: "PO-001",
+  pr_no: "PR-001",
+  vendor_name: "PT. Supplier Tech",
+  vendor_email: "sales@suppliertech.com",
+  contact_person: "Budi Vendor",
+  items_count: 5,
+  total_amount: 25000000,
+  order_date: "2025-12-13",
+  delivery_date: "2025-12-25",
   payment_term: "Net 30",
-  delivery_date: "2025-12-20",
   status: "Open",
   created_at: "2025-12-13",
   updated_at: "2025-12-13",
+  notes: "Urgent order for customer project",
 };
 
 function getStatusBadgeClass(status: string): string {
@@ -47,7 +50,7 @@ function getStatusBadgeClass(status: string): string {
       return "bg-green-100 text-green-800";
     case "in_progress":
       return "bg-yellow-100 text-yellow-800";
-    case "completed":
+    case "received":
       return "bg-purple-100 text-purple-800";
     case "cancelled":
       return "bg-red-100 text-red-800";
@@ -56,29 +59,29 @@ function getStatusBadgeClass(status: string): string {
   }
 }
 
-export default function SalesOrderDetailPage() {
+export default function PurchaseOrderDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const [salesOrder, setSalesOrder] = useState(mockSalesOrder);
+  const [purchaseOrder, setPurchaseOrder] = useState(mockPurchaseOrder);
 
-  // TODO: Fetch sales order detail by id
+  // TODO: Fetch purchase order detail by id
   useEffect(() => {
     // Replace with actual API call
-    console.log("Fetching sales order with id:", id);
-    setSalesOrder({ ...mockSalesOrder, id: id as string });
+    console.log("Fetching purchase order with id:", id);
+    setPurchaseOrder({ ...mockPurchaseOrder, id: id as string });
   }, [id]);
 
   const handleDelete = () => {
     // TODO: Implement delete functionality
-    console.log("Delete sales order:", id);
-    router.push("/crm/sales-orders");
+    console.log("Delete purchase order:", id);
+    router.push("/purchasing/purchase-orders");
   };
 
   return (
     <>
       <DashboardBreadcrumb
-        title={`Sales Order - ${salesOrder.so_no}`}
-        text="View sales order details"
+        title={`Purchase Order - ${purchaseOrder.po_no}`}
+        text="View purchase order details"
       />
       <div className="max-w-4xl mx-auto py-8">
         <Card>
@@ -86,21 +89,23 @@ export default function SalesOrderDetailPage() {
             <div className="flex items-start justify-between">
               <div>
                 <CardTitle className="text-2xl font-bold">
-                  {salesOrder.so_no}
+                  {purchaseOrder.po_no}
                 </CardTitle>
                 <p className="text-sm text-gray-500 mt-1">
-                  Sales Order Details
+                  Purchase Order Details
                 </p>
               </div>
-              <Badge className={getStatusBadgeClass(salesOrder.status)}>
-                {salesOrder.status}
+              <Badge className={getStatusBadgeClass(purchaseOrder.status)}>
+                {purchaseOrder.status}
               </Badge>
             </div>
           </CardHeader>
           <CardContent>
             {/* Action Buttons */}
             <div className="flex gap-2 mb-6 pb-6 border-b">
-              <Link href={`/crm/sales-orders/${salesOrder.id}/edit`}>
+              <Link
+                href={`/purchasing/purchase-orders/${purchaseOrder.id}/edit`}
+              >
                 <Button
                   size="sm"
                   variant="outline"
@@ -121,7 +126,7 @@ export default function SalesOrderDetailPage() {
               </Button>
             </div>
 
-            {/* Sales Order Information */}
+            {/* Order Information */}
             <div className="space-y-6">
               <div>
                 <h3 className="font-semibold text-lg mb-4">
@@ -131,40 +136,38 @@ export default function SalesOrderDetailPage() {
                   <div className="flex items-start gap-3">
                     <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500">SO Number</p>
-                      <p className="font-medium">{salesOrder.so_no}</p>
+                      <p className="text-sm text-gray-500">PO Number</p>
+                      <p className="font-medium">{purchaseOrder.po_no}</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
                     <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500">
-                        Quotation Reference
-                      </p>
+                      <p className="text-sm text-gray-500">PR Reference</p>
                       <Link
-                        href={`/crm/quotations/${salesOrder.quotation_no}`}
+                        href={`/purchasing/purchase-requests/${purchaseOrder.pr_no}`}
                         className="font-medium text-blue-600 hover:underline"
                       >
-                        {salesOrder.quotation_no}
+                        {purchaseOrder.pr_no}
                       </Link>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <User className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <Building2 className="w-5 h-5 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500">Customer Name</p>
-                      <p className="font-medium">{salesOrder.customer_name}</p>
+                      <p className="text-sm text-gray-500">Vendor Name</p>
+                      <p className="font-medium">{purchaseOrder.vendor_name}</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
                     <Mail className="w-5 h-5 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500">Customer Email</p>
+                      <p className="text-sm text-gray-500">Vendor Email</p>
                       <p className="font-medium">
-                        {salesOrder.customer_email || "-"}
+                        {purchaseOrder.vendor_email || "-"}
                       </p>
                     </div>
                   </div>
@@ -172,9 +175,9 @@ export default function SalesOrderDetailPage() {
                   <div className="flex items-start gap-3">
                     <User className="w-5 h-5 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500">Sales PIC</p>
+                      <p className="text-sm text-gray-500">Contact Person</p>
                       <p className="font-medium">
-                        {salesOrder.sales_pic || "-"}
+                        {purchaseOrder.contact_person || "-"}
                       </p>
                     </div>
                   </div>
@@ -184,7 +187,7 @@ export default function SalesOrderDetailPage() {
                     <div>
                       <p className="text-sm text-gray-500">Total Items</p>
                       <p className="font-medium">
-                        {salesOrder.items_count} items
+                        {purchaseOrder.items_count} items
                       </p>
                     </div>
                   </div>
@@ -194,7 +197,7 @@ export default function SalesOrderDetailPage() {
                     <div>
                       <p className="text-sm text-gray-500">Total Amount</p>
                       <p className="font-medium text-lg">
-                        {salesOrder.total_amount.toLocaleString("id-ID", {
+                        {purchaseOrder.total_amount.toLocaleString("id-ID", {
                           style: "currency",
                           currency: "IDR",
                         })}
@@ -207,7 +210,17 @@ export default function SalesOrderDetailPage() {
                     <div>
                       <p className="text-sm text-gray-500">Payment Term</p>
                       <p className="font-medium">
-                        {salesOrder.payment_term || "-"}
+                        {purchaseOrder.payment_term || "-"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-500">Order Date</p>
+                      <p className="font-medium">
+                        {formatDate(purchaseOrder.order_date)}
                       </p>
                     </div>
                   </div>
@@ -217,27 +230,25 @@ export default function SalesOrderDetailPage() {
                     <div>
                       <p className="text-sm text-gray-500">Delivery Date</p>
                       <p className="font-medium">
-                        {formatDate(salesOrder.delivery_date)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Created At</p>
-                      <p className="font-medium">
-                        {formatDate(salesOrder.created_at)}
+                        {formatDate(purchaseOrder.delivery_date)}
                       </p>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Notes */}
+              {purchaseOrder.notes && (
+                <div>
+                  <h3 className="font-semibold text-lg mb-4">Notes</h3>
+                  <p className="text-gray-700">{purchaseOrder.notes}</p>
+                </div>
+              )}
+
               {/* Related Data */}
               <div>
                 <h3 className="font-semibold text-lg mb-4">Related Data</h3>
-                <SalesOrderRelatedData salesOrderId={salesOrder.id} />
+                <PurchaseOrderRelatedData purchaseOrderId={purchaseOrder.id} />
               </div>
             </div>
           </CardContent>

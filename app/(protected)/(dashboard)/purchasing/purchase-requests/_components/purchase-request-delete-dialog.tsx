@@ -13,46 +13,46 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
-type Opportunity = {
+type PurchaseRequest = {
   id: string;
-  opportunity_no: string;
-  customer_name: string;
-  customer_email: string;
-  sales_pic: string;
-  type: string;
-  company: string;
-  potential_value: number;
-  stage: string;
+  pr_no: string;
+  so_no: string;
+  requested_by: string;
+  department: string;
+  items_count: number;
+  total_amount: number;
+  request_date: string;
+  required_date: string;
   status: string;
   created_at: string;
   updated_at: string;
 };
 
-interface OpportunityDeleteDialogProps {
-  opportunity: Opportunity;
+interface PurchaseRequestDeleteDialogProps {
+  purchaseRequest: PurchaseRequest;
   trigger: React.ReactNode;
   onDelete?: () => void;
 }
 
-export default function OpportunityDeleteDialog({
-  opportunity,
+export default function PurchaseRequestDeleteDialog({
+  purchaseRequest,
   trigger,
   onDelete,
-}: OpportunityDeleteDialogProps) {
+}: PurchaseRequestDeleteDialogProps) {
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
     setLoading(true);
     try {
       // TODO: Implement actual delete API call
-      console.log("Deleting opportunity:", opportunity.id);
+      console.log("Deleting purchase request:", purchaseRequest.id);
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       onDelete?.();
     } catch (error) {
-      console.error("Error deleting opportunity:", error);
+      console.error("Error deleting purchase request:", error);
     } finally {
       setLoading(false);
     }
@@ -63,12 +63,12 @@ export default function OpportunityDeleteDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete Opportunity</DialogTitle>
+          <DialogTitle>Delete Purchase Request</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete opportunity{" "}
-            <strong>{opportunity.opportunity_no}</strong> for{" "}
-            <strong>{opportunity.customer_name}</strong>? This action cannot be
-            undone and will also remove all related data.
+            Are you sure you want to delete purchase request{" "}
+            <strong>{purchaseRequest.pr_no}</strong> requested by{" "}
+            <strong>{purchaseRequest.requested_by}</strong>? This action cannot
+            be undone and will also remove all related data.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -83,7 +83,7 @@ export default function OpportunityDeleteDialog({
             disabled={loading}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
-            {loading ? "Deleting..." : "Delete Opportunity"}
+            {loading ? "Deleting..." : "Delete Purchase Request"}
           </Button>
         </DialogFooter>
       </DialogContent>

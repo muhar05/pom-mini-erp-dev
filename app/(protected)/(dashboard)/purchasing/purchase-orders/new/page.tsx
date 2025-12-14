@@ -1,14 +1,14 @@
 "use client";
 
-import OpportunityForm from "../_components/opportunity-form";
+import PurchaseOrderForm from "../_components/purchase-order-form";
 import { useRouter } from "next/navigation";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 
-export default function OpportunityNewPage() {
+export default function PurchaseOrderNewPage() {
   const router = useRouter();
 
   const handleSuccess = () => {
-    router.push("/crm/opportunities");
+    router.push("/purchasing/purchase-orders");
   };
 
   const handleClose = () => {
@@ -18,11 +18,11 @@ export default function OpportunityNewPage() {
   return (
     <>
       <DashboardBreadcrumb
-        title="Create Opportunity"
-        text="Create a new sales opportunity"
+        title="Create Purchase Order"
+        text="Create a new purchase order from purchase request"
       />
       <div className="max-w-4xl mx-auto py-8">
-        <OpportunityForm
+        <PurchaseOrderForm
           mode="add"
           onClose={handleClose}
           onSuccess={handleSuccess}

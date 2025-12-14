@@ -14,34 +14,33 @@ import {
   Trash2,
   FileText,
   User,
-  Mail,
   Calendar,
+  Package,
   DollarSign,
   Building2,
-  ShoppingBag,
+  ShoppingCart,
 } from "lucide-react";
 import { formatDate } from "@/utils/formatDate";
 import Link from "next/link";
-import QuotationRelatedData from "./quotation-related-data";
+import PurchaseRequestRelatedData from "./purchase-request-related-data";
 
-type Quotation = {
+type PurchaseRequest = {
   id: string;
-  quotation_no: string;
-  opportunity_no: string;
-  customer_name: string;
-  customer_email: string;
-  sales_pic: string;
-  type: string;
-  company: string;
+  pr_no: string;
+  so_no: string;
+  requested_by: string;
+  department: string;
+  items_count: number;
   total_amount: number;
+  request_date: string;
+  required_date: string;
   status: string;
   created_at: string;
   updated_at: string;
-  valid_until?: string;
 };
 
-interface QuotationDetailDrawerProps {
-  quotation: Quotation | null;
+interface PurchaseRequestDetailDrawerProps {
+  purchaseRequest: PurchaseRequest | null;
   open: boolean;
   onClose: () => void;
   onEdit?: () => void;
@@ -50,31 +49,31 @@ interface QuotationDetailDrawerProps {
 
 function getStatusBadgeClass(status: string): string {
   switch (status?.toLowerCase()) {
-    case "open":
-      return "bg-blue-100 text-blue-800";
-    case "confirmed":
+    case "pending":
+      return "bg-yellow-100 text-yellow-800";
+    case "approved":
       return "bg-green-100 text-green-800";
     case "rejected":
       return "bg-red-100 text-red-800";
-    case "expired":
-      return "bg-gray-100 text-gray-800";
-    case "converted to so":
+    case "converted to po":
       return "bg-purple-100 text-purple-800";
+    case "cancelled":
+      return "bg-gray-100 text-gray-800";
     default:
-      return "bg-yellow-100 text-yellow-800";
+      return "bg-blue-100 text-blue-800";
   }
 }
 
-export default function QuotationDetailDrawer({
-  quotation,
+export default function PurchaseRequestDetailDrawer({
+  purchaseRequest,
   open,
   onClose,
   onEdit,
   onDelete,
-}: QuotationDetailDrawerProps) {
-  if (!quotation) return null;
+}: PurchaseRequestDetailDrawerProps) {
+  if (!purchaseRequest) return null;
 
-  const canConvertToSO = quotation.status.toLowerCase() === "confirmed";
+  const canConvertToPO = purchaseRequest.status.toLowerCase() === "approved";
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
@@ -83,21 +82,23 @@ export default function QuotationDetailDrawer({
           <div className="flex items-start justify-between">
             <div>
               <SheetTitle className="text-xl font-bold">
-                {quotation.quotation_no}
+                {purchaseRequest.pr_no}
               </SheetTitle>
               <SheetDescription className="text-sm text-gray-500">
-                Quotation Details
+                Purchase Request Details
               </SheetDescription>
             </div>
-            <Badge className={getStatusBadgeClass(quotation.status)}>
-              {quotation.status}
+            <Badge className={getStatusBadgeClass(purchaseRequest.status)}>
+              {purchaseRequest.status}
             </Badge>
           </div>
         </SheetHeader>
 
         {/* Action Buttons */}
         <div className="flex gap-2 mb-6">
-          <Link href={`/crm/quotations/${quotation.id}/edit`}>
+          <Link
+            href={`/purchasing/purchase-requests/${purchaseRequest.id}/edit`}
+          >
             <Button
               size="sm"
               variant="outline"
@@ -116,43 +117,43 @@ export default function QuotationDetailDrawer({
             <Trash2 className="w-4 h-4" />
             Delete
           </Button>
-          {canConvertToSO && (
-            <Link href={`/crm/sales-orders/new?quotation_id=${quotation.id}`}>
+          {canConvertToPO && (
+            <Link
+              href={`/purchasing/purchase-orders/new?pr_id=${purchaseRequest.id}`}
+            >
               <Button
                 size="sm"
                 className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
               >
-                <ShoppingBag className="w-4 h-4" />
-                Create SO
+                <ShoppingCart className="w-4 h-4" />
+                Create PO
               </Button>
             </Link>
           )}
         </div>
 
-        {/* Quotation Information */}
+        {/* Purchase Request Information */}
         <div className="space-y-6">
           <div>
-            <h3 className="font-semibold text-lg mb-4">
-              Quotation Information
-            </h3>
+            <h3 className="font-semibold text-lg mb-4">Request Information</h3>
             <div className="grid grid-cols-1 gap-4">
               <div className="flex items-center gap-3">
                 <FileText className="w-4 h-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">Quotation Number</p>
-                  <p className="font-medium">{quotation.quotation_no}</p>
+                  <p className="text-sm text-gray-500">PR Number</p>
+                  <p className="font-medium">{purchaseRequest.pr_no}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <FileText className="w-4 h-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">Opportunity Reference</p>
+                  <p className="text-sm text-gray-500">SO Reference</p>
                   <Link
-                    href={`/crm/opportunities/${quotation.opportunity_no}`}
+                    href={`/crm/sales-orders/${purchaseRequest.so_no}`}
                     className="font-medium text-blue-600 hover:underline"
                   >
-                    {quotation.opportunity_no}
+                    {purchaseRequest.so_no}
                   </Link>
                 </div>
               </div>
@@ -160,42 +161,26 @@ export default function QuotationDetailDrawer({
               <div className="flex items-center gap-3">
                 <User className="w-4 h-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">Customer Name</p>
-                  <p className="font-medium">{quotation.customer_name}</p>
+                  <p className="text-sm text-gray-500">Requested By</p>
+                  <p className="font-medium">{purchaseRequest.requested_by}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-gray-400" />
+                <Building2 className="w-4 h-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">Customer Email</p>
+                  <p className="text-sm text-gray-500">Department</p>
+                  <p className="font-medium">{purchaseRequest.department}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Package className="w-4 h-4 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-500">Total Items</p>
                   <p className="font-medium">
-                    {quotation.customer_email || "-"}
+                    {purchaseRequest.items_count} items
                   </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Building2 className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Customer Type</p>
-                  <p className="font-medium">{quotation.type}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Building2 className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Company</p>
-                  <p className="font-medium">{quotation.company || "-"}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <User className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Sales PIC</p>
-                  <p className="font-medium">{quotation.sales_pic || "-"}</p>
                 </div>
               </div>
 
@@ -204,7 +189,7 @@ export default function QuotationDetailDrawer({
                 <div>
                   <p className="text-sm text-gray-500">Total Amount</p>
                   <p className="font-medium text-lg">
-                    {quotation.total_amount.toLocaleString("id-ID", {
+                    {purchaseRequest.total_amount.toLocaleString("id-ID", {
                       style: "currency",
                       currency: "IDR",
                     })}
@@ -212,24 +197,32 @@ export default function QuotationDetailDrawer({
                 </div>
               </div>
 
-              {quotation.valid_until && (
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Valid Until</p>
-                    <p className="font-medium">
-                      {formatDate(quotation.valid_until)}
-                    </p>
-                  </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-500">Request Date</p>
+                  <p className="font-medium">
+                    {formatDate(purchaseRequest.request_date)}
+                  </p>
                 </div>
-              )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-500">Required Date</p>
+                  <p className="font-medium">
+                    {formatDate(purchaseRequest.required_date)}
+                  </p>
+                </div>
+              </div>
 
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-gray-400" />
                 <div>
                   <p className="text-sm text-gray-500">Created At</p>
                   <p className="font-medium">
-                    {formatDate(quotation.created_at)}
+                    {formatDate(purchaseRequest.created_at)}
                   </p>
                 </div>
               </div>
@@ -237,7 +230,7 @@ export default function QuotationDetailDrawer({
           </div>
 
           {/* Related Data */}
-          <QuotationRelatedData quotationId={quotation.id} />
+          <PurchaseRequestRelatedData purchaseRequestId={purchaseRequest.id} />
         </div>
       </SheetContent>
     </Sheet>

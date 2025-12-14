@@ -1,42 +1,42 @@
 "use client";
 
-import QuotationForm from "../../_components/quotation-form";
+import OpportunityForm from "../../_components/opportunity-form";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 
 // Mock data - replace with actual API call
-const mockQuotation = {
+const mockOpportunity = {
   id: "1",
-  quotation_no: "QT-001",
   opportunity_no: "OPP-001",
-  customer_name: "PT. XYZ",
-  customer_email: "xyz@email.com",
+  customer_name: "PT. ABC",
+  customer_email: "abc@email.com",
   sales_pic: "Sales 1",
   type: "Perusahaan",
-  company: "PT. XYZ",
-  total_amount: 20000000,
+  company: "PT. ABC",
+  potential_value: 10000000,
+  stage: "Qualified",
   status: "Open",
   created_at: "2025-12-10",
   updated_at: "2025-12-11",
-  valid_until: "2025-12-31",
-  notes: "Initial quotation for customer requirements",
+  expected_close_date: "2025-12-31",
+  notes: "High potential customer for Q4 2025",
 };
 
-export default function QuotationEditPage() {
+export default function OpportunityEditPage() {
   const { id } = useParams();
   const router = useRouter();
-  const [quotation, setQuotation] = useState(mockQuotation);
+  const [opportunity, setOpportunity] = useState(mockOpportunity);
 
-  // TODO: Fetch quotation detail by id for editing
+  // TODO: Fetch opportunity detail by id for editing
   useEffect(() => {
     // Replace with actual API call
-    console.log("Fetching quotation for edit with id:", id);
-    setQuotation({ ...mockQuotation, id: id as string });
+    console.log("Fetching opportunity for edit with id:", id);
+    setOpportunity({ ...mockOpportunity, id: id as string });
   }, [id]);
 
   const handleSuccess = () => {
-    router.push("/crm/quotations");
+    router.push("/crm/opportunities");
   };
 
   const handleClose = () => {
@@ -46,13 +46,13 @@ export default function QuotationEditPage() {
   return (
     <>
       <DashboardBreadcrumb
-        title={`Edit Quotation - ${quotation.quotation_no}`}
-        text="Update quotation information"
+        title={`Edit Opportunity - ${opportunity.opportunity_no}`}
+        text="Update opportunity information"
       />
       <div className="max-w-4xl mx-auto py-8">
-        <QuotationForm
+        <OpportunityForm
           mode="edit"
-          quotation={quotation}
+          opportunity={opportunity}
           onClose={handleClose}
           onSuccess={handleSuccess}
         />

@@ -3,40 +3,38 @@
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
-import OpportunityDeleteDialog from "./opportunity-delete-dialog";
+import PurchaseRequestDeleteDialog from "./purchase-request-delete-dialog";
 
-type Opportunity = {
+type PurchaseRequest = {
   id: string;
-  opportunity_no: string;
-  customer_name: string;
-  customer_email: string;
-  sales_pic: string;
-  type: string;
-  company: string;
-  potential_value: number;
-  stage: string;
+  pr_no: string;
+  so_no: string;
+  requested_by: string;
+  department: string;
+  items_count: number;
+  total_amount: number;
+  request_date: string;
+  required_date: string;
   status: string;
   created_at: string;
   updated_at: string;
 };
 
-interface OpportunityActionsProps {
-  opportunity: Opportunity;
+interface PurchaseRequestActionsProps {
+  purchaseRequest: PurchaseRequest;
   onEdit?: () => void;
   onDelete?: () => void;
 }
 
-export default function OpportunityActions({
-  opportunity,
+export default function PurchaseRequestActions({
+  purchaseRequest,
   onEdit,
   onDelete,
-}: OpportunityActionsProps) {
-  if (!opportunity) return null;
-
+}: PurchaseRequestActionsProps) {
   return (
     <div className="flex gap-2">
       {/* View */}
-      <Link href={`/crm/opportunities/${opportunity.id}`}>
+      <Link href={`/purchasing/purchase-requests/${purchaseRequest.id}`}>
         <Button
           size="icon"
           variant="ghost"
@@ -48,7 +46,7 @@ export default function OpportunityActions({
       </Link>
 
       {/* Edit */}
-      <Link href={`/crm/opportunities/${opportunity.id}/edit`}>
+      <Link href={`/purchasing/purchase-requests/${purchaseRequest.id}/edit`}>
         <Button
           size="icon"
           variant="ghost"
@@ -60,8 +58,8 @@ export default function OpportunityActions({
       </Link>
 
       {/* Delete */}
-      <OpportunityDeleteDialog
-        opportunity={opportunity}
+      <PurchaseRequestDeleteDialog
+        purchaseRequest={purchaseRequest}
         trigger={
           <Button
             size="icon"

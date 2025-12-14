@@ -16,32 +16,35 @@ import {
   User,
   Mail,
   Calendar,
+  Package,
   DollarSign,
   Building2,
-  ShoppingBag,
+  CreditCard,
+  Truck,
 } from "lucide-react";
 import { formatDate } from "@/utils/formatDate";
 import Link from "next/link";
-import QuotationRelatedData from "./quotation-related-data";
+import PurchaseOrderRelatedData from "./purchase-order-related-data";
 
-type Quotation = {
+type PurchaseOrder = {
   id: string;
-  quotation_no: string;
-  opportunity_no: string;
-  customer_name: string;
-  customer_email: string;
-  sales_pic: string;
-  type: string;
-  company: string;
+  po_no: string;
+  pr_no: string;
+  vendor_name: string;
+  vendor_email: string;
+  contact_person: string;
+  items_count: number;
   total_amount: number;
+  order_date: string;
+  delivery_date: string;
+  payment_term: string;
   status: string;
   created_at: string;
   updated_at: string;
-  valid_until?: string;
 };
 
-interface QuotationDetailDrawerProps {
-  quotation: Quotation | null;
+interface PurchaseOrderDetailDrawerProps {
+  purchaseOrder: PurchaseOrder | null;
   open: boolean;
   onClose: () => void;
   onEdit?: () => void;
@@ -54,27 +57,25 @@ function getStatusBadgeClass(status: string): string {
       return "bg-blue-100 text-blue-800";
     case "confirmed":
       return "bg-green-100 text-green-800";
-    case "rejected":
-      return "bg-red-100 text-red-800";
-    case "expired":
-      return "bg-gray-100 text-gray-800";
-    case "converted to so":
-      return "bg-purple-100 text-purple-800";
-    default:
+    case "in_progress":
       return "bg-yellow-100 text-yellow-800";
+    case "received":
+      return "bg-purple-100 text-purple-800";
+    case "cancelled":
+      return "bg-red-100 text-red-800";
+    default:
+      return "bg-gray-100 text-gray-800";
   }
 }
 
-export default function QuotationDetailDrawer({
-  quotation,
+export default function PurchaseOrderDetailDrawer({
+  purchaseOrder,
   open,
   onClose,
   onEdit,
   onDelete,
-}: QuotationDetailDrawerProps) {
-  if (!quotation) return null;
-
-  const canConvertToSO = quotation.status.toLowerCase() === "confirmed";
+}: PurchaseOrderDetailDrawerProps) {
+  if (!purchaseOrder) return null;
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
@@ -83,21 +84,21 @@ export default function QuotationDetailDrawer({
           <div className="flex items-start justify-between">
             <div>
               <SheetTitle className="text-xl font-bold">
-                {quotation.quotation_no}
+                {purchaseOrder.po_no}
               </SheetTitle>
               <SheetDescription className="text-sm text-gray-500">
-                Quotation Details
+                Purchase Order Details
               </SheetDescription>
             </div>
-            <Badge className={getStatusBadgeClass(quotation.status)}>
-              {quotation.status}
+            <Badge className={getStatusBadgeClass(purchaseOrder.status)}>
+              {purchaseOrder.status}
             </Badge>
           </div>
         </SheetHeader>
 
         {/* Action Buttons */}
         <div className="flex gap-2 mb-6">
-          <Link href={`/crm/quotations/${quotation.id}/edit`}>
+          <Link href={`/purchasing/purchase-orders/${purchaseOrder.id}/edit`}>
             <Button
               size="sm"
               variant="outline"
@@ -116,86 +117,69 @@ export default function QuotationDetailDrawer({
             <Trash2 className="w-4 h-4" />
             Delete
           </Button>
-          {canConvertToSO && (
-            <Link href={`/crm/sales-orders/new?quotation_id=${quotation.id}`}>
-              <Button
-                size="sm"
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                Create SO
-              </Button>
-            </Link>
-          )}
         </div>
 
-        {/* Quotation Information */}
+        {/* Purchase Order Information */}
         <div className="space-y-6">
           <div>
-            <h3 className="font-semibold text-lg mb-4">
-              Quotation Information
-            </h3>
+            <h3 className="font-semibold text-lg mb-4">Order Information</h3>
             <div className="grid grid-cols-1 gap-4">
               <div className="flex items-center gap-3">
                 <FileText className="w-4 h-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">Quotation Number</p>
-                  <p className="font-medium">{quotation.quotation_no}</p>
+                  <p className="text-sm text-gray-500">PO Number</p>
+                  <p className="font-medium">{purchaseOrder.po_no}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <FileText className="w-4 h-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">Opportunity Reference</p>
+                  <p className="text-sm text-gray-500">PR Reference</p>
                   <Link
-                    href={`/crm/opportunities/${quotation.opportunity_no}`}
+                    href={`/purchasing/purchase-requests/${purchaseOrder.pr_no}`}
                     className="font-medium text-blue-600 hover:underline"
                   >
-                    {quotation.opportunity_no}
+                    {purchaseOrder.pr_no}
                   </Link>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
-                <User className="w-4 h-4 text-gray-400" />
+                <Building2 className="w-4 h-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">Customer Name</p>
-                  <p className="font-medium">{quotation.customer_name}</p>
+                  <p className="text-sm text-gray-500">Vendor Name</p>
+                  <p className="font-medium">{purchaseOrder.vendor_name}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">Customer Email</p>
+                  <p className="text-sm text-gray-500">Vendor Email</p>
                   <p className="font-medium">
-                    {quotation.customer_email || "-"}
+                    {purchaseOrder.vendor_email || "-"}
                   </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Building2 className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Customer Type</p>
-                  <p className="font-medium">{quotation.type}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Building2 className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Company</p>
-                  <p className="font-medium">{quotation.company || "-"}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <User className="w-4 h-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">Sales PIC</p>
-                  <p className="font-medium">{quotation.sales_pic || "-"}</p>
+                  <p className="text-sm text-gray-500">Contact Person</p>
+                  <p className="font-medium">
+                    {purchaseOrder.contact_person || "-"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Package className="w-4 h-4 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-500">Total Items</p>
+                  <p className="font-medium">
+                    {purchaseOrder.items_count} items
+                  </p>
                 </div>
               </div>
 
@@ -204,7 +188,7 @@ export default function QuotationDetailDrawer({
                 <div>
                   <p className="text-sm text-gray-500">Total Amount</p>
                   <p className="font-medium text-lg">
-                    {quotation.total_amount.toLocaleString("id-ID", {
+                    {purchaseOrder.total_amount.toLocaleString("id-ID", {
                       style: "currency",
                       currency: "IDR",
                     })}
@@ -212,24 +196,42 @@ export default function QuotationDetailDrawer({
                 </div>
               </div>
 
-              {quotation.valid_until && (
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <div>
-                    <p className="text-sm text-gray-500">Valid Until</p>
-                    <p className="font-medium">
-                      {formatDate(quotation.valid_until)}
-                    </p>
-                  </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-500">Order Date</p>
+                  <p className="font-medium">
+                    {formatDate(purchaseOrder.order_date)}
+                  </p>
                 </div>
-              )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Truck className="w-4 h-4 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-500">Delivery Date</p>
+                  <p className="font-medium">
+                    {formatDate(purchaseOrder.delivery_date)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <CreditCard className="w-4 h-4 text-gray-400" />
+                <div>
+                  <p className="text-sm text-gray-500">Payment Term</p>
+                  <p className="font-medium">
+                    {purchaseOrder.payment_term || "-"}
+                  </p>
+                </div>
+              </div>
 
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-gray-400" />
                 <div>
                   <p className="text-sm text-gray-500">Created At</p>
                   <p className="font-medium">
-                    {formatDate(quotation.created_at)}
+                    {formatDate(purchaseOrder.created_at)}
                   </p>
                 </div>
               </div>
@@ -237,7 +239,7 @@ export default function QuotationDetailDrawer({
           </div>
 
           {/* Related Data */}
-          <QuotationRelatedData quotationId={quotation.id} />
+          <PurchaseOrderRelatedData purchaseOrderId={purchaseOrder.id} />
         </div>
       </SheetContent>
     </Sheet>

@@ -3,40 +3,40 @@
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
-import OpportunityDeleteDialog from "./opportunity-delete-dialog";
+import PurchaseOrderDeleteDialog from "./purchase-order-delete-dialog";
 
-type Opportunity = {
+type PurchaseOrder = {
   id: string;
-  opportunity_no: string;
-  customer_name: string;
-  customer_email: string;
-  sales_pic: string;
-  type: string;
-  company: string;
-  potential_value: number;
-  stage: string;
+  po_no: string;
+  pr_no: string;
+  vendor_name: string;
+  vendor_email: string;
+  contact_person: string;
+  items_count: number;
+  total_amount: number;
+  order_date: string;
+  delivery_date: string;
+  payment_term: string;
   status: string;
   created_at: string;
   updated_at: string;
 };
 
-interface OpportunityActionsProps {
-  opportunity: Opportunity;
+interface PurchaseOrderActionsProps {
+  purchaseOrder: PurchaseOrder;
   onEdit?: () => void;
   onDelete?: () => void;
 }
 
-export default function OpportunityActions({
-  opportunity,
+export default function PurchaseOrderActions({
+  purchaseOrder,
   onEdit,
   onDelete,
-}: OpportunityActionsProps) {
-  if (!opportunity) return null;
-
+}: PurchaseOrderActionsProps) {
   return (
     <div className="flex gap-2">
       {/* View */}
-      <Link href={`/crm/opportunities/${opportunity.id}`}>
+      <Link href={`/purchasing/purchase-orders/${purchaseOrder.id}`}>
         <Button
           size="icon"
           variant="ghost"
@@ -48,7 +48,7 @@ export default function OpportunityActions({
       </Link>
 
       {/* Edit */}
-      <Link href={`/crm/opportunities/${opportunity.id}/edit`}>
+      <Link href={`/purchasing/purchase-orders/${purchaseOrder.id}/edit`}>
         <Button
           size="icon"
           variant="ghost"
@@ -60,8 +60,8 @@ export default function OpportunityActions({
       </Link>
 
       {/* Delete */}
-      <OpportunityDeleteDialog
-        opportunity={opportunity}
+      <PurchaseOrderDeleteDialog
+        purchaseOrder={purchaseOrder}
         trigger={
           <Button
             size="icon"

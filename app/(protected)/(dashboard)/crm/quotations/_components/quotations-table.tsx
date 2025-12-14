@@ -15,6 +15,7 @@ type Quotation = {
   id: string;
   quotation_no: string;
   created_at: string;
+  updated_at: string; // ← tambahkan ini
   customer_name: string;
   customer_email: string;
   sales_pic: string;
@@ -98,7 +99,7 @@ export default function QuotationsTable({
             </TableCell>
             <TableCell>{formatDate(q.created_at)}</TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
-              <QuotationActions item={q} />
+              <QuotationActions quotation={q} />
             </TableCell>
           </TableRow>
         ))}

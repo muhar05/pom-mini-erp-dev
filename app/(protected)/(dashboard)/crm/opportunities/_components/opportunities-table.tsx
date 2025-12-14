@@ -11,16 +11,18 @@ import {
 import OpportunityActions from "./opportunity-actions";
 
 type Opportunity = {
-  no: string;
-  date: string;
-  customer: string;
-  email: string;
-  sales: string;
+  id: string;
+  opportunity_no: string;
+  customer_name: string;
+  customer_email: string;
+  sales_pic: string;
   type: string;
   company: string;
-  total: number;
+  potential_value: number;
+  stage: string;
   status: string;
-  lastUpdate: string;
+  created_at: string;
+  updated_at: string;
 };
 
 type OpportunitiesTableProps = {
@@ -59,24 +61,23 @@ export default function OpportunitiesTable({
         {data.length > 0 ? (
           data.map((item, idx) => (
             <TableRow
-              key={item.no}
+              key={item.id}
               onClick={() => onRowClick?.(item)}
               className="cursor-pointer"
             >
-              <TableCell>{item.no}</TableCell>
-              <TableCell>{item.date}</TableCell>
-              <TableCell>{item.customer}</TableCell>
-              <TableCell>{item.email}</TableCell>
-              <TableCell>{item.sales}</TableCell>
+              <TableCell>{item.opportunity_no}</TableCell>
+              <TableCell>{item.created_at}</TableCell>
+              <TableCell>{item.customer_name}</TableCell>
+              <TableCell>{item.customer_email}</TableCell>
+              <TableCell>{item.sales_pic}</TableCell>
               <TableCell>{item.type}</TableCell>
               <TableCell>{item.company}</TableCell>
-              <TableCell>{item.total.toLocaleString()}</TableCell>
+              <TableCell>{item.potential_value.toLocaleString()}</TableCell>
               <TableCell>{item.status}</TableCell>
-              <TableCell>{item.lastUpdate}</TableCell>
+              <TableCell>{item.updated_at}</TableCell>
               <TableCell>
                 <OpportunityActions
-                  item={item}
-                  isSuperadmin={isSuperadmin}
+                  opportunity={item}
                   onEdit={() => onEdit?.(item)}
                   onDelete={() => onDelete?.(item)}
                 />

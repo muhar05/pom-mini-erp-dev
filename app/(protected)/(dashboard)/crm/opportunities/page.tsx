@@ -6,40 +6,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem } from "@/components/ui/select";
 import OpportunitiesTable from "./_components/opportunities-table";
-import OpportunityDetailDrawer from "./_components/opportunity-detail-drawer";
-import OpportunityEditForm from "./_components/opportunity-edit-form";
 import OpportunityDeleteDialog from "./_components/opportunity-delete-dialog";
 import { useSession } from "@/contexts/session-context";
+import { useRouter } from "next/navigation";
 
 // Dummy data untuk testing
 const dummyOpportunities = [
   {
-    id: 1,
-    no: "OPP-001",
-    date: "2025-12-10",
-    customer: "PT. ABC",
-    email: "abc@email.com",
-    sales: "Sales 1",
+    id: "1",
+    opportunity_no: "OPP-001",
+    customer_name: "PT. ABC",
+    customer_email: "abc@email.com",
+    sales_pic: "Sales 1",
     type: "Perusahaan",
     company: "PT. ABC",
-    total: 10000000,
-    status: "Prospecting",
+    potential_value: 10000000,
     stage: "Prospecting",
-    lastUpdate: "2025-12-11",
+    status: "Open",
+    created_at: "2025-12-10",
+    updated_at: "2025-12-11",
   },
   {
-    id: 2,
-    no: "OPP-002",
-    date: "2025-12-09",
-    customer: "Budi Santoso",
-    email: "budi@email.com",
-    sales: "Sales 2",
+    id: "2",
+    opportunity_no: "OPP-002",
+    customer_name: "Budi Santoso",
+    customer_email: "budi@email.com",
+    sales_pic: "Sales 2",
     type: "Personal",
     company: "-",
-    total: 5000000,
-    status: "Qualified",
+    potential_value: 5000000,
     stage: "Qualified",
-    lastUpdate: "2025-12-10",
+    status: "Open",
+    created_at: "2025-12-09",
+    updated_at: "2025-12-10",
   },
   // Tambahkan data lain sesuai kebutuhan
 ];
@@ -63,9 +62,8 @@ export default function OpportunitiesPage() {
   const [stage, setStage] = useState("All");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<any | null>(null);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showAdd, setShowAdd] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
+  const router = useRouter();
 
   // Filtered data
   const filtered = useMemo(() => {
@@ -73,7 +71,7 @@ export default function OpportunitiesPage() {
     if (stage !== "All") data = data.filter((o) => o.stage === stage);
     if (search)
       data = data.filter((o) =>
-        o.customer.toLowerCase().includes(search.toLowerCase())
+        o.customer_name.toLowerCase().includes(search.toLowerCase())
       );
     return data;
   }, [search, stage]);
@@ -87,8 +85,8 @@ export default function OpportunitiesPage() {
   const handleRowClick = (item: any) => setSelected(item);
   const handleCloseDetail = () => setSelected(null);
   const handleEdit = (item: any) => {
-    setSelected(item);
-    setShowEdit(true);
+    // Arahkan ke halaman edit
+    router.push(`/crm/opportunities/${item.id}/edit`);
   };
   const handleDelete = (item: any) => {
     setSelected(item);
@@ -136,7 +134,10 @@ export default function OpportunitiesPage() {
                   </Select>
                 </div>
               </div>
-              <Button variant="default" onClick={() => setShowAdd(true)}>
+              <Button
+                variant="default"
+                onClick={() => router.push("/crm/opportunities/new")}
+              >
                 Add Opportunity
               </Button>
             </div>
@@ -176,43 +177,12 @@ export default function OpportunitiesPage() {
         </div>
       </div>
 
-      {/* Detail Drawer */}
-      {selected && !showEdit && !showDelete && (
-        <OpportunityDetailDrawer
-          opportunity={selected}
-          onClose={handleCloseDetail}
-          onEdit={() => {
-            setShowEdit(true);
-          }}
-          onDelete={() => {
-            setShowDelete(true);
-          }}
-        />
-      )}
-
-      {/* Add/Edit Modal/Drawer */}
-      {showAdd && (
-        <OpportunityEditForm
-          mode="add"
-          onClose={() => setShowAdd(false)}
-          // onSuccess={...}
-        />
-      )}
-      {showEdit && selected && (
-        <OpportunityEditForm
-          mode="edit"
-          opportunity={selected}
-          onClose={() => setShowEdit(false)}
-          // onSuccess={...}
-        />
-      )}
-
       {/* Delete Dialog */}
       {showDelete && selected && (
         <OpportunityDeleteDialog
           opportunity={selected}
-          onClose={() => setShowDelete(false)}
-          // onSuccess={...}
+          trigger={<span />} // atau button dummy, jika ingin langsung tampilkan dialog, bisa gunakan state
+          onDelete={() => setShowDelete(false)}
         />
       )}
     </>
