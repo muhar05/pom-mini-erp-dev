@@ -130,7 +130,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
           icon: Banknote,
         },
         {
-          title: "Customer Payment Status",
+          title: "Customer Payment",
           url: "/finance/customer-payment",
           icon: HandCoins,
         },
