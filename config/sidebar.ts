@@ -143,30 +143,30 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       items: [
         { title: "Users", url: "/settings/users", icon: Users },
         { title: "Company", url: "/settings/company", icon: UserCog },
-        { title: "Products", url: "/settings/products", icon: Boxes },
-        {
-          title: "Lead Sources",
-          url: "/settings/lead-sources",
-          icon: FileText,
-        },
-        {
-          title: "Category PT",
-          url: "/settings/categories",
-          icon: BadgeDollarSign,
-        },
-        { title: "Locations", url: "/settings/locations", icon: Building2 },
-        {
-          title: "Auto Numbering",
-          url: "/settings/auto-numbering",
-          icon: ClipboardList,
-        },
-        { title: "Permissions", url: "/settings/permissions", icon: UserCog },
-        {
-          title: "Document Templates",
-          url: "/settings/document-templates",
-          icon: FileCheck,
-        },
-        { title: "Audit Logs", url: "/settings/logs", icon: FileText },
+        // { title: "Products", url: "/settings/products", icon: Boxes },
+        // {
+        //   title: "Lead Sources",
+        //   url: "/settings/lead-sources",
+        //   icon: FileText,
+        // },
+        // {
+        //   title: "Category PT",
+        //   url: "/settings/categories",
+        //   icon: BadgeDollarSign,
+        // },
+        // { title: "Locations", url: "/settings/locations", icon: Building2 },
+        // {
+        //   title: "Auto Numbering",
+        //   url: "/settings/auto-numbering",
+        //   icon: ClipboardList,
+        // },
+        // { title: "Permissions", url: "/settings/permissions", icon: UserCog },
+        // {
+        //   title: "Document Templates",
+        //   url: "/settings/document-templates",
+        //   icon: FileCheck,
+        // },
+        // { title: "Audit Logs", url: "/settings/logs", icon: FileText },
       ],
     },
 
