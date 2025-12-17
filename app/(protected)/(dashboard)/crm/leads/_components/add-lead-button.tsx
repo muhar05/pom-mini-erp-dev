@@ -6,7 +6,7 @@ import Link from "next/link";
 
 export default function AddLeadButton() {
   return (
-    <div className="flex justify-end">
+    <div className="flex justify-end mb-4">
       <Link href="/crm/leads/new">
         <Button className="flex items-center gap-2">
           <Plus className="w-4 h-4" />

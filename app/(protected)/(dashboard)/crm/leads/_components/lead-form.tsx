@@ -17,7 +17,7 @@ import { useRouter } from "next/navigation";
 import { createLeadSchema, updateLeadSchema } from "@/lib/schemas";
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
-import { STATUS_OPTIONS, formatStatusDisplay } from "@/utils/formatStatus";
+import { formatStatusDisplay } from "@/utils/formatStatus";
 import { formatDate } from "@/utils/formatDate";
 
 interface LeadFormProps {
@@ -44,6 +44,16 @@ const SOURCE_OPTIONS = [
   { value: "referral", label: "Referral" },
   { value: "cold_call", label: "Cold Call" },
   { value: "event", label: "Event" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "new", label: "New" }, // Baru masuk, belum disentuh.
+  { value: "contacted", label: "Contacted" }, // Sudah dicoba dihubungi.
+  { value: "nurturing", label: "Nurturing" }, // Belum siap beli tapi potensial.
+  { value: "unqualified", label: "Unqualified" }, // Tidak layak jadi penjualan.
+  { value: "invalid", label: "Invalid" }, // Data palsu atau salah.
+  { value: "qualified", label: "Qualified" }, // Sudah layak diproses.
+  { value: "converted", label: "Converted" }, // Sudah naik level jadi Opportunity.
 ];
 
 export default function LeadForm({ mode, lead, onSubmit }: LeadFormProps) {

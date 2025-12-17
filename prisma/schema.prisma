@@ -8,25 +8,6 @@ datasource db {
   provider = "postgresql"
 }
 
-model companies {
-  id         Int          @id @default(autoincrement())
-  group_name String?      @db.VarChar(50)
-  name       String       @db.VarChar(150)
-  company    String?      @db.VarChar(200)
-  phone      String?      @db.VarChar(50)
-  email      String?      @db.VarChar(150)
-  address    String?
-  npwp       String?      @db.VarChar(50)
-  level      String?      @db.VarChar(50)
-  disc1      Decimal?     @db.Decimal(10, 2)
-  disc2      Decimal?     @db.Decimal(10, 2)
-  note       String?
-  status     Boolean?     @default(true)
-  created_at DateTime?    @default(now()) @db.Timestamp(6)
-  updated_at DateTime?    @default(now()) @db.Timestamp(6)
-  quotations quotations[]
-}
-
 model leads {
   id                             Int       @id @default(autoincrement())
   reference_no                   String?   @db.VarChar(100)
@@ -68,7 +49,7 @@ model products {
 model quotations {
   id               Int       @id @default(autoincrement())
   quotation_no     String    @db.VarChar(50)
-  company_id       Int
+  customer_id      Int
   quotation_detail Json
   total            Decimal?  @default(0) @db.Decimal(18, 2)
   shipping         Decimal?  @default(0) @db.Decimal(18, 2)
@@ -82,7 +63,6 @@ model quotations {
   top              String?   @db.VarChar(50)
   created_at       DateTime? @default(now()) @db.Timestamp(6)
   updated_at       DateTime? @default(now()) @db.Timestamp(6)
-  companies        companies @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model roles {
@@ -168,4 +148,116 @@ model warehouse {
   location   String?
   created_at DateTime? @default(now()) @db.Timestamp(6)
   updated_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model delivery_orders {
+  id                  BigInt    @id @default(autoincrement())
+  do_no               String    @unique @db.VarChar(50)
+  delivery_request_id BigInt
+  sale_id             BigInt
+  status              String?   @default("OPEN") @db.VarChar(30)
+  customer_po         String?
+  note                String?
+  created_at          DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model delivery_requests {
+  id         BigInt    @id @default(autoincrement())
+  dr_no      String    @unique @db.VarChar(50)
+  sale_id    BigInt
+  status     String?   @default("OPEN") @db.VarChar(30)
+  note       String?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model finance_approval {
+  id         BigInt    @id @default(autoincrement())
+  sale_id    BigInt
+  status     String?   @default("PENDING") @db.VarChar(30)
+  note       String?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model finance_transactions {
+  id             BigInt    @id @default(autoincrement())
+  sale_id        BigInt
+  amount         Decimal   @db.Decimal(15, 2)
+  payment_status String?   @default("UNPAID") @db.VarChar(30)
+  note           String?
+  created_at     DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model purchase_orders {
+  id              BigInt    @id @default(autoincrement())
+  po_no           String    @unique @db.VarChar(50)
+  pr_id           BigInt?
+  po_detail_items Json
+  total           Decimal?  @default(0) @db.Decimal(15, 2)
+  status          String?   @default("DRAFT") @db.VarChar(30)
+  supplier_do     String?   @db.VarChar(255)
+  supplier_so     String?   @db.VarChar(255)
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model sale_order_detail {
+  id           BigInt   @id @default(autoincrement())
+  sale_id      BigInt
+  product_id   BigInt?
+  product_name String   @db.VarChar(255)
+  price        Decimal  @db.Decimal(15, 2)
+  qty          Int
+  total        Decimal? @default(dbgenerated("(price * (qty)::numeric)")) @db.Decimal(15, 2)
+  status       String?  @default("ACTIVE") @db.VarChar(30)
+}
+
+model sales_orders {
+  id               BigInt    @id @default(autoincrement())
+  sale_no          String    @unique @db.VarChar(50)
+  quotation_id     BigInt?
+  total            Decimal?  @default(0) @db.Decimal(15, 2)
+  discount         Decimal?  @default(0) @db.Decimal(15, 2)
+  shipping         Decimal?  @default(0) @db.Decimal(15, 2)
+  tax              Decimal?  @default(0) @db.Decimal(15, 2)
+  grand_total      Decimal?  @default(0) @db.Decimal(15, 2)
+  status           String?   @default("DRAFT") @db.VarChar(30)
+  note             String?
+  sale_status      String?   @default("OPEN") @db.VarChar(30)
+  payment_status   String?   @default("UNPAID") @db.VarChar(30)
+  file_po_customer String?
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model stock_reservations {
+  id          BigInt    @id @default(autoincrement())
+  item_detail Json
+  lead_id     BigInt?
+  type        String?   @db.VarChar(30)
+  status      String?   @default("RESERVED") @db.VarChar(30)
+  note        String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model suppliers {
+  id            BigInt    @id @default(autoincrement())
+  supplier_name String    @db.VarChar(255)
+  address       String?
+  phone         String?   @db.VarChar(30)
+  email         String?   @db.VarChar(150)
+  type          String?   @db.VarChar(30)
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model warehouses_history {
+  id          BigInt    @id @default(autoincrement())
+  wh_id       BigInt
+  product_id  BigInt
+  remark      String?   @db.VarChar(50)
+  qty         Int
+  part_number String?   @db.VarChar(100)
+  supplier_id BigInt?
+  po_id       BigInt?
+  do_id       BigInt?
+  note        String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  created_by  BigInt?
 }

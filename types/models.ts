@@ -53,7 +53,7 @@ export interface products {
   stock?: number | null;
   brand?: string | null;
   rack?: string | null;
-  images?: any;
+  images?: unknown;
   created_at?: Date | null;
   updated_at?: Date | null;
 }
@@ -62,8 +62,8 @@ export interface products {
 export interface quotations {
   id: number;
   quotation_no: string;
-  company_id: number;
-  quotation_detail: any;
+  customer_id: number;
+  quotation_detail: unknown;
   total?: number | null;
   shipping?: number | null;
   discount?: number | null;
@@ -76,7 +76,7 @@ export interface quotations {
   top?: string | null;
   created_at?: Date | null;
   updated_at?: Date | null;
-  companies?: companies;
+  customers?: customers;
 }
 
 // roles
@@ -156,8 +156,8 @@ export interface user_logs {
   endpoint?: string | null;
   ip_address?: string | null;
   user_agent?: string | null;
-  old_data?: any;
-  new_data?: any;
+  old_data?: unknown;
+  new_data?: unknown;
   created_at?: Date | null;
   users?: users;
 }
@@ -170,4 +170,126 @@ export interface warehouse {
   location?: string | null;
   created_at?: Date | null;
   updated_at?: Date | null;
+}
+
+// delivery_orders
+export interface delivery_orders {
+  id: string; // BigInt as string
+  do_no: string;
+  delivery_request_id: string;
+  sale_id: string;
+  status?: string | null;
+  customer_po?: string | null;
+  note?: string | null;
+  created_at?: Date | null;
+}
+
+// delivery_requests
+export interface delivery_requests {
+  id: string; // BigInt as string
+  dr_no: string;
+  sale_id: string;
+  status?: string | null;
+  note?: string | null;
+  created_at?: Date | null;
+}
+
+// finance_approval
+export interface finance_approval {
+  id: string; // BigInt as string
+  sale_id: string;
+  status?: string | null;
+  note?: string | null;
+  created_at?: Date | null;
+}
+
+// finance_transactions
+export interface finance_transactions {
+  id: string; // BigInt as string
+  sale_id: string;
+  amount: number;
+  payment_status?: string | null;
+  note?: string | null;
+  created_at?: Date | null;
+}
+
+// purchase_orders
+export interface purchase_orders {
+  id: string; // BigInt as string
+  po_no: string;
+  pr_id?: string | null;
+  po_detail_items: unknown;
+  total?: number | null;
+  status?: string | null;
+  supplier_do?: string | null;
+  supplier_so?: string | null;
+  created_at?: Date | null;
+}
+
+// sale_order_detail
+export interface sale_order_detail {
+  id: string; // BigInt as string
+  sale_id: string;
+  product_id?: string | null;
+  product_name: string;
+  price: number;
+  qty: number;
+  total?: number | null;
+  status?: string | null;
+}
+
+// sales_orders
+export interface sales_orders {
+  id: string; // BigInt as string
+  sale_no: string;
+  quotation_id?: string | null;
+  total?: number | null;
+  discount?: number | null;
+  shipping?: number | null;
+  tax?: number | null;
+  grand_total?: number | null;
+  status?: string | null;
+  note?: string | null;
+  sale_status?: string | null;
+  payment_status?: string | null;
+  file_po_customer?: string | null;
+  created_at?: Date | null;
+}
+
+// stock_reservations
+export interface stock_reservations {
+  id: string; // BigInt as string
+  item_detail: unknown;
+  lead_id?: string | null;
+  type?: string | null;
+  status?: string | null;
+  note?: string | null;
+  created_at?: Date | null;
+}
+
+// suppliers
+export interface suppliers {
+  id: string; // BigInt as string
+  supplier_name: string;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  type?: string | null;
+  created_at?: Date | null;
+}
+
+// warehouses_history
+export interface warehouses_history {
+  id: string; // BigInt as string
+  wh_id: string;
+  product_id: string;
+  remark?: string | null;
+  qty: number;
+  part_number?: string | null;
+  supplier_id?: string | null;
+  po_id?: string | null;
+  do_id?: string | null;
+  note?: string | null;
+  created_at?: Date | null;
+  created_by?: string | null;
 }
