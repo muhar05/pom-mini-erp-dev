@@ -7,18 +7,29 @@ import {
   deleteLeadDb,
   getLeadByIdDb,
   getAllLeadsDb,
-  CreateLeadInput, // tambahkan ini
+  CreateLeadInput,
 } from "@/data/leads";
 import { validateLeadFormData, extractLeadId } from "@/lib/schemas";
 import { ZodError } from "zod";
 import { auth } from "@/auth";
 import { users, leads } from "@/types/models";
-import {
-  isSuperuser,
-  isSales,
-  logLeadActivity,
-  // createOpportunityFromLead,
-} from "@/utils/leadHelpers";
+import { isSuperuser, isSales, logLeadActivity } from "@/utils/leadHelpers";
+
+// Helper untuk generate reference_no
+function generateReferenceNo(): string {
+  // Contoh: LE + 6 digit random (bisa diganti sesuai kebutuhan)
+  const randomNum = Math.floor(100000 + Math.random() * 900000);
+  return `LE${randomNum}`;
+}
+
+function generateOpportunityNo(): string {
+  // OP + 2 digit tahun + 2 digit bulan + 4-5 digit random
+  const now = new Date();
+  const year = String(now.getFullYear()).slice(-2);
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const random = Math.floor(10000 + Math.random() * 90000); // 5 digit random
+  return `OP${year}${month}${random}`;
+}
 
 // CREATE
 export async function createLeadAction(formData: FormData) {
@@ -30,26 +41,27 @@ export async function createLeadAction(formData: FormData) {
     if (!validatedData.lead_name) {
       throw new Error("Lead name is required");
     }
-    // Pastikan status "New" jika tidak ada di input
     if (!validatedData.status) validatedData.status = "New";
+    validatedData.id_user = Number(user.id);
+
+    // Tambahkan reference_no random jika belum ada
+    validatedData.reference_no = generateReferenceNo();
+
     const lead = await createLeadDb(validatedData as CreateLeadInput);
-    await logLeadActivity(lead.id, user!.id, "create", null, lead);
+    await logLeadActivity(lead.id, Number(user.id), "create", null, lead);
 
     revalidatePath("/crm/leads");
     return { success: true, message: "Lead created successfully" };
   } catch (error) {
     console.error("Error creating lead:", error);
 
-    // Handle validation errors specifically
     if (error instanceof ZodError) {
       const errorMessages = error.errors.map((err) => err.message).join(", ");
       throw new Error(`Validation error: ${errorMessages}`);
     }
-
     if (error instanceof Error) {
       throw new Error(error.message);
     }
-
     throw new Error(
       "Failed to create lead. Please check your input and try again."
     );
@@ -65,6 +77,7 @@ export async function updateLeadAction(formData: FormData) {
     const id = Number(extractLeadId(formData));
     const oldLead = await getLeadByIdDb(id);
 
+    // Hanya superuser atau sales yang boleh update, sales hanya miliknya sendiri
     if (isSales(user) && oldLead.id_user !== user.id) {
       throw new Error("Unauthorized");
     }
@@ -105,15 +118,18 @@ export async function updateLeadAction(formData: FormData) {
       }
       await logLeadActivity(
         id,
-        user.id,
+        Number(user.id),
         "status-change",
         oldLead.status,
         validatedData.status
       );
     }
 
+    // Jangan pernah update id_user dari client
+    delete (validatedData as any).id_user;
+
     const updatedLead = await updateLeadDb(id, validatedData);
-    await logLeadActivity(id, user.id, "update", oldLead, updatedLead);
+    await logLeadActivity(id, Number(user.id), "update", oldLead, updatedLead);
 
     revalidatePath("/crm/leads");
     revalidatePath(`/crm/leads/${id}`);
@@ -121,16 +137,13 @@ export async function updateLeadAction(formData: FormData) {
   } catch (error) {
     console.error("Error updating lead:", error);
 
-    // Handle validation errors specifically
     if (error instanceof ZodError) {
       const errorMessages = error.errors.map((err) => err.message).join(", ");
       throw new Error(`Validation error: ${errorMessages}`);
     }
-
     if (error instanceof Error) {
       throw new Error(error.message);
     }
-
     throw new Error(
       "Failed to update lead. Please check your input and try again."
     );
@@ -158,7 +171,7 @@ export async function deleteLeadAction(formData: FormData) {
     }
 
     await deleteLeadDb(id);
-    await logLeadActivity(id, user.id, "delete", lead, null);
+    await logLeadActivity(id, Number(user.id), "delete", lead, null);
 
     revalidatePath("/crm/leads");
     return { success: true, message: "Lead deleted successfully" };
@@ -214,10 +227,21 @@ export async function convertLeadAction(id: number) {
   }
   // Superuser boleh convert kapan saja
 
-  const updatedLead = await updateLeadDb(id, { status: "Converted" });
-  await logLeadActivity(id, user.id, "status-change", lead.status, "Converted");
+  // Generate nomor opportunity baru
+  const opportunityNo = generateOpportunityNo();
 
-  // await createOpportunityFromLead(updatedLead, user.id);
+  // Ubah status menjadi Prospecting, bukan Converted
+  const updatedLead = await updateLeadDb(id, {
+    status: "leadqualified",
+    reference_no: opportunityNo,
+  });
+  await logLeadActivity(
+    id,
+    Number(user.id),
+    "status-change",
+    lead,
+    updatedLead
+  );
 
   revalidatePath("/crm/leads");
   return { success: true, message: "Lead converted to opportunity" };

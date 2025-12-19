@@ -18,20 +18,27 @@ export function formatStatusValue(displayStatus: string): string {
 export const STATUS_DISPLAY_MAP = {
   new: "New",
   contacted: "Contacted",
-  qualified: "Qualified",
-  proposal: "Proposal",
-  negotiation: "Negotiation",
-  closed_won: "Closed Won",
-  closed_lost: "Closed Lost",
-  Open: "Open", // Default from database
+  nurturing: "Nurturing",
+  unqualified: "UnQualified",
+  invalid: "Invalid",
+  leadqualified: "LeadQualified",
+  converted: "Converted",
+  prospecting: "Prospecting",
+  opportunityqualified: "OpportunityQualified",
+  lost: "Lost",
+  open: "Open",
 } as const;
 
+// Pilihan status konsisten dengan LeadForm
 export const STATUS_OPTIONS = [
   { value: "new", label: "New" },
   { value: "contacted", label: "Contacted" },
-  { value: "qualified", label: "Qualified" },
-  { value: "proposal", label: "Proposal" },
-  { value: "negotiation", label: "Negotiation" },
-  { value: "closed_won", label: "Closed Won" },
-  { value: "closed_lost", label: "Closed Lost" },
+  { value: "nurturing", label: "Nurturing" },
+  { value: "unqualified", label: "UnQualified" },
+  { value: "invalid", label: "Invalid" },
+  { value: "leadqualified", label: "LeadQualified" },
+  { value: "converted", label: "Converted" },
+  { value: "prospecting", label: "Prospecting" },
+  { value: "opportunityqualified", label: "OpportunityQualified" },
+  { value: "lost", label: "Lost" },
 ] as const;

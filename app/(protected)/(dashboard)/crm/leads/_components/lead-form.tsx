@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,9 @@ import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import { formatStatusDisplay } from "@/utils/formatStatus";
 import { formatDate } from "@/utils/formatDate";
+import CustomSelect from "@/components/shared/custom-select";
+import ReactSelect from "react-select";
+import WindowedSelect from "react-windowed-select";
 
 interface LeadFormProps {
   mode: "create" | "edit";
@@ -26,6 +29,7 @@ interface LeadFormProps {
   onSubmit: (
     formData: FormData
   ) => Promise<void> | Promise<{ success: boolean; message: string }>;
+  products: Array<{ id: number; name: string }>;
 }
 
 interface FormErrors {
@@ -47,20 +51,89 @@ const SOURCE_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
-  { value: "new", label: "New" }, // Baru masuk, belum disentuh.
-  { value: "contacted", label: "Contacted" }, // Sudah dicoba dihubungi.
-  { value: "nurturing", label: "Nurturing" }, // Belum siap beli tapi potensial.
-  { value: "unqualified", label: "Unqualified" }, // Tidak layak jadi penjualan.
-  { value: "invalid", label: "Invalid" }, // Data palsu atau salah.
-  { value: "qualified", label: "Qualified" }, // Sudah layak diproses.
-  { value: "converted", label: "Converted" }, // Sudah naik level jadi Opportunity.
+  { value: "new", label: "New" },
+  { value: "contacted", label: "Contacted" },
+  { value: "nurturing", label: "Nurturing" },
+  { value: "unqualified", label: "UnQualified" },
+  { value: "invalid", label: "Invalid" },
+  { value: "leadqualified", label: "LeadQualified" },
 ];
 
-export default function LeadForm({ mode, lead, onSubmit }: LeadFormProps) {
+const PROVINCES = [
+  "Aceh",
+  "Sumatera Utara",
+  "Sumatera Barat",
+  "Riau",
+  "Jambi",
+  "Sumatera Selatan",
+  "Bengkulu",
+  "Lampung",
+  "Kepulauan Bangka Belitung",
+  "Kepulauan Riau",
+  "DKI Jakarta",
+  "Jawa Barat",
+  "Jawa Tengah",
+  "DI Yogyakarta",
+  "Jawa Timur",
+  "Banten",
+  "Bali",
+  "Nusa Tenggara Barat",
+  "Nusa Tenggara Timur",
+  "Kalimantan Barat",
+  "Kalimantan Tengah",
+  "Kalimantan Selatan",
+  "Kalimantan Timur",
+  "Kalimantan Utara",
+  "Sulawesi Utara",
+  "Sulawesi Tengah",
+  "Sulawesi Selatan",
+  "Sulawesi Tenggara",
+  "Gorontalo",
+  "Sulawesi Barat",
+  "Maluku",
+  "Maluku Utara",
+  "Papua",
+  "Papua Barat",
+  "Papua Selatan",
+  "Papua Tengah",
+  "Papua Pegunungan",
+  "Papua Barat Daya",
+];
+
+const LOCATION_OPTIONS = [
+  ...PROVINCES.map((prov) => ({ value: prov, label: prov })),
+  { value: "luar_negeri", label: "Luar negeri – Sebutkan nama Negara" },
+];
+
+export default function LeadForm({
+  mode,
+  lead,
+  onSubmit,
+  products,
+}: LeadFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [productInterest, setProductInterest] = useState<
+    Array<{ label: string; value: string }>
+  >(
+    lead?.product_interest
+      ? lead.product_interest
+          .split(",")
+          .map((name: string) => ({ label: name, value: name }))
+      : []
+  );
+  const [selectedLocation, setSelectedLocation] = useState<string>(
+    lead?.location || ""
+  );
+  const [foreignCountry, setForeignCountry] = useState<string>("");
   const router = useRouter();
+
+  // Ubah products menjadi array nama produk
+  const productOptions = products.map((p) => ({
+    label: p.name,
+    value: p.name,
+  }));
 
   // Client-side validation
   const validateForm = (formData: FormData): boolean => {
@@ -120,11 +193,25 @@ export default function LeadForm({ mode, lead, onSubmit }: LeadFormProps) {
         formData.append("id", lead.id.toString());
       }
 
+      // Set product_interest as comma separated string
+      formData.set(
+        "product_interest",
+        productInterest.map((p) => p.value).join(",")
+      );
+
       // Ensure status is not empty: set sensible default if missing
       const statusValue = (formData.get("status") as string) ?? "";
       if (statusValue.trim() === "") {
         const defaultStatus = mode === "create" ? "new" : lead?.status ?? "new";
         formData.set("status", defaultStatus);
+      }
+
+      // Location and country handling
+      formData.set("location", selectedLocation);
+      if (selectedLocation === "luar_negeri") {
+        formData.set("country_name", foreignCountry);
+      } else {
+        formData.delete("country_name");
       }
 
       // Client-side validation
@@ -327,15 +414,43 @@ export default function LeadForm({ mode, lead, onSubmit }: LeadFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="location">Location</Label>
-          <Input
+          <Label htmlFor="location">Lokasi *</Label>
+          <select
             id="location"
             name="location"
-            defaultValue={lead?.location || ""}
+            value={selectedLocation}
+            onChange={(e) => setSelectedLocation(e.target.value)}
+            required
             disabled={loading}
-            maxLength={150}
-            className={formErrors.location ? "border-red-500" : ""}
-          />
+            className={
+              formErrors.location
+                ? "border-red-500 w-full rounded px-3 py-2"
+                : "w-full rounded px-3 py-2"
+            }
+          >
+            <option value="">Pilih lokasi</option>
+            {LOCATION_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          {selectedLocation === "luar_negeri" && (
+            <div className="mt-2">
+              <Label htmlFor="country_name" className="mb-2">
+                Nama Negara
+              </Label>
+              <Input
+                id="country_name"
+                name="country_name"
+                value={foreignCountry}
+                onChange={(e) => setForeignCountry(e.target.value)}
+                placeholder="Contoh: Singapore"
+                disabled={loading}
+                required
+              />
+            </div>
+          )}
           {formErrors.location && (
             <p className="text-sm text-red-500">{formErrors.location}</p>
           )}
@@ -528,13 +643,17 @@ export default function LeadForm({ mode, lead, onSubmit }: LeadFormProps) {
 
         <div className="md:col-span-2 space-y-2">
           <Label htmlFor="product_interest">Product Interest</Label>
-          <Input
-            id="product_interest"
+          <WindowedSelect
+            windowThreshold={100}
+            isMulti
             name="product_interest"
-            defaultValue={lead?.product_interest || ""}
-            disabled={loading}
-            maxLength={200}
-            className={formErrors.product_interest ? "border-red-500" : ""}
+            options={productOptions}
+            value={productInterest}
+            onChange={(newValue) =>
+              setProductInterest(Array.isArray(newValue) ? newValue : [])
+            }
+            placeholder="Select products"
+            classNamePrefix="react-select"
           />
           {formErrors.product_interest && (
             <p className="text-sm text-red-500">

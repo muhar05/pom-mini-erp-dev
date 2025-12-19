@@ -131,48 +131,51 @@ const statusSchema = z
   );
 
 // Main lead schema for CREATE (lead_name is required)
-export const createLeadSchema = z.object({
-  lead_name: leadNameSchema, // Required for create
-  company: companySchema.refine((val) => !!val && val.trim() !== "", {
-    message: "Company is required",
-  }),
-  contact: contactSchema,
-  email: emailSchema,
-  phone: phoneSchema,
-  type: typeSchema,
-  location: locationSchema,
-  product_interest: z
-    .string()
-    .optional()
-    .refine(
-      (val) => {
-        if (!val || val.trim() === "") return true;
-        return val.trim().length <= 200;
-      },
-      {
-        message: "Product interest must be less than 200 characters",
-      }
-    ),
-  source: sourceSchema,
-  note: z
-    .string()
-    .optional()
-    .refine(
-      (val) => {
-        if (!val || val.trim() === "") return true;
-        return val.trim().length <= 1000;
-      },
-      {
-        message: "Note must be less than 1000 characters",
-      }
-    ),
-  id_user: z.number().optional(),
-  assigned_to: z.number().optional(),
-  status: statusSchema,
-}).refine(
-  (data) => !!data.email || !!data.phone,
-  { message: "At least one of email or phone is required", path: ["email"] }
-);
+export const createLeadSchema = z
+  .object({
+    lead_name: leadNameSchema,
+    company: companySchema.refine((val) => !!val && val.trim() !== "", {
+      message: "Company is required",
+    }),
+    contact: contactSchema,
+    email: emailSchema,
+    phone: phoneSchema,
+    type: typeSchema,
+    location: locationSchema,
+    product_interest: z
+      .string()
+      .optional()
+      .refine(
+        (val) => {
+          if (!val || val.trim() === "") return true;
+          return val.trim().length <= 200;
+        },
+        {
+          message: "Product interest must be less than 200 characters",
+        }
+      ),
+    source: sourceSchema,
+    note: z
+      .string()
+      .optional()
+      .refine(
+        (val) => {
+          if (!val || val.trim() === "") return true;
+          return val.trim().length <= 1000;
+        },
+        {
+          message: "Note must be less than 1000 characters",
+        }
+      ),
+    id_user: z.number().optional(),
+    assigned_to: z.number().optional(),
+    status: statusSchema,
+    reference_no: z.string().optional(), // ← Tambahkan baris ini
+  })
+  .refine((data) => !!data.email || !!data.phone, {
+    message: "At least one of email or phone is required",
+    path: ["email"],
+  });
 
 // Schema untuk update (all fields optional including lead_name)
 export const updateLeadSchema = z.object({
@@ -211,6 +214,7 @@ export const updateLeadSchema = z.object({
   id_user: z.number().optional(),
   assigned_to: z.number().optional(),
   status: statusSchema,
+  reference_no: z.string().optional(), // ← Tambahkan baris ini juga
 });
 
 // Export base schema for form validation (same as create for backward compatibility)

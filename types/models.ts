@@ -293,3 +293,18 @@ export interface warehouses_history {
   created_at?: Date | null;
   created_by?: string | null;
 }
+
+export type Opportunity = {
+  id: string;
+  opportunity_no: string;
+  customer_name: string;
+  customer_email: string;
+  sales_pic: string;
+  type: string;
+  company: string;
+  potential_value: number;
+  stage: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};

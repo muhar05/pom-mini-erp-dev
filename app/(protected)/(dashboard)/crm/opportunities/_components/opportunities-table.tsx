@@ -53,7 +53,7 @@ export default function OpportunitiesTable({
           <TableHead>Perusahaan</TableHead>
           <TableHead>Total Harga</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Last Update</TableHead>
+          {/* <TableHead>Last Update</TableHead> */}
           <TableHead>Action</TableHead>
         </TableRow>
       </TableHeader>
@@ -74,7 +74,7 @@ export default function OpportunitiesTable({
               <TableCell>{item.company}</TableCell>
               <TableCell>{item.potential_value.toLocaleString()}</TableCell>
               <TableCell>{item.status}</TableCell>
-              <TableCell>{item.updated_at}</TableCell>
+              {/* <TableCell>{item.updated_at}</TableCell> */}
               <TableCell>
                 <OpportunityActions
                   opportunity={item}

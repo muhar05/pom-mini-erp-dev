@@ -48,7 +48,7 @@ export default function OpportunityActions({
       </Link>
 
       {/* Edit */}
-      <Link href={`/crm/opportunities/${opportunity.id}/edit`}>
+      {/* <Link href={`/crm/opportunities/${opportunity.id}/edit`}>
         <Button
           size="icon"
           variant="ghost"
@@ -57,10 +57,10 @@ export default function OpportunityActions({
         >
           <Edit className="w-4 h-4" />
         </Button>
-      </Link>
+      </Link> */}
 
       {/* Delete */}
-      <OpportunityDeleteDialog
+      {/* <OpportunityDeleteDialog
         opportunity={opportunity}
         trigger={
           <Button
@@ -73,7 +73,7 @@ export default function OpportunityActions({
           </Button>
         }
         onDelete={() => onDelete?.()}
-      />
+      /> */}
     </div>
   );
 }

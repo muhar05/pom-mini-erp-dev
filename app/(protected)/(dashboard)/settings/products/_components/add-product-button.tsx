@@ -4,13 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 
-export default function AddOpportunityButton() {
+interface AddProductButtonProps {
+  onProductAdded?: () => void;
+}
+
+export default function AddProductButton({
+  onProductAdded,
+}: AddProductButtonProps) {
   return (
-    <div className="flex justify-end mb-4">
-      <Link href="/crm/opportunities/new">
+    <div className="flex justify-end">
+      <Link href="/settings/products/new">
         <Button className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
-          Add Opportunity
+          Add Product
         </Button>
       </Link>
     </div>
