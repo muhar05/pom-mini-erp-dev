@@ -16,7 +16,14 @@ const mockQuotation = {
   type: "Perusahaan",
   company: "PT. XYZ",
   total_amount: 20000000,
+  shipping: 500000, // Add shipping
+  discount: 1000000, // Add discount
+  tax: 2000000, // Add tax
+  grand_total: 21500000, // Add grand total (total_amount + shipping + tax - discount)
   status: "Open",
+  stage: "draft", // Add stage
+  target_date: "2025-12-31", // Add target_date
+  top: "net30", // Add terms of payment
   created_at: "2025-12-10",
   updated_at: "2025-12-11",
   valid_until: "2025-12-31",

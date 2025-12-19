@@ -16,6 +16,9 @@ import {
   DollarSign,
   Building2,
   ShoppingBag,
+  Truck,
+  Percent,
+  Receipt,
 } from "lucide-react";
 import { formatDate } from "@/utils/formatDate";
 import Link from "next/link";
@@ -32,7 +35,14 @@ const mockQuotation = {
   type: "Perusahaan",
   company: "PT. XYZ",
   total_amount: 20000000,
+  shipping: 500000,
+  discount: 1000000,
+  tax: 2000000,
+  grand_total: 21500000,
   status: "Open",
+  stage: "draft",
+  target_date: "2025-12-31",
+  top: "net30",
   created_at: "2025-12-10",
   updated_at: "2025-12-11",
   valid_until: "2025-12-31",
@@ -53,6 +63,21 @@ function getStatusBadgeClass(status: string): string {
       return "bg-purple-100 text-purple-800";
     default:
       return "bg-yellow-100 text-yellow-800";
+  }
+}
+
+function getStageBadgeClass(stage: string): string {
+  switch (stage?.toLowerCase()) {
+    case "draft":
+      return "bg-gray-100 text-gray-800";
+    case "review":
+      return "bg-blue-100 text-blue-800";
+    case "approved":
+      return "bg-green-100 text-green-800";
+    case "sent":
+      return "bg-purple-100 text-purple-800";
+    default:
+      return "bg-gray-100 text-gray-800";
   }
 }
 
@@ -92,9 +117,16 @@ export default function QuotationDetailPage() {
                 </CardTitle>
                 <p className="text-sm text-gray-500 mt-1">Quotation Details</p>
               </div>
-              <Badge className={getStatusBadgeClass(quotation.status)}>
-                {quotation.status}
-              </Badge>
+              <div className="flex gap-2">
+                <Badge className={getStatusBadgeClass(quotation.status)}>
+                  {quotation.status}
+                </Badge>
+                {quotation.stage && (
+                  <Badge className={getStageBadgeClass(quotation.stage)}>
+                    {quotation.stage}
+                  </Badge>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -145,7 +177,9 @@ export default function QuotationDetailPage() {
                     <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
                     <div>
                       <p className="text-sm text-gray-500">Quotation Number</p>
-                      <p className="font-medium">{quotation.quotation_no}</p>
+                      <p className="font-medium font-mono">
+                        {quotation.quotation_no}
+                      </p>
                     </div>
                   </div>
 
@@ -208,18 +242,29 @@ export default function QuotationDetailPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3">
-                    <DollarSign className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Total Amount</p>
-                      <p className="font-medium text-lg">
-                        {quotation.total_amount.toLocaleString("id-ID", {
-                          style: "currency",
-                          currency: "IDR",
-                        })}
-                      </p>
+                  {quotation.top && (
+                    <div className="flex items-start gap-3">
+                      <Receipt className="w-5 h-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-gray-500">
+                          Terms of Payment
+                        </p>
+                        <p className="font-medium">{quotation.top}</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {quotation.target_date && (
+                    <div className="flex items-start gap-3">
+                      <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-gray-500">Target Date</p>
+                        <p className="font-medium">
+                          {formatDate(quotation.target_date)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {quotation.valid_until && (
                     <div className="flex items-start gap-3">
@@ -245,11 +290,87 @@ export default function QuotationDetailPage() {
                 </div>
               </div>
 
+              {/* Financial Information */}
+              <div>
+                <h3 className="font-semibold text-lg mb-4">
+                  Financial Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-start gap-3">
+                    <DollarSign className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-500">Subtotal</p>
+                      <p className="font-medium">
+                        {quotation.total_amount.toLocaleString("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Truck className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-500">Shipping Cost</p>
+                      <p className="font-medium">
+                        {quotation.shipping.toLocaleString("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Percent className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-500">Discount</p>
+                      <p className="font-medium text-red-600">
+                        -
+                        {quotation.discount.toLocaleString("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Receipt className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-500">Tax</p>
+                      <p className="font-medium">
+                        {quotation.tax.toLocaleString("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 md:col-span-2">
+                    <DollarSign className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-500">Grand Total</p>
+                      <p className="font-bold text-lg text-green-600">
+                        {quotation.grand_total.toLocaleString("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Notes */}
               {quotation.notes && (
                 <div>
                   <h3 className="font-semibold text-lg mb-4">Notes</h3>
-                  <p className="text-gray-700">{quotation.notes}</p>
+                  <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
+                    {quotation.notes}
+                  </p>
                 </div>
               )}
 
