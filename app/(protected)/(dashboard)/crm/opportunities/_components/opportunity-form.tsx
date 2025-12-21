@@ -12,7 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  OPPORTUNITY_STATUSES,
+  formatStatusDisplay,
+} from "@/utils/statusHelpers";
 import { useState } from "react";
+import { updateOpportunityStatus } from "@/app/actions/opportunities";
 
 type Opportunity = {
   id?: string;
@@ -23,8 +28,6 @@ type Opportunity = {
   type: string;
   company: string;
   potential_value: number;
-  stage: string;
-  status: string;
   expected_close_date?: string;
   notes?: string;
 };
@@ -35,6 +38,29 @@ interface OpportunityFormProps {
   onClose?: () => void;
   onSuccess?: () => void;
 }
+
+const OPPORTUNITY_STAGE_OPTIONS = [
+  { value: "opp_new", label: "New" },
+  { value: "opp_qualified", label: "Qualified" },
+  { value: "opp_proposal", label: "Proposal" },
+  { value: "opp_negotiation", label: "Negotiation" },
+  { value: "opp_won", label: "Won" },
+  { value: "opp_lost", label: "Lost" },
+  { value: "opp_cancelled", label: "Cancelled" },
+];
+
+// Pilihan status setelah converted
+const OPPORTUNITY_STATUS_AFTER_CONVERT = [
+  {
+    value: OPPORTUNITY_STATUSES.QUALIFIED,
+    label: formatStatusDisplay(OPPORTUNITY_STATUSES.QUALIFIED),
+  },
+  {
+    value: OPPORTUNITY_STATUSES.LOST,
+    label: formatStatusDisplay(OPPORTUNITY_STATUSES.LOST),
+  },
+  { value: "opp_sq", label: "SQ" }, // Jika status SQ belum ada di enum, tambahkan manual
+];
 
 export default function OpportunityForm({
   mode,
@@ -50,8 +76,6 @@ export default function OpportunityForm({
     type: opportunity?.type || "Perusahaan",
     company: opportunity?.company || "",
     potential_value: opportunity?.potential_value || 0,
-    stage: opportunity?.stage || "Prospecting",
-    status: opportunity?.status || "Open",
     expected_close_date: opportunity?.expected_close_date || "",
     notes: opportunity?.notes || "",
   });
@@ -110,44 +134,6 @@ export default function OpportunityForm({
                   disabled={mode === "edit"}
                   required
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="stage">Stage *</Label>
-                <Select
-                  value={formData.stage}
-                  onValueChange={(value) => handleInputChange("stage", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Prospecting">Prospecting</SelectItem>
-                    <SelectItem value="Qualified">Qualified</SelectItem>
-                    <SelectItem value="Proposal">Proposal</SelectItem>
-                    <SelectItem value="Negotiation">Negotiation</SelectItem>
-                    <SelectItem value="Won">Won</SelectItem>
-                    <SelectItem value="Lost">Lost</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => handleInputChange("status", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Open">Open</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
-                    <SelectItem value="Closed Won">Closed Won</SelectItem>
-                    <SelectItem value="Closed Lost">Closed Lost</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="space-y-2">
@@ -298,6 +284,71 @@ export default function OpportunityForm({
             </Button>
           </div>
         </form>
+
+        {mode === "edit" && (
+          <div className="flex gap-2 justify-end pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  // Panggil API update status ke Qualified
+                  await updateOpportunityStatus(
+                    formData.id!,
+                    OPPORTUNITY_STATUSES.QUALIFIED
+                  );
+                  onSuccess?.();
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+            >
+              Set Qualified
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  // Panggil API update status ke Lost
+                  await updateOpportunityStatus(
+                    formData.id!,
+                    OPPORTUNITY_STATUSES.LOST
+                  );
+                  onSuccess?.();
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+            >
+              Set Lost
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  // Panggil API update status ke SQ
+                  await updateOpportunityStatus(
+                    formData.id!,
+                    OPPORTUNITY_STATUSES.SQ
+                  );
+                  onSuccess?.();
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+            >
+              Convert to SQ
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -4,6 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { isSuperuser, isSales } from "@/utils/leadHelpers";
 import { revalidatePath } from "next/cache";
+import {
+  LEAD_STATUSES,
+  OPPORTUNITY_STATUSES,
+  isValidStatusTransition,
+  formatStatusDisplay,
+} from "@/utils/statusHelpers";
 
 // Tipe data Opportunity (bisa disesuaikan dengan kebutuhan frontend)
 export interface Opportunity {
@@ -61,14 +67,87 @@ async function calculatePotentialValue(
   return totalPrice;
 }
 
+// Helper to check if status indicates a converted opportunity
+function isOpportunityStatus(status: string): boolean {
+  const opportunityStatuses = [
+    LEAD_STATUSES.CONVERTED,
+    OPPORTUNITY_STATUSES.NEW,
+    OPPORTUNITY_STATUSES.QUALIFIED,
+    OPPORTUNITY_STATUSES.PROPOSAL,
+    OPPORTUNITY_STATUSES.NEGOTIATION,
+    OPPORTUNITY_STATUSES.WON,
+    OPPORTUNITY_STATUSES.LOST,
+    OPPORTUNITY_STATUSES.CANCELLED,
+    // Legacy statuses for backward compatibility
+    "Converted",
+    "converted",
+    "CONVERTED",
+    "Prospecting",
+    "prospecting",
+    "PROSPECTING",
+    "OpportunityQualified",
+    "opportunityqualified",
+    "OPPORTUNITYQUALIFIED",
+    "LeadQualified",
+    "leadqualified",
+    "LEADQUALIFIED",
+    "Lost",
+    "lost",
+    "LOST",
+  ];
+
+  return opportunityStatuses.includes(status);
+}
+
+// Map status to display stage
+function mapStatusToStage(status: string): string {
+  const statusLower = status.toLowerCase();
+
+  // Handle prefixed statuses
+  if (status === LEAD_STATUSES.CONVERTED) return "Converted";
+  if (status === OPPORTUNITY_STATUSES.NEW) return "New Opportunity";
+  if (status === OPPORTUNITY_STATUSES.QUALIFIED) return "Qualified";
+  if (status === OPPORTUNITY_STATUSES.PROPOSAL) return "Proposal";
+  if (status === OPPORTUNITY_STATUSES.NEGOTIATION) return "Negotiation";
+  if (status === OPPORTUNITY_STATUSES.WON) return "Won";
+  if (status === OPPORTUNITY_STATUSES.LOST) return "Lost";
+  if (status === OPPORTUNITY_STATUSES.CANCELLED) return "Cancelled";
+
+  // Handle legacy statuses
+  switch (statusLower) {
+    case "converted":
+      return "Converted";
+    case "opportunityqualified":
+      return "Qualified";
+    case "leadqualified":
+      return "Lead Qualified";
+    case "prospecting":
+      return "Prospecting";
+    case "lost":
+      return "Lost";
+    default:
+      return formatStatusDisplay(status);
+  }
+}
+
 // Ambil semua leads yang sudah converted dan mapping ke opportunity
 export async function getConvertedOpportunities(): Promise<Opportunity[]> {
   const session = await auth();
   const user = session?.user;
 
-  // Query status: include "LeadQualified"
   let whereClause: any = {
     OR: [
+      // New prefixed statuses
+      { status: LEAD_STATUSES.CONVERTED },
+      { status: OPPORTUNITY_STATUSES.NEW },
+      { status: OPPORTUNITY_STATUSES.QUALIFIED },
+      { status: OPPORTUNITY_STATUSES.PROPOSAL },
+      { status: OPPORTUNITY_STATUSES.NEGOTIATION },
+      { status: OPPORTUNITY_STATUSES.WON },
+      { status: OPPORTUNITY_STATUSES.LOST },
+      { status: OPPORTUNITY_STATUSES.CANCELLED },
+
+      // Legacy statuses for backward compatibility
       { status: "Converted" },
       { status: "converted" },
       { status: "CONVERTED" },
@@ -105,17 +184,7 @@ export async function getConvertedOpportunities(): Promise<Opportunity[]> {
       const l = lead as any;
       const potentialValue = await calculatePotentialValue(l.product_interest);
 
-      // Map stage berdasarkan status
-      let stage = "Prospecting";
-      if (l.status?.toLowerCase() === "converted") {
-        stage = "Converted";
-      } else if (l.status?.toLowerCase() === "opportunityqualified") {
-        stage = "OpportunityQualified";
-      } else if (l.status?.toLowerCase() === "leadqualified") {
-        stage = "LeadQualified";
-      } else if (l.status?.toLowerCase() === "lost") {
-        stage = "Lost";
-      }
+      const stage = mapStatusToStage(l.status ?? "");
 
       return {
         id: l.id.toString(),
@@ -147,12 +216,10 @@ export async function updateOpportunityStatus(id: string, newStatus: string) {
   const user = session?.user;
   if (!user) throw new Error("Unauthorized");
 
-  // Normalize status: if "Qualified", use "OpportunityQualified"
-  if (newStatus === "Qualified") {
-    newStatus = "OpportunityQualified";
-  }
-
-  const allowedStatuses = [
+  // Validate new status
+  const validOpportunityStatuses = [
+    ...Object.values(OPPORTUNITY_STATUSES),
+    // Legacy statuses for backward compatibility
     "Converted",
     "Prospecting",
     "OpportunityQualified",
@@ -160,11 +227,45 @@ export async function updateOpportunityStatus(id: string, newStatus: string) {
     "Qualified",
     "Lost",
   ];
-  if (!allowedStatuses.includes(newStatus)) {
+
+  if (!validOpportunityStatuses.includes(newStatus)) {
     throw new Error("Invalid status");
   }
 
   try {
+    // Get current lead to validate transition
+    const currentLead = await prisma.leads.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!currentLead) {
+      throw new Error("Opportunity not found");
+    }
+
+    // For sales users, validate status transitions
+    if (isSales(user)) {
+      const currentStatus = currentLead.status || "";
+
+      // Convert legacy status to new format for validation if needed
+      const normalizedCurrentStatus = currentStatus.startsWith("opp_")
+        ? currentStatus
+        : currentStatus.toLowerCase() === "converted"
+        ? OPPORTUNITY_STATUSES.NEW
+        : currentStatus;
+
+      const normalizedNewStatus = newStatus.startsWith("opp_")
+        ? newStatus
+        : newStatus === "Qualified"
+        ? OPPORTUNITY_STATUSES.QUALIFIED
+        : newStatus;
+
+      if (
+        !isValidStatusTransition(normalizedCurrentStatus, normalizedNewStatus)
+      ) {
+        throw new Error("Invalid status transition");
+      }
+    }
+
     await prisma.leads.update({
       where: { id: Number(id) },
       data: {
@@ -175,7 +276,10 @@ export async function updateOpportunityStatus(id: string, newStatus: string) {
     revalidatePath("/crm/opportunities");
     revalidatePath(`/crm/opportunities/${id}`);
 
-    return { success: true, message: `Status updated to ${newStatus}` };
+    return {
+      success: true,
+      message: `Status updated to ${formatStatusDisplay(newStatus)}`,
+    };
   } catch (error) {
     console.error("Error updating opportunity status:", error);
     throw new Error("Failed to update status");

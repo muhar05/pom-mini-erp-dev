@@ -22,6 +22,7 @@ import { formatDate } from "@/utils/formatDate";
 import CustomSelect from "@/components/shared/custom-select";
 import ReactSelect from "react-select";
 import WindowedSelect from "react-windowed-select";
+import { LEAD_STATUS_OPTIONS } from "@/utils/statusHelpers";
 
 interface LeadFormProps {
   mode: "create" | "edit";
@@ -50,14 +51,8 @@ const SOURCE_OPTIONS = [
   { value: "event", label: "Event" },
 ];
 
-const STATUS_OPTIONS = [
-  { value: "new", label: "New" },
-  { value: "contacted", label: "Contacted" },
-  { value: "nurturing", label: "Nurturing" },
-  { value: "unqualified", label: "UnQualified" },
-  { value: "invalid", label: "Invalid" },
-  { value: "leadqualified", label: "LeadQualified" },
-];
+// Ganti konstanta STATUS_OPTIONS:
+const STATUS_OPTIONS = LEAD_STATUS_OPTIONS;
 
 const PROVINCES = [
   "Aceh",
@@ -170,13 +165,13 @@ export default function LeadForm({
       return true;
     } catch (error) {
       if (error instanceof ZodError) {
-        const errors: FormErrors = {};
+        const newErrors: FormErrors = {};
         error.errors.forEach((err) => {
-          if (err.path.length > 0) {
-            errors[err.path[0] as string] = err.message;
-          }
+          const path = err.path[0] as keyof FormErrors;
+          newErrors[path] = err.message;
         });
-        setFormErrors(errors);
+        setFormErrors(newErrors);
+        return false;
       }
       return false;
     }

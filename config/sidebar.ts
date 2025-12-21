@@ -55,9 +55,9 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       title: "Master",
       icon: Settings,
       items: [
-        { title: "Customer List", url: "/crm/customers", icon: UserRound },
-        { title: "Company List", url: "/settings/company", icon: UserCog },
-        { title: "Product List", url: "/settings/products", icon: Boxes },
+        { title: "Customer List", url: "/customers", icon: UserRound },
+        { title: "Company List", url: "/companies", icon: UserCog },
+        { title: "Product List", url: "/products", icon: Boxes },
       ],
     },
 

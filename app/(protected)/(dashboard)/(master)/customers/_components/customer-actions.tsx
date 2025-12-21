@@ -4,21 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import CustomerDeleteDialog from "./customer-delete-dialog";
+import type { customers } from "@/types/models";
 
-type Customer = {
-  id: string;
-  customer_name: string;
-  email: string;
-  phone: string;
-  company: string;
-  contact_person: string;
-  address: string;
-  city: string;
-  country: string;
-  customer_type: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
+// Extend customers type for UI-only fields if needed
+type Customer = customers & {
+  status?: string | null;
+  customer_type?: string | null;
+  contact_person?: string | null;
+  city?: string | null;
+  country?: string | null;
+  updated_at?: string | Date | null;
 };
 
 interface CustomerActionsProps {

@@ -9,6 +9,17 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import OpportunityActions from "./opportunity-actions";
+import { formatStatusDisplay } from "@/utils/statusHelpers";
+import { MoreHorizontal, Eye, Edit } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
 type Opportunity = {
   id: string;
@@ -73,14 +84,32 @@ export default function OpportunitiesTable({
               <TableCell>{item.type}</TableCell>
               <TableCell>{item.company}</TableCell>
               <TableCell>{item.potential_value.toLocaleString()}</TableCell>
-              <TableCell>{item.status}</TableCell>
+              <TableCell>{formatStatusDisplay(item.status)}</TableCell>
               {/* <TableCell>{item.updated_at}</TableCell> */}
               <TableCell>
-                <OpportunityActions
-                  opportunity={item}
-                  onEdit={() => onEdit?.(item)}
-                  onDelete={() => onDelete?.(item)}
-                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="h-8 w-8 flex items-center justify-center rounded hover:bg-gray-100">
+                      <MoreHorizontal className="w-5 h-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href={`/crm/opportunities/${item.id}`}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Detail
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href={`/crm/opportunities/${item.id}/edit`}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           ))

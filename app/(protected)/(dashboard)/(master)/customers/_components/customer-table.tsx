@@ -12,29 +12,26 @@ import CustomerActions from "./customer-actions";
 import CustomerDetailDrawer from "./customer-detail-drawer";
 import { formatDate } from "@/utils/formatDate";
 import { useState } from "react";
+import type { customers } from "@/types/models";
 
-type Customer = {
-  id: string;
-  customer_name: string;
-  email: string;
-  phone: string;
-  company: string;
-  contact_person: string;
-  address: string;
-  city: string;
-  country: string;
-  customer_type: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
+// Extend customers type for UI-only fields if needed
+type Customer = customers & {
+  status?: string | null;
+  customer_type?: string | null;
+  contact_person?: string | null;
+  city?: string | null;
+  country?: string | null;
+  updated_at?: string | Date | null;
 };
 
+// Props
 interface CustomersTableProps {
   customers: Customer[];
+  filters?: any;
 }
 
 // Helper function to get status badge styling
-function getStatusBadgeClass(status: string): string {
+function getStatusBadgeClass(status?: string | null): string {
   switch (status?.toLowerCase()) {
     case "active":
       return "bg-green-100 text-green-800 border-green-200";
@@ -47,7 +44,7 @@ function getStatusBadgeClass(status: string): string {
   }
 }
 
-function getTypeBadgeClass(type: string): string {
+function getTypeBadgeClass(type?: string | null): string {
   switch (type?.toLowerCase()) {
     case "corporate":
       return "bg-blue-100 text-blue-800 border-blue-200";
@@ -60,7 +57,10 @@ function getTypeBadgeClass(type: string): string {
   }
 }
 
-export default function CustomersTable({ customers }: CustomersTableProps) {
+export default function CustomersTable({
+  customers,
+  filters,
+}: CustomersTableProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
@@ -76,6 +76,26 @@ export default function CustomersTable({ customers }: CustomersTableProps) {
     setSelectedCustomer(null);
   };
 
+  // Optional: filter data di sini jika ingin filter di client
+  let filteredCustomers = customers;
+  if (filters) {
+    if (filters.search) {
+      filteredCustomers = filteredCustomers.filter((c) =>
+        c.customer_name.toLowerCase().includes(filters.search.toLowerCase())
+      );
+    }
+    if (filters.customer_type && filters.customer_type !== "all") {
+      filteredCustomers = filteredCustomers.filter(
+        (c) => c.type?.toLowerCase() === filters.customer_type.toLowerCase()
+      );
+    }
+    if (filters.status && filters.status !== "all") {
+      filteredCustomers = filteredCustomers.filter(
+        (c) => c.status?.toLowerCase() === filters.status.toLowerCase()
+      );
+    }
+  }
+
   return (
     <>
       <Table>
@@ -86,16 +106,13 @@ export default function CustomersTable({ customers }: CustomersTableProps) {
             <TableHead>Email</TableHead>
             <TableHead>Phone</TableHead>
             <TableHead>Company</TableHead>
-            <TableHead>Contact Person</TableHead>
-            <TableHead>City</TableHead>
             <TableHead>Type</TableHead>
-            <TableHead>Status</TableHead>
             <TableHead>Created At</TableHead>
             <TableHead>Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {customers.map((customer, idx) => (
+          {filteredCustomers.map((customer, idx) => (
             <TableRow
               key={customer.id}
               onClick={() => handleRowClick(customer)}
@@ -107,28 +124,31 @@ export default function CustomersTable({ customers }: CustomersTableProps) {
               </TableCell>
               <TableCell>{customer.email || "-"}</TableCell>
               <TableCell>{customer.phone || "-"}</TableCell>
-              <TableCell>{customer.company || "-"}</TableCell>
-              <TableCell>{customer.contact_person || "-"}</TableCell>
-              <TableCell>{customer.city || "-"}</TableCell>
+              <TableCell>
+                {typeof customer.company === "object"
+                  ? customer.company?.company_name || "-"
+                  : customer.company || "-"}
+              </TableCell>
               <TableCell>
                 <span
                   className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getTypeBadgeClass(
-                    customer.customer_type
+                    customer.type
                   )}`}
                 >
-                  {customer.customer_type}
+                  {customer.type || "-"}
                 </span>
               </TableCell>
               <TableCell>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusBadgeClass(
-                    customer.status
-                  )}`}
-                >
-                  {customer.status}
-                </span>
+                {customer.created_at
+                  ? formatDate(
+                      typeof customer.created_at === "string"
+                        ? customer.created_at
+                        : customer.created_at instanceof Date
+                        ? customer.created_at.toISOString()
+                        : String(customer.created_at)
+                    )
+                  : "-"}
               </TableCell>
-              <TableCell>{formatDate(customer.created_at)}</TableCell>
               <TableCell onClick={(e) => e.stopPropagation()}>
                 <CustomerActions
                   customer={customer}
@@ -138,12 +158,9 @@ export default function CustomersTable({ customers }: CustomersTableProps) {
               </TableCell>
             </TableRow>
           ))}
-          {customers.length === 0 && (
+          {filteredCustomers.length === 0 && (
             <TableRow>
-              <TableCell
-                colSpan={11}
-                className="text-center py-8 text-gray-500"
-              >
+              <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                 No customers found.
                 <a
                   href="/crm/customers/new"
@@ -157,15 +174,6 @@ export default function CustomersTable({ customers }: CustomersTableProps) {
           )}
         </TableBody>
       </Table>
-
-      {/* Customer Detail Drawer */}
-      <CustomerDetailDrawer
-        customer={selectedCustomer}
-        isOpen={isDrawerOpen}
-        onClose={handleCloseDrawer}
-        onEdit={() => {}}
-        onDelete={() => {}}
-      />
     </>
   );
 }

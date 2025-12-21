@@ -59,11 +59,8 @@ export default function QuotationsClient({
       {" "}
       <QuotationFilters search={""} setSearch={() => {}} />
       <div className="grid grid-cols-1 gap-6 mt-6">
-        {/* Available Leads Table */}
+        <AddQuotationButton />
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">
-            Available Leads (OpportunityQualified)
-          </h2>
           <Table>
             <TableHeader>
               <TableRow>
@@ -94,15 +91,6 @@ export default function QuotationsClient({
                     <TableCell>{lead.location || "-"}</TableCell>
                     <TableCell>{lead.product_interest || "-"}</TableCell>
                     <TableCell>{lead.created_at || "-"}</TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        onClick={() => handleCreateQuotation(lead)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        Create Quotation
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 ))
               ) : (
@@ -111,7 +99,7 @@ export default function QuotationsClient({
                     colSpan={11}
                     className="text-center py-8 text-gray-500"
                   >
-                    No available leads found.
+                    No available Quotations found.
                   </TableCell>
                 </TableRow>
               )}

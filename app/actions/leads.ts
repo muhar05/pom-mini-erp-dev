@@ -14,6 +14,12 @@ import { ZodError } from "zod";
 import { auth } from "@/auth";
 import { users, leads } from "@/types/models";
 import { isSuperuser, isSales, logLeadActivity } from "@/utils/leadHelpers";
+import {
+  LEAD_STATUSES,
+  OPPORTUNITY_STATUSES,
+  isValidStatusTransition,
+  getStatusPrefix,
+} from "@/utils/statusHelpers";
 
 // Helper untuk generate reference_no
 function generateReferenceNo(): string {
@@ -31,6 +37,23 @@ function generateOpportunityNo(): string {
   return `OP${year}${month}${random}`;
 }
 
+// Helper to normalize legacy statuses to new prefixed format
+function normalizeStatusToNewFormat(status: string): string {
+  const legacyToNewMapping: Record<string, string> = {
+    new: LEAD_STATUSES.NEW,
+    contacted: LEAD_STATUSES.CONTACTED,
+    nurturing: LEAD_STATUSES.INTERESTED, // Map nurturing to interested
+    qualified: LEAD_STATUSES.QUALIFIED,
+    unqualified: LEAD_STATUSES.UNQUALIFIED,
+    invalid: LEAD_STATUSES.UNQUALIFIED, // Map invalid to unqualified
+    converted: LEAD_STATUSES.CONVERTED,
+    leadqualified: LEAD_STATUSES.QUALIFIED,
+  };
+
+  const lowerStatus = status.toLowerCase();
+  return legacyToNewMapping[lowerStatus] || status;
+}
+
 // CREATE
 export async function createLeadAction(formData: FormData) {
   const session = await auth();
@@ -41,7 +64,15 @@ export async function createLeadAction(formData: FormData) {
     if (!validatedData.lead_name) {
       throw new Error("Lead name is required");
     }
-    if (!validatedData.status) validatedData.status = "New";
+
+    // Set default status using new prefixed format
+    if (!validatedData.status) {
+      validatedData.status = LEAD_STATUSES.NEW;
+    } else {
+      // Normalize legacy status to new format
+      validatedData.status = normalizeStatusToNewFormat(validatedData.status);
+    }
+
     validatedData.id_user = Number(user.id);
 
     // Tambahkan reference_no random jika belum ada
@@ -81,41 +112,44 @@ export async function updateLeadAction(formData: FormData) {
     if (isSales(user) && oldLead.id_user !== user.id) {
       throw new Error("Unauthorized");
     }
-    if (isSales(user) && oldLead.status === "Converted") {
+    if (isSales(user) && oldLead.status === LEAD_STATUSES.CONVERTED) {
       throw new Error("Lead cannot be edited after conversion.");
     }
 
     const validatedData = validateLeadFormData(formData, "update");
-    if (!validatedData.status) validatedData.status = "New";
+
+    // Set default status if not provided
+    if (!validatedData.status) {
+      validatedData.status = LEAD_STATUSES.NEW;
+    } else {
+      // Normalize legacy status to new format
+      validatedData.status = normalizeStatusToNewFormat(validatedData.status);
+    }
+
+    // Status change validation
     if (validatedData.status && validatedData.status !== oldLead.status) {
+      const oldNormalizedStatus = normalizeStatusToNewFormat(
+        oldLead.status || LEAD_STATUSES.NEW
+      );
+
       if (isSales(user)) {
-        if (
-          ["Converted", "Invalid", "Unqualified"].includes(
-            validatedData.status!
-          )
-        ) {
+        // Sales tidak bisa ubah ke status tertentu
+        const restrictedStatuses = [
+          LEAD_STATUSES.CONVERTED,
+          LEAD_STATUSES.UNQUALIFIED,
+        ];
+        if (restrictedStatuses.includes(validatedData.status as any)) {
           throw new Error("Unauthorized status change.");
         }
-        if (oldLead.status === "New" && validatedData.status === "Converted") {
-          throw new Error("Invalid status transition");
-        }
-        const allowedTransitions: Record<string, string[]> = {
-          New: ["Contacted"],
-          Contacted: ["Qualified", "Nurturing", "Unqualified", "Invalid"],
-          Qualified: ["Converted"],
-          Nurturing: [],
-          Unqualified: [],
-          Invalid: [],
-          Converted: [],
-        };
+
+        // Validate status transition
         if (
-          oldLead.status &&
-          (!allowedTransitions[oldLead.status] ||
-            !allowedTransitions[oldLead.status].includes(validatedData.status!))
+          !isValidStatusTransition(oldNormalizedStatus, validatedData.status)
         ) {
           throw new Error("Invalid status transition");
         }
       }
+
       await logLeadActivity(
         id,
         Number(user.id),
@@ -163,7 +197,9 @@ export async function deleteLeadAction(formData: FormData) {
     if (isSales(user)) {
       throw new Error("Unauthorized");
     }
-    if (lead.status === "Converted") {
+
+    const normalizedStatus = normalizeStatusToNewFormat(lead.status || "");
+    if (normalizedStatus === LEAD_STATUSES.CONVERTED) {
       return {
         success: false,
         message: "Lead is already Converted. Are you sure you want to delete?",
@@ -220,9 +256,11 @@ export async function convertLeadAction(id: number) {
   if (!user) throw new Error("Unauthorized");
   const lead = await getLeadByIdDb(id);
 
+  const normalizedStatus = normalizeStatusToNewFormat(lead.status || "");
+
   if (isSales(user)) {
     if (lead.id_user !== user.id) throw new Error("Unauthorized");
-    if (lead.status !== "Qualified")
+    if (normalizedStatus !== LEAD_STATUSES.QUALIFIED)
       throw new Error("Only qualified leads can be converted.");
   }
   // Superuser boleh convert kapan saja
@@ -230,11 +268,12 @@ export async function convertLeadAction(id: number) {
   // Generate nomor opportunity baru
   const opportunityNo = generateOpportunityNo();
 
-  // Ubah status menjadi Prospecting, bukan Converted
+  // Ubah status menjadi converted dan update reference_no
   const updatedLead = await updateLeadDb(id, {
-    status: "leadqualified",
+    status: LEAD_STATUSES.CONVERTED,
     reference_no: opportunityNo,
   });
+
   await logLeadActivity(
     id,
     Number(user.id),

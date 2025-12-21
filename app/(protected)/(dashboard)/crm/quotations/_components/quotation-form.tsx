@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -18,27 +17,30 @@ import {
   createQuotationFromLeadAction,
   generateQuotationNumberAction,
 } from "@/app/actions/quotations";
+import { QuotationDetailItem } from "@/lib/schemas/quotations";
+import BoqTable, { BoqItem } from "./BoqTable";
 
 type Quotation = {
   id?: string;
   quotation_no: string;
-  opportunity_no: string; // This is for display, not in DB
-  customer_name: string; // This is for display, not in DB
-  customer_email: string; // This is for display, not in DB
-  sales_pic: string; // This is for display, not in DB
-  type: string; // This is for display, not in DB
-  company: string; // This is for display, not in DB
-  total_amount: number; // Maps to 'total'
-  shipping: number; // Add this
-  discount: number; // Add this
-  tax: number; // Add this
-  grand_total: number; // Add this
+  opportunity_no: string;
+  customer_name: string;
+  customer_email: string;
+  sales_pic: string;
+  type: string;
+  company: string;
+  total_amount: number;
+  shipping: number;
+  discount: number;
+  tax: number;
+  grand_total: number;
   status: string;
-  stage?: string; // Add this
-  target_date?: string; // Add this (ISO date string)
-  top?: string; // Add this (Terms of Payment)
-  valid_until?: string; // This can map to target_date
-  notes?: string; // Maps to 'note'
+  stage?: string;
+  target_date?: string;
+  top?: string;
+  valid_until?: string;
+  notes?: string;
+  quotation_detail?: BoqItem[]; // <-- Tambahkan baris ini
 };
 
 interface QuotationFormProps {
@@ -80,6 +82,10 @@ export default function QuotationForm({
     valid_until: quotation?.valid_until || "",
     notes: quotation?.notes || "",
   });
+
+  const [boqItems, setBoqItems] = useState<BoqItem[]>(
+    quotation?.quotation_detail || []
+  );
 
   // Generate quotation number when form loads for new quotations
   useEffect(() => {
@@ -140,53 +146,29 @@ export default function QuotationForm({
     setLoading(true);
 
     try {
-      if (leadData) {
-        // Convert formData to FormData object
-        const formDataObj = new FormData();
+      const formDataObj = new FormData();
 
-        // Add all form fields to FormData
-        Object.entries(formData).forEach(([key, value]) => {
-          if (value !== null && value !== undefined) {
-            formDataObj.append(key, String(value));
-          }
-        });
-
-        // Add quotation_detail as JSON (required by schema)
-        const quotationDetail = [
-          {
-            product_id: 1, // You'll need to get this from product selection
-            product_name: "Sample Product", // You'll need to get this from product selection
-            product_code: "SAMPLE-001",
-            quantity: 1,
-            unit_price: formData.total_amount,
-            discount: 0,
-            total: formData.total_amount,
-          },
-        ];
-
-        formDataObj.append("quotation_detail", JSON.stringify(quotationDetail));
-        formDataObj.append("customer_id", "0"); // Will be auto-created in action
-        formDataObj.append("total", String(formData.total_amount));
-        formDataObj.append("grand_total", String(formData.grand_total));
-
-        const result = await createQuotationFromLeadAction(
-          leadData.leadId,
-          formDataObj
-        );
-
-        if (result.success) {
-          alert(`Quotation ${result.data.quotation_no} created successfully!`);
-          onSuccess?.();
-          router.push("/crm/quotations");
+      // Add all form fields to FormData
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          formDataObj.append(key, String(value));
         }
-      } else {
-        // TODO: Implement actual API call for normal quotation creation
-        console.log("Submitting quotation:", formData);
+      });
 
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+      formDataObj.append("quotation_detail", JSON.stringify(boqItems));
+      formDataObj.append("customer_id", "0"); // Will be auto-created in action
+      formDataObj.append("total", String(formData.total_amount));
+      formDataObj.append("grand_total", String(formData.grand_total));
 
+      const result = await createQuotationFromLeadAction(
+        leadData.leadId,
+        formDataObj
+      );
+
+      if (result.success) {
+        alert(`Quotation ${result.data.quotation_no} created successfully!`);
         onSuccess?.();
+        router.push("/crm/quotations");
       }
     } catch (error) {
       console.error("Error saving quotation:", error);
@@ -537,19 +519,9 @@ export default function QuotationForm({
           </div>
 
           {/* Additional Notes */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Additional Information</h3>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => handleInputChange("notes", e.target.value)}
-                placeholder="Add any additional notes or requirements..."
-                rows={4}
-              />
-            </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">Bill of Quantity (BOQ)</h3>
+            <BoqTable items={boqItems} onChange={setBoqItems} />
           </div>
 
           {/* Form Actions */}
