@@ -17,6 +17,7 @@ import { ZodError } from "zod";
 import { auth } from "@/auth";
 import { users } from "@/types/models";
 import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import { serializeDecimal } from "@/utils/formatDecimal";
 
 // CREATE
 export async function createCustomerAction(formData: FormData) {
@@ -34,8 +35,12 @@ export async function createCustomerAction(formData: FormData) {
       validatedData as CreateCustomerInput
     );
 
-    revalidatePath("/crm/customers");
-    return { success: true, message: "Customer created successfully" };
+    revalidatePath("/customers");
+    return {
+      success: true,
+      message: "Customer created successfully",
+      data: serializeDecimal(customer),
+    };
   } catch (error) {
     console.error("Error creating customer:", error);
 
@@ -67,9 +72,13 @@ export async function updateCustomerAction(formData: FormData) {
     const validatedData = validateCustomerFormData(formData, "update");
     const updatedCustomer = await updateCustomerDb(id, validatedData);
 
-    revalidatePath("/crm/customers");
-    revalidatePath(`/crm/customers/${id}`);
-    return { success: true, message: "Customer updated successfully" };
+    revalidatePath("/customers");
+    revalidatePath(`/customers/${id}`);
+    return {
+      success: true,
+      message: "Customer updated successfully",
+      data: serializeDecimal(updatedCustomer),
+    };
   } catch (error) {
     console.error("Error updating customer:", error);
 
@@ -103,10 +112,14 @@ export async function deleteCustomerAction(formData: FormData) {
     const id = Number(formData.get("id"));
     if (!id) throw new Error("Customer ID is required");
 
-    await deleteCustomerDb(id);
+    const deleted = await deleteCustomerDb(id);
 
-    revalidatePath("/crm/customers");
-    return { success: true, message: "Customer deleted successfully" };
+    revalidatePath("/customers");
+    return {
+      success: true,
+      message: "Customer deleted successfully",
+      data: serializeDecimal(deleted),
+    };
   } catch (error) {
     console.error("Error deleting customer:", error);
 
@@ -127,7 +140,8 @@ export async function getCustomerByIdAction(id: number) {
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
-  return getCustomerByIdDb(id);
+  const customer = await getCustomerByIdDb(id);
+  return { data: serializeDecimal(customer) };
 }
 
 // GET ALL
@@ -137,7 +151,8 @@ export async function getAllCustomersAction() {
   if (!user) throw new Error("Unauthorized");
 
   try {
-    return await getAllCustomersDb();
+    const customers = await getAllCustomersDb();
+    return { data: customers.map(serializeDecimal) };
   } catch (error) {
     console.error("Error fetching customers:", error);
     throw new Error("Failed to fetch customers");

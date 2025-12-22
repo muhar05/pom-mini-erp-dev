@@ -34,8 +34,8 @@ function serializeDecimal(obj: any): any {
 }
 
 export default async function CustomerPage() {
-  const data = await getAllCustomersAction();
-  const customers = data.map(serializeDecimal);
+  const { data: customers } = await getAllCustomersAction();
+  console.log("SERIALIZED CUSTOMERS", JSON.stringify(customers));
 
   return (
     <>
@@ -43,7 +43,7 @@ export default async function CustomerPage() {
         title="Customer List"
         text="Manage and monitor your customers"
       />
-      <CustomersClient customers={customers} />;
+      <CustomersClient customers={customers} />
     </>
   );
 }

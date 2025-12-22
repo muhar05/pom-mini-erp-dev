@@ -13,7 +13,7 @@ export default function AddProductButton({
 }: AddProductButtonProps) {
   return (
     <div className="flex justify-end">
-      <Link href="/settings/products/new">
+      <Link href="/products/new">
         <Button className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Add Product

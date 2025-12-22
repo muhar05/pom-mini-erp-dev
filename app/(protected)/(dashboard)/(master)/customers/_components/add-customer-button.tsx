@@ -7,7 +7,7 @@ import Link from "next/link";
 export default function AddCustomerButton() {
   return (
     <div className="flex justify-end">
-      <Link href="/crm/customers/new">
+      <Link href="/customers/new">
         <Button className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Add New Customer

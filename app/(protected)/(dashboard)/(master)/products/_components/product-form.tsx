@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { Product } from "../page";
+import { Product } from "@/types/models";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface ProductFormProps {
   product?: Product | null;
@@ -35,13 +36,31 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
     null
   );
   const [dialogMessage, setDialogMessage] = useState("");
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setErrors({});
+
+    // Simple client-side validation
+    const formData = new FormData(e.currentTarget);
+    const requiredFields = ["product_code", "name"];
+    const newErrors: { [key: string]: string } = {};
+    requiredFields.forEach((field) => {
+      if (
+        !formData.get(field) ||
+        (formData.get(field) as string).trim() === ""
+      ) {
+        newErrors[field] = "This field is required";
+      }
+    });
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
 
     try {
       setIsLoading(true);
-      const formData = new FormData(e.currentTarget);
 
       // Convert FormData to JSON object
       const data: Record<string, any> = {};
@@ -51,10 +70,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
           if (trimmedValue === "") {
             continue;
           } else {
-            if (key === "price") {
-              const numValue = Number(trimmedValue);
-              data[key] = isNaN(numValue) ? null : numValue;
-            } else if (key === "stock") {
+            if (key === "price" || key === "stock") {
               const numValue = Number(trimmedValue);
               data[key] = isNaN(numValue) ? null : numValue;
             } else {
@@ -92,7 +108,6 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
       );
       setDialogOpen(true);
 
-      // Delay navigation to allow user to see dialog
       setTimeout(() => {
         setDialogOpen(false);
         router.push("/settings/products");
@@ -102,7 +117,6 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
       setDialogType("error");
       setDialogMessage(error?.message || `Failed to ${mode} product`);
       setDialogOpen(true);
-      // Optionally, show error UI here
     } finally {
       setIsLoading(false);
     }
@@ -110,39 +124,57 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-8">
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
+            <CardTitle>
+              {mode === "create" ? "Add New Product" : "Edit Product"}
+            </CardTitle>
             <CardDescription>
-              Enter the basic details of the product
+              {mode === "create"
+                ? "Fill in the details to add a new product."
+                : "Update the product information below."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="product_code">Product Code *</Label>
+                <Label htmlFor="product_code">
+                  Product Code <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="product_code"
                   name="product_code"
                   defaultValue={product?.product_code || ""}
                   placeholder="Enter product code"
                   required
+                  className={errors.product_code ? "border-red-500" : ""}
                 />
+                {errors.product_code && (
+                  <span className="text-xs text-red-500">
+                    {errors.product_code}
+                  </span>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="name">Product Name *</Label>
+                <Label htmlFor="name">
+                  Product Name <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="name"
                   name="name"
                   defaultValue={product?.name || ""}
                   placeholder="Enter product name"
                   required
+                  className={errors.name ? "border-red-500" : ""}
                 />
+                {errors.name && (
+                  <span className="text-xs text-red-500">{errors.name}</span>
+                )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="item_group">Item Group</Label>
                 <Input
@@ -163,7 +195,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="brand">Brand</Label>
                 <Input
@@ -194,18 +226,8 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                 rows={3}
               />
             </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Pricing & Inventory</CardTitle>
-            <CardDescription>
-              Set the price and inventory details
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="price">Price (IDR)</Label>
                 <Input
@@ -215,7 +237,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                   step="0.01"
                   min="0"
                   defaultValue={product?.price?.toString() || ""}
-                  placeholder="0.00"
+                  placeholder="0"
                 />
               </div>
               <div className="space-y-2">
@@ -242,7 +264,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end space-x-4">
+        <div className="flex justify-end gap-4">
           <Button
             type="button"
             variant="outline"
@@ -265,7 +287,12 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {dialogType === "success" ? (
+                <CheckCircle2 className="text-green-500 w-5 h-5" />
+              ) : (
+                <AlertCircle className="text-red-500 w-5 h-5" />
+              )}
               {dialogType === "success" ? "Success" : "Error"}
             </DialogTitle>
             <DialogDescription>{dialogMessage}</DialogDescription>

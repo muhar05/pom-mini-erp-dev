@@ -17,19 +17,17 @@ import { SidebarItem } from "@/components/nav-main";
 function convertMenuToSidebar(items: MenuItem[]): SidebarItem[] {
   return items.map((item) => {
     if (item.items && item.items.length > 0) {
-      // Untuk group, sub-menu HARUS bertipe { title, url, circleColor }
       return {
         title: item.title,
         icon: item.icon,
-        // Tidak perlu url/circleColor di group
         items: item.items.map((sub) => ({
           title: sub.title,
           url: sub.url ?? "#",
-          circleColor: "bg-primary", // atau warna lain sesuai kebutuhan
+          icon: sub.icon, // <-- tambahkan ini
+          circleColor: "bg-primary",
         })),
       };
     }
-    // Untuk leaf menu
     return {
       title: item.title,
       url: item.url,

@@ -9,6 +9,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { company } from "@/types/models";
+import { formatDate } from "@/utils/formatDate";
+import CompanyActions from "./company-actions";
 
 interface CompaniesTableProps {
   companies: company[];
@@ -25,8 +27,8 @@ export default function CompaniesTable({ companies }: CompaniesTableProps) {
           <TableHead>Address</TableHead>
           <TableHead>NPWP</TableHead>
           <TableHead>Level</TableHead>
-          <TableHead>Note</TableHead>
           <TableHead>Created At</TableHead>
+          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -39,21 +41,15 @@ export default function CompaniesTable({ companies }: CompaniesTableProps) {
             <TableCell>
               {company.company_level ? company.company_level.level_name : "-"}
             </TableCell>
-            <TableCell>{company.note || "-"}</TableCell>
+            <TableCell>{formatDate(company.created_at)}</TableCell>
             <TableCell>
-              {company.created_at
-                ? typeof company.created_at === "string"
-                  ? company.created_at
-                  : company.created_at instanceof Date
-                  ? company.created_at.toISOString()
-                  : String(company.created_at)
-                : "-"}
+              <CompanyActions company={company} />
             </TableCell>
           </TableRow>
         ))}
         {companies.length === 0 && (
           <TableRow>
-            <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+            <TableCell colSpan={8} className="text-center py-8 text-gray-500">
               No companies found.
             </TableCell>
           </TableRow>

@@ -308,3 +308,20 @@ export type Opportunity = {
   created_at: string;
   updated_at: string;
 };
+
+export interface Product {
+  id: number;
+  product_code: string;
+  name: string;
+  item_group?: string | null;
+  unit?: string | null;
+  part_number?: string | null;
+  description?: string | null;
+  price?: number | null;
+  stock?: number | null;
+  brand?: string | null;
+  rack?: string | null;
+  images?: any;
+  created_at: string;
+  updated_at: string;
+}

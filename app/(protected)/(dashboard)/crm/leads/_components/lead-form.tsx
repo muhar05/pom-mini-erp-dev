@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { CSSObjectWithLabel } from "react-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,11 +19,16 @@ import { createLeadSchema, updateLeadSchema } from "@/lib/schemas";
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import { formatStatusDisplay } from "@/utils/formatStatus";
-import { formatDate } from "@/utils/formatDate";
-import CustomSelect from "@/components/shared/custom-select";
-import ReactSelect from "react-select";
 import WindowedSelect from "react-windowed-select";
 import { LEAD_STATUS_OPTIONS } from "@/utils/statusHelpers";
+import type {
+  StylesConfig,
+  GroupBase,
+  ControlProps,
+  OptionProps,
+  MultiValueProps,
+  MenuProps,
+} from "react-select";
 
 interface LeadFormProps {
   mode: "create" | "edit";
@@ -31,6 +37,12 @@ interface LeadFormProps {
     formData: FormData
   ) => Promise<void> | Promise<{ success: boolean; message: string }>;
   products: Array<{ id: number; name: string }>;
+  // customers: Array<{
+  //   id: number;
+  //   customer_name: string;
+  //   company?: { company_name?: string };
+  // }>;
+  // companies: Array<{ id: number; company_name: string }>;
 }
 
 interface FormErrors {
@@ -100,12 +112,60 @@ const LOCATION_OPTIONS = [
   { value: "luar_negeri", label: "Luar negeri – Sebutkan nama Negara" },
 ];
 
+const selectStyles: StylesConfig<any, boolean, GroupBase<any>> = {
+  control: (base: CSSObjectWithLabel, state) => ({
+    ...base,
+    backgroundColor: state.isFocused ? "#F3F4F6" : "#fff",
+    borderColor: state.isFocused ? "#10B981" : "#D1D5DB",
+    boxShadow: state.isFocused ? "0 0 0 2px #10B98133" : "none",
+    color: "#111827",
+    minHeight: 40,
+    fontSize: 15,
+  }),
+  option: (base: CSSObjectWithLabel, state) => ({
+    ...base,
+    backgroundColor: state.isSelected
+      ? "#10B981"
+      : state.isFocused
+      ? "#ECFDF5"
+      : "#fff",
+    color: state.isSelected ? "#fff" : "#111827",
+    fontWeight: state.isSelected ? 600 : 400,
+    fontSize: 15,
+  }),
+  multiValue: (base: CSSObjectWithLabel) => ({
+    ...base,
+    backgroundColor: "#ECFDF5",
+    color: "#047857",
+    fontWeight: 500,
+  }),
+  multiValueLabel: (base: CSSObjectWithLabel) => ({
+    ...base,
+    color: "#047857",
+    fontWeight: 500,
+  }),
+  multiValueRemove: (base: CSSObjectWithLabel) => ({
+    ...base,
+    color: "#047857",
+    ":hover": {
+      backgroundColor: "#10B981",
+      color: "#fff",
+    },
+  }),
+  menu: (base: CSSObjectWithLabel) => ({
+    ...base,
+    zIndex: 20,
+  }),
+};
+
 export default function LeadForm({
   mode,
   lead,
   onSubmit,
   products,
-}: LeadFormProps) {
+}: // customers,
+// companies,
+LeadFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -122,6 +182,13 @@ export default function LeadForm({
     lead?.location || ""
   );
   const [foreignCountry, setForeignCountry] = useState<string>("");
+  const [selectedCustomers, setSelectedCustomers] = useState<
+    Array<{ label: string; value: string }>
+  >([]);
+  const [selectedCompany, setSelectedCompany] = useState<{
+    label: string;
+    value: string;
+  } | null>(null);
   const router = useRouter();
 
   // Ubah products menjadi array nama produk
@@ -129,6 +196,29 @@ export default function LeadForm({
     label: p.name,
     value: p.name,
   }));
+
+  // const customerOptions = customers.map((c) => ({
+  //   value: String(c.id),
+  //   label:
+  //     c.customer_name +
+  //     (c.company?.company_name ? ` - ${c.company.company_name}` : ""),
+  // }));
+
+  // const companyOptions = companies.map((c) => ({
+  //   value: String(c.id),
+  //   label: c.company_name,
+  // }));
+
+  // Filter customer options based on selected company
+  // const filteredCustomerOptions = selectedCompany
+  //   ? customerOptions.filter(
+  //       (c) =>
+  //         customers.find((cu) => cu.id === Number(c.value))?.company
+  //           ?.company_name === selectedCompany.label
+  //     )
+  //   : customerOptions.filter(
+  //       (c) => !customers.find((cu) => cu.id === Number(c.value))?.company
+  //     );
 
   // Client-side validation
   const validateForm = (formData: FormData): boolean => {
@@ -193,6 +283,13 @@ export default function LeadForm({
         "product_interest",
         productInterest.map((p) => p.value).join(",")
       );
+
+      // Set customers as comma separated string
+      formData.set(
+        "customers",
+        selectedCustomers.map((c) => c.value).join(",")
+      );
+      formData.set("company_id", selectedCompany?.value ?? "");
 
       // Ensure status is not empty: set sensible default if missing
       const statusValue = (formData.get("status") as string) ?? "";
@@ -410,26 +507,26 @@ export default function LeadForm({
 
         <div className="space-y-2">
           <Label htmlFor="location">Lokasi *</Label>
-          <select
-            id="location"
+          <Select
             name="location"
             value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)}
-            required
+            onValueChange={(val) => setSelectedLocation(val)}
             disabled={loading}
-            className={
-              formErrors.location
-                ? "border-red-500 w-full rounded px-3 py-2"
-                : "w-full rounded px-3 py-2"
-            }
+            required
           >
-            <option value="">Pilih lokasi</option>
-            {LOCATION_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              className={formErrors.location ? "border-red-500" : ""}
+            >
+              <SelectValue placeholder="Pilih lokasi" />
+            </SelectTrigger>
+            <SelectContent>
+              {LOCATION_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {selectedLocation === "luar_negeri" && (
             <div className="mt-2">
               <Label htmlFor="country_name" className="mb-2">
@@ -649,6 +746,7 @@ export default function LeadForm({
             }
             placeholder="Select products"
             classNamePrefix="react-select"
+            styles={selectStyles}
           />
           {formErrors.product_interest && (
             <p className="text-sm text-red-500">
@@ -656,6 +754,48 @@ export default function LeadForm({
             </p>
           )}
         </div>
+
+        {/* Customers multi-select */}
+        {/* <div className="space-y-2">
+          <Label htmlFor="customers">Customers</Label>
+          <WindowedSelect
+            windowThreshold={100}
+            isMulti
+            name="customers"
+            options={filteredCustomerOptions}
+            value={selectedCustomers}
+            onChange={(newValue) =>
+              setSelectedCustomers(Array.isArray(newValue) ? newValue : [])
+            }
+            placeholder="Pilih customer"
+            styles={selectStyles}
+          />
+          {formErrors.customers && (
+            <p className="text-sm text-red-500">{formErrors.customers}</p>
+          )}
+        </div> */}
+
+        {/* Companies single-select */}
+        {/* <div className="space-y-2">
+          <Label htmlFor="company">Company</Label>
+          <WindowedSelect
+            windowThreshold={100}
+            name="company"
+            options={companyOptions}
+            value={selectedCompany}
+            onChange={(newValue) =>
+              setSelectedCompany(
+                newValue as { label: string; value: string } | null
+              )
+            }
+            placeholder="Select company"
+            classNamePrefix="react-select"
+            styles={selectStyles}
+          />
+          {formErrors.company && (
+            <p className="text-sm text-red-500">{formErrors.company}</p>
+          )}
+        </div> */}
       </div>
 
       <div className="space-y-2">

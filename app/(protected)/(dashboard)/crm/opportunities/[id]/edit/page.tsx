@@ -1,46 +1,32 @@
-"use client";
-
-import OpportunityForm from "../../_components/opportunity-form";
-import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { getConvertedOpportunities } from "@/app/actions/opportunities";
+import { notFound } from "next/navigation";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import OpportunityForm from "../../_components/opportunity-form";
 
-// Mock data - replace with actual API call
-const mockOpportunity = {
-  id: "1",
-  opportunity_no: "OPP-001",
-  customer_name: "PT. ABC",
-  customer_email: "abc@email.com",
-  sales_pic: "Sales 1",
-  type: "Perusahaan",
-  company: "PT. ABC",
-  potential_value: 10000000,
-  stage: "Qualified",
-  status: "Open",
-  created_at: "2025-12-10",
-  updated_at: "2025-12-11",
-  expected_close_date: "2025-12-31",
-  notes: "High potential customer for Q4 2025",
-};
+export default async function OpportunityEditPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const { id } = params;
 
-export default function OpportunityEditPage() {
-  const { id } = useParams();
-  const router = useRouter();
-  const [opportunity, setOpportunity] = useState(mockOpportunity);
+  // Ambil semua opportunities dan cari yang sesuai ID
+  const opportunities = await getConvertedOpportunities();
+  const opportunity = opportunities.find((o) => o.id === id);
 
-  // TODO: Fetch opportunity detail by id for editing
-  useEffect(() => {
-    // Replace with actual API call
-    console.log("Fetching opportunity for edit with id:", id);
-    setOpportunity({ ...mockOpportunity, id: id as string });
-  }, [id]);
+  if (!opportunity) {
+    return notFound();
+  }
 
   const handleSuccess = () => {
-    router.push("/crm/opportunities");
+    "use client";
+    // router.push("/crm/opportunities");
+    window.location.href = "/crm/opportunities";
   };
 
   const handleClose = () => {
-    router.back();
+    "use client";
+    window.history.back();
   };
 
   return (

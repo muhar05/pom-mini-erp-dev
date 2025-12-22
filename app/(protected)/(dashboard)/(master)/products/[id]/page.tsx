@@ -7,18 +7,10 @@ import Link from "next/link";
 import { formatDate } from "@/utils/formatDate";
 import { notFound } from "next/navigation";
 import { getProductByIdAction } from "@/app/actions/products";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface ProductDetailPageProps {
   params: { id: string };
-}
-
-// Helper functions
-function formatCurrency(amount: number | null | undefined): string {
-  if (!amount) return "-";
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-  }).format(amount);
 }
 
 function getStockBadgeVariant(
@@ -35,18 +27,10 @@ function getStockStatus(stock: number | null | undefined): string {
   return "In Stock";
 }
 
-// Helper function to convert Decimal to number
-function decimalToNumber(decimal: any): number | null {
-  if (!decimal) return null;
-  return typeof decimal.toNumber === "function"
-    ? decimal.toNumber()
-    : Number(decimal);
-}
-
 export default async function ProductDetailPage({
   params,
 }: ProductDetailPageProps) {
-  const { id } = await params;
+  const { id } = params;
   const product = await getProductByIdAction(Number(id));
 
   if (!product) {
@@ -54,101 +38,78 @@ export default async function ProductDetailPage({
   }
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-8">
       <DashboardBreadcrumb
         title="Product Details"
         text="View detailed information about this product"
       />
 
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <Link href="/settings/products">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Products
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Package className="w-6 h-6" />
-                {product.name}
-              </h1>
-              <p className="text-gray-600">{product.product_code}</p>
-            </div>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+        <div className="flex items-center gap-4">
+          <Link href="/products">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Products
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <Package className="w-7 h-7 text-primary" />
+              {product.name}
+            </h1>
+            <p className="text-gray-500 text-sm">{product.product_code}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={getStockBadgeVariant(product.stock)}>
-              {getStockStatus(product.stock)}
-            </Badge>
-            <Link href={`/settings/products/${product.id}/edit`}>
-              <Button>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Product
-              </Button>
-            </Link>
-          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={getStockBadgeVariant(product.stock)}>
+            {getStockStatus(product.stock)}
+          </Badge>
+          <Link href={`/products/${product.id}/edit`}>
+            <Button>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Product
+            </Button>
+          </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Basic Information */}
-        <Card>
+        <Card className="col-span-1 lg:col-span-2">
           <CardHeader>
             <CardTitle>Basic Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Product Code
-                </label>
-                <p className="text-sm font-mono">{product.product_code}</p>
+                <div className="text-xs text-gray-500 mb-1">Product Code</div>
+                <div className="font-mono">{product.product_code}</div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Product Name
-                </label>
-                <p className="text-sm">{product.name}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Item Group
-                </label>
-                <p className="text-sm">{product.item_group || "-"}</p>
+                <div className="text-xs text-gray-500 mb-1">Product Name</div>
+                <div className="font-semibold">{product.name}</div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Unit
-                </label>
-                <p className="text-sm">{product.unit || "-"}</p>
+                <div className="text-xs text-gray-500 mb-1">Item Group</div>
+                <div>{product.item_group || "-"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Unit</div>
+                <div>{product.unit || "-"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Brand</div>
+                <div>{product.brand || "-"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Part Number</div>
+                <div>{product.part_number || "-"}</div>
               </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Brand
-                </label>
-                <p className="text-sm">{product.brand || "-"}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Part Number
-                </label>
-                <p className="text-sm">{product.part_number || "-"}</p>
-              </div>
-            </div>
-
             {product.description && (
               <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Description
-                </label>
-                <p className="text-sm">{product.description}</p>
+                <div className="text-xs text-gray-500 mb-1">Description</div>
+                <div>{product.description}</div>
               </div>
             )}
           </CardContent>
@@ -160,35 +121,28 @@ export default async function ProductDetailPage({
             <CardTitle>Pricing & Inventory</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Price
-                </label>
-                <p className="text-lg font-medium">
-                  {formatCurrency(decimalToNumber(product.price))}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Current Stock
-                </label>
-                <p className="text-lg font-medium">{product.stock || 0}</p>
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Price</div>
+              <div className="text-xl font-bold text-primary">
+                {formatCurrency(product.price)}
               </div>
             </div>
-
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Current Stock</div>
+              <div className="text-lg font-semibold">{product.stock || 0}</div>
+            </div>
             {product.rack && (
               <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Rack Location
-                </label>
-                <p className="text-sm">{product.rack}</p>
+                <div className="text-xs text-gray-500 mb-1">Rack Location</div>
+                <div>{product.rack}</div>
               </div>
             )}
           </CardContent>
         </Card>
+      </div>
 
-        {/* System Information */}
+      {/* System Information */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <Card>
           <CardHeader>
             <CardTitle>System Information</CardTitle>
@@ -196,16 +150,12 @@ export default async function ProductDetailPage({
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Created At
-                </label>
-                <p className="text-sm">{formatDate(product.created_at)}</p>
+                <div className="text-xs text-gray-500 mb-1">Created At</div>
+                <div>{formatDate(product.created_at)}</div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">
-                  Updated At
-                </label>
-                <p className="text-sm">{formatDate(product.updated_at)}</p>
+                <div className="text-xs text-gray-500 mb-1">Updated At</div>
+                <div>{formatDate(product.updated_at)}</div>
               </div>
             </div>
           </CardContent>

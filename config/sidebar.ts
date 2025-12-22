@@ -39,7 +39,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       title: "CRM",
       icon: FileText,
       items: [
-        { title: "Lead List", url: "/crm/leads", icon: FileText },
+        { title: "Lead List", url: "/crm/leads", icon: Users },
         {
           title: "Opportunity",
           url: "/crm/opportunities",
@@ -56,8 +56,8 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       icon: Settings,
       items: [
         { title: "Customer List", url: "/customers", icon: UserRound },
-        { title: "Company List", url: "/companies", icon: UserCog },
-        { title: "Product List", url: "/products", icon: Boxes },
+        { title: "Company List", url: "/companies", icon: Building2 },
+        { title: "Product List", url: "/products", icon: Package },
       ],
     },
 
@@ -68,7 +68,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
         {
           title: "Purchase Request (PR)",
           url: "/purchasing/purchase-requests",
-          icon: FileText,
+          icon: ClipboardList,
         },
         {
           title: "Purchase Order (PO)",
@@ -79,7 +79,6 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       ],
     },
 
-    // --- Warehouse & Logistics split into three groups ---
     {
       title: "Warehouse",
       icon: Warehouse,
@@ -119,7 +118,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
         {
           title: "Stock Movements",
           url: "/warehouse/inventory/movements",
-          icon: Boxes,
+          icon: FileText,
         },
       ],
     },
@@ -148,31 +147,8 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       icon: Settings,
       items: [
         { title: "Users", url: "/settings/users", icon: Users },
-        { title: "Company", url: "/settings/company", icon: UserCog },
-        // { title: "Products", url: "/settings/products", icon: Boxes },
-        // {
-        //   title: "Lead Sources",
-        //   url: "/settings/lead-sources",
-        //   icon: FileText,
-        // },
-        // {
-        //   title: "Category PT",
-        //   url: "/settings/categories",
-        //   icon: BadgeDollarSign,
-        // },
-        // { title: "Locations", url: "/settings/locations", icon: Building2 },
-        // {
-        //   title: "Auto Numbering",
-        //   url: "/settings/auto-numbering",
-        //   icon: ClipboardList,
-        // },
-        // { title: "Permissions", url: "/settings/permissions", icon: UserCog },
-        // {
-        //   title: "Document Templates",
-        //   url: "/settings/document-templates",
-        //   icon: FileCheck,
-        // },
-        // { title: "Audit Logs", url: "/settings/logs", icon: FileText },
+        { title: "Company", url: "/settings/company", icon: Building2 },
+        // Tambahkan icon jika ada sub-items lain yang diaktifkan
       ],
     },
 
@@ -182,7 +158,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
   // SALES — hanya CRM
   sales: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Leads", url: "/crm/leads", icon: FileText },
+    { title: "Leads", url: "/crm/leads", icon: Users },
     { title: "Opportunity", url: "/crm/opportunities", icon: ClipboardList },
     { title: "Quotation (SQ)", url: "/crm/quotations", icon: FileCheck },
     { title: "Sales Order (SO)", url: "/crm/sales-orders", icon: ShoppingCart },
@@ -195,7 +171,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
     {
       title: "Purchase Request (PR)",
       url: "/purchasing/purchase-requests",
-      icon: FileText,
+      icon: ClipboardList,
     },
     {
       title: "Purchase Order (PO)",
@@ -223,7 +199,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
     {
       title: "Stock Movements",
       url: "/warehouse/inventory/movements",
-      icon: Boxes,
+      icon: FileText,
     },
   ],
 
@@ -251,7 +227,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       url: "/manager-sales/pending-task",
       icon: ClipboardList,
     },
-    { title: "Leads", url: "/crm/leads", icon: FileText },
+    { title: "Leads", url: "/crm/leads", icon: Users },
     { title: "Opportunity", url: "/crm/opportunities", icon: ClipboardList },
     { title: "Quotation (SQ)", url: "/crm/quotations", icon: FileCheck },
     { title: "Sales Order (SO)", url: "/crm/sales-orders", icon: ShoppingCart },
@@ -262,7 +238,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
     {
       title: "Purchase Request (PR)",
       url: "/purchasing/purchase-requests",
-      icon: FileText,
+      icon: ClipboardList,
     },
     {
       title: "Purchase Order (PO)",
@@ -288,7 +264,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
     {
       title: "Stock Movements",
       url: "/warehouse/inventory/movements",
-      icon: Boxes,
+      icon: FileText,
     },
   ],
   manager_finance: [

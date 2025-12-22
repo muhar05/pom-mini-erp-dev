@@ -285,3 +285,15 @@ export async function updateOpportunityStatus(id: string, newStatus: string) {
     throw new Error("Failed to update status");
   }
 }
+
+export async function setOpportunityLost(id: string) {
+  return await updateOpportunityStatus(id, "opp_lost");
+}
+
+export async function setOpportunityQualified(id: string) {
+  return await updateOpportunityStatus(id, "opp_qualified");
+}
+
+export async function setOpportunitySQ(id: string) {
+  return await updateOpportunityStatus(id, "opp_sq");
+}

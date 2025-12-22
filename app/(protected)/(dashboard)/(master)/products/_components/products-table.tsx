@@ -10,21 +10,13 @@ import {
 } from "@/components/ui/table";
 import ProductActions from "./product-actions";
 import { formatDate } from "@/utils/formatDate";
-import { Product } from "../page";
+import { Product } from "@/types/models";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface ProductsTableProps {
   products: Product[];
   onProductUpdated?: () => void;
   onProductDeleted?: () => void;
-}
-
-// Helper function to format currency
-function formatCurrency(amount: number | null | undefined): string {
-  if (!amount) return "-";
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-  }).format(amount);
 }
 
 // Helper function to get stock status badge

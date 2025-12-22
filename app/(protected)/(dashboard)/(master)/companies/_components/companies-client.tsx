@@ -40,7 +40,7 @@ export default function CompaniesClient({ companies }: CompaniesClientProps) {
   }, [filters]);
 
   return (
-    <div className="grid grid-cols-1 gap-6 mt-6">
+    <div className="grid grid-cols-1 gap-2">
       <DashboardBreadcrumb
         title="Company List"
         text="Manage and monitor your companies"
@@ -50,7 +50,7 @@ export default function CompaniesClient({ companies }: CompaniesClientProps) {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold mb-4">List Companies</h2>
         <CompaniesTable companies={paged} filters={filters} />
-        <div className="flex justify-end items-center gap-2 mt-4">
+        <div className="flex justify-end items-center gap-2 mt-2">
           <button
             className="px-3 py-1 rounded border"
             disabled={page === 1}

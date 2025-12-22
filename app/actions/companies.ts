@@ -21,7 +21,7 @@ export async function createCompanyAction(formData: FormData) {
   try {
     const validatedData = validateCompanyFormData(formData, "create");
     await createCompanyDb(validatedData as CreateCompanyInput);
-    revalidatePath("/crm/companies");
+    revalidatePath("/companies");
     return { success: true, message: "Company created successfully" };
   } catch (error) {
     if (error instanceof ZodError) {
@@ -41,8 +41,8 @@ export async function updateCompanyAction(formData: FormData) {
     const id = Number(formData.get("id"));
     const validatedData = validateCompanyFormData(formData, "update");
     await updateCompanyDb(id, validatedData);
-    revalidatePath("/crm/companies");
-    revalidatePath(`/crm/companies/${id}`);
+    revalidatePath("/companies");
+    revalidatePath(`/companies/${id}`);
     return { success: true, message: "Company updated successfully" };
   } catch (error) {
     if (error instanceof ZodError) {
@@ -61,7 +61,7 @@ export async function deleteCompanyAction(formData: FormData) {
   try {
     const id = Number(formData.get("id"));
     await deleteCompanyDb(id);
-    revalidatePath("/crm/companies");
+    revalidatePath("/companies");
     return { success: true, message: "Company deleted successfully" };
   } catch (error) {
     return {

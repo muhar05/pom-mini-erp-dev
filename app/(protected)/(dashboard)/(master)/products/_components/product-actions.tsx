@@ -14,7 +14,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSession } from "@/contexts/session-context";
 import ProductDeleteDialog from "./product-delete-dialog";
-import { Product } from "../page";
+import { Product } from "@/types/models";
 
 interface ProductActionsProps {
   product: Product;
@@ -28,7 +28,7 @@ export default function ProductActions({
   onProductDeleted,
 }: ProductActionsProps) {
   const { user } = useSession();
-  console.log("User role in ProductActions:", user?.role_name);                     
+  console.log("User role in ProductActions:", user?.role_name);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const isSuperuser = user?.role_name === "Superuser";
 
@@ -47,7 +47,7 @@ export default function ProductActions({
 
           <DropdownMenuItem asChild>
             <Link
-              href={`/settings/products/${product.id}`}
+              href={`/products/${product.id}`}
               className="flex items-center gap-2 cursor-pointer"
             >
               <Eye className="w-4 h-4" />
@@ -57,7 +57,7 @@ export default function ProductActions({
 
           <DropdownMenuItem asChild>
             <Link
-              href={`/settings/products/${product.id}/edit`}
+              href={`/products/${product.id}/edit`}
               className="flex items-center gap-2 cursor-pointer"
             >
               <Edit className="w-4 h-4" />

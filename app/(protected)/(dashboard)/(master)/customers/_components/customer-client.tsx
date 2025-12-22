@@ -64,7 +64,6 @@ export default function CustomersClient({ customers }: CustomersClientProps) {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold mb-4">List Customers</h2>
         <CustomersTable customers={paged} filters={filters} />
-        {/* Pagination */}
         <div className="flex justify-end items-center gap-2 mt-4">
           <button
             className="px-3 py-1 rounded border"

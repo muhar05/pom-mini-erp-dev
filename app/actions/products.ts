@@ -17,6 +17,7 @@ import { ZodError } from "zod";
 import { auth } from "@/auth";
 import { users } from "@/types/models";
 import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import { serializeDecimal } from "@/utils/formatDecimal";
 
 // CREATE
 export async function createProductAction(formData: FormData) {
@@ -35,8 +36,13 @@ export async function createProductAction(formData: FormData) {
 
     const product = await createProductDb(validatedData as CreateProductInput);
 
-    revalidatePath("/settings/products");
-    return { success: true, message: "Product created successfully" };
+    revalidatePath("/products");
+    // Kembalikan produk yang sudah di-serialize jika ingin return data produk
+    return {
+      success: true,
+      message: "Product created successfully",
+      product: serializeDecimal(product),
+    };
   } catch (error) {
     console.error("Error creating product:", error);
 
@@ -68,9 +74,14 @@ export async function updateProductAction(formData: FormData) {
     const validatedData = validateProductFormData(formData, "update");
     const updatedProduct = await updateProductDb(id, validatedData);
 
-    revalidatePath("/settings/products");
-    revalidatePath(`/settings/products/${id}`);
-    return { success: true, message: "Product updated successfully" };
+    revalidatePath("/products");
+    revalidatePath(`/products/${id}`);
+    // Kembalikan produk yang sudah di-serialize jika ingin return data produk
+    return {
+      success: true,
+      message: "Product updated successfully",
+      product: serializeDecimal(updatedProduct),
+    };
   } catch (error) {
     console.error("Error updating product:", error);
 
@@ -106,7 +117,7 @@ export async function deleteProductAction(formData: FormData) {
 
     await deleteProductDb(id);
 
-    revalidatePath("/settings/products");
+    revalidatePath("/products");
     return { success: true, message: "Product deleted successfully" };
   } catch (error) {
     console.error("Error deleting product:", error);
@@ -128,7 +139,8 @@ export async function getProductByIdAction(id: number) {
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
-  return getProductByIdDb(id);
+  const product = await getProductByIdDb(id);
+  return serializeDecimal(product); // Sudah benar
 }
 
 // GET ALL
@@ -138,7 +150,10 @@ export async function getAllProductsAction() {
   if (!user) throw new Error("Unauthorized");
 
   try {
-    return await getAllProductsDb();
+    const products = await getAllProductsDb();
+    const serialized = products.map(serializeDecimal);
+    console.log("SERIALIZED PRODUCTS", JSON.stringify(serialized)); // Ini akan error jika masih ada fungsi
+    return serialized;
   } catch (error) {
     console.error("Error fetching products:", error);
     throw new Error("Failed to fetch products");
