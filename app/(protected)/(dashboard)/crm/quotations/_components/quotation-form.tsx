@@ -381,7 +381,7 @@ export default function QuotationForm({
           </div>
 
           {/* Pricing Information */}
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <h3 className="text-lg font-medium">Pricing Information</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -461,9 +461,17 @@ export default function QuotationForm({
                 />
               </div>
             </div>
+          </div> */}
+
+        
+
+          {/* Additional Notes */}
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">Bill of Quantity (BOQ)</h3>
+            <BoqTable items={boqItems} onChange={setBoqItems} />
           </div>
 
-          {/* Terms and Timeline */}
+            {/* Terms and Timeline */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Terms and Timeline</h3>
 
@@ -516,12 +524,6 @@ export default function QuotationForm({
                 </Select>
               </div>
             </div>
-          </div>
-
-          {/* Additional Notes */}
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">Bill of Quantity (BOQ)</h3>
-            <BoqTable items={boqItems} onChange={setBoqItems} />
           </div>
 
           {/* Form Actions */}

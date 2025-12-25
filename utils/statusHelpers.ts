@@ -15,13 +15,8 @@ export const LEAD_STATUSES = {
 
 // Opportunity Status Enum
 export const OPPORTUNITY_STATUSES = {
-  NEW: "opp_new",
-  QUALIFIED: "opp_qualified",
-  PROPOSAL: "opp_proposal",
-  NEGOTIATION: "opp_negotiation",
-  WON: "opp_won",
+  PROSPECTING: "prospecting",
   LOST: "opp_lost",
-  CANCELLED: "opp_cancelled",
   SQ: "opp_sq",
 } as const;
 
@@ -192,25 +187,9 @@ export function isValidStatusTransition(
       [LEAD_STATUSES.CONVERTED]: [],
     },
     opp: {
-      [OPPORTUNITY_STATUSES.NEW]: [OPPORTUNITY_STATUSES.QUALIFIED],
-      [OPPORTUNITY_STATUSES.QUALIFIED]: [
-        OPPORTUNITY_STATUSES.PROPOSAL,
-        OPPORTUNITY_STATUSES.LOST,
-        OPPORTUNITY_STATUSES.CANCELLED,
-      ],
-      [OPPORTUNITY_STATUSES.PROPOSAL]: [
-        OPPORTUNITY_STATUSES.NEGOTIATION,
-        OPPORTUNITY_STATUSES.LOST,
-        OPPORTUNITY_STATUSES.CANCELLED,
-      ],
-      [OPPORTUNITY_STATUSES.NEGOTIATION]: [
-        OPPORTUNITY_STATUSES.WON,
-        OPPORTUNITY_STATUSES.LOST,
-        OPPORTUNITY_STATUSES.CANCELLED,
-      ],
-      [OPPORTUNITY_STATUSES.WON]: [],
+      [OPPORTUNITY_STATUSES.PROSPECTING]: [OPPORTUNITY_STATUSES.LOST],
       [OPPORTUNITY_STATUSES.LOST]: [],
-      [OPPORTUNITY_STATUSES.CANCELLED]: [],
+      [OPPORTUNITY_STATUSES.SQ]: [],
     },
     sq: {
       [SQ_STATUSES.DRAFT]: [SQ_STATUSES.SENT, SQ_STATUSES.CANCELLED],
@@ -294,12 +273,11 @@ export const LEAD_STATUS_OPTIONS = (
   label: formatStatusDisplay(status),
 }));
 
-export const OPPORTUNITY_STATUS_OPTIONS = (
-  Object.values(OPPORTUNITY_STATUSES) as string[]
-).map((status) => ({
-  value: status,
-  label: formatStatusDisplay(status),
-}));
+export const OPPORTUNITY_STATUS_OPTIONS = [
+  { value: OPPORTUNITY_STATUSES.PROSPECTING, label: "Prospecting" },
+  { value: OPPORTUNITY_STATUSES.LOST, label: "Lost" },
+  { value: OPPORTUNITY_STATUSES.SQ, label: "SQ" },
+];
 
 export const SQ_STATUS_OPTIONS = (Object.values(SQ_STATUSES) as string[]).map(
   (status) => ({

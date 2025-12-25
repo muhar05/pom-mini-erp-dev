@@ -37,16 +37,17 @@ function generateOpportunityNo(): string {
   return `OP${year}${month}${random}`;
 }
 
-// Helper to normalize legacy statuses to new prefixed format
+// Normalisasi status lead
 function normalizeStatusToNewFormat(status: string): string {
   const legacyToNewMapping: Record<string, string> = {
     new: LEAD_STATUSES.NEW,
     contacted: LEAD_STATUSES.CONTACTED,
-    nurturing: LEAD_STATUSES.INTERESTED, // Map nurturing to interested
+    nurturing: LEAD_STATUSES.INTERESTED,
     qualified: LEAD_STATUSES.QUALIFIED,
     unqualified: LEAD_STATUSES.UNQUALIFIED,
-    invalid: LEAD_STATUSES.UNQUALIFIED, // Map invalid to unqualified
-    converted: LEAD_STATUSES.CONVERTED,
+    invalid: LEAD_STATUSES.UNQUALIFIED,
+    converted: "prospecting", // Ubah ke prospecting
+    lead_converted: "prospecting", // Ubah ke prospecting
     leadqualified: LEAD_STATUSES.QUALIFIED,
   };
 

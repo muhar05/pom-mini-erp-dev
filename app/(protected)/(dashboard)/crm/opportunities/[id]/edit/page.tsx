@@ -1,47 +1,31 @@
-import { getConvertedOpportunities } from "@/app/actions/opportunities";
-import { notFound } from "next/navigation";
+import React from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { getOpportunityByIdAction } from "@/app/actions/opportunities";
 import OpportunityForm from "../../_components/opportunity-form";
 
-export default async function OpportunityEditPage({
-  params,
-}: {
+interface EditOpportunityPageProps {
   params: { id: string };
-}) {
-  const { id } = params;
+}
 
-  // Ambil semua opportunities dan cari yang sesuai ID
-  const opportunities = await getConvertedOpportunities();
-  const opportunity = opportunities.find((o) => o.id === id);
-
-  if (!opportunity) {
-    return notFound();
-  }
-
-  const handleSuccess = () => {
-    "use client";
-    // router.push("/crm/opportunities");
-    window.location.href = "/crm/opportunities";
-  };
-
-  const handleClose = () => {
-    "use client";
-    window.history.back();
-  };
+export default async function EditOpportunityPage({
+  params,
+}: EditOpportunityPageProps) {
+  const opportunity = await getOpportunityByIdAction(Number(params.id));
 
   return (
     <>
       <DashboardBreadcrumb
-        title={`Edit Opportunity - ${opportunity.opportunity_no}`}
+        title={`Edit Opportunity: ${opportunity.opportunity_no}`}
         text="Update opportunity information"
       />
-      <div className="max-w-4xl mx-auto py-8">
-        <OpportunityForm
-          mode="edit"
-          opportunity={opportunity}
-          onClose={handleClose}
-          onSuccess={handleSuccess}
-        />
+      <div className="grid grid-cols-1 gap-6 mt-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold mb-4">
+            Edit Opportunity Information
+          </h2>
+          {/* Do not pass onClose or onSuccess from here */}
+          <OpportunityForm mode="edit" opportunity={opportunity} />
+        </div>
       </div>
     </>
   );

@@ -7,6 +7,7 @@ import AddLeadButton from "./_components/add-lead-button";
 import LeadsFilter from "./_components/leads-filter";
 import { getAllLeadsAction } from "@/app/actions/leads";
 import { leads } from "@/types/models";
+import LoadingSkeleton from "@/components/loading-skeleton";
 
 export default function LeadPage() {
   const [leads, setLeads] = useState<leads[]>([]);
@@ -51,8 +52,11 @@ export default function LeadPage() {
           title="Lead Management"
           text="Manage and monitor your leads"
         />
-        <div className="flex justify-center items-center p-8">
-          <div className="text-center">Loading leads...</div>
+        <div className="flex justify-center items-center p-16 w-full h-full">
+          <div className="flex flex-col w-full justify-center items-center">
+            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+            <span className="text-sm text-muted-foreground">Loading...</span>
+          </div>
         </div>
       </>
     );

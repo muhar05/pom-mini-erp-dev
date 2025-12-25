@@ -18,7 +18,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Opportunity } from "@/types/models";
-import { updateOpportunityStatus } from "@/app/actions/opportunities";
+import { updateOpportunityAction } from "@/app/actions/opportunities";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,10 @@ import {
   DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  LEAD_STATUS_OPTIONS,
+  OPPORTUNITY_STATUS_OPTIONS,
+} from "@/utils/statusHelpers";
 
 interface OpportunityDetailClientProps {
   opportunity: Opportunity;
@@ -63,6 +67,11 @@ function getStageBadgeClass(stage: string): string {
   }
 }
 
+function getStatusFlow() {
+  // Gabungkan lead dan opportunity status
+  return [...LEAD_STATUS_OPTIONS, ...OPPORTUNITY_STATUS_OPTIONS];
+}
+
 export default function OpportunityDetailClient({
   opportunity,
 }: OpportunityDetailClientProps) {
@@ -84,7 +93,11 @@ export default function OpportunityDetailClient({
     if (!pendingStatus) return;
     setIsLoading(true);
     try {
-      await updateOpportunityStatus(opportunity.id, pendingStatus);
+      await fetch(`/api/opportunities/${opportunity.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: pendingStatus }),
+      });
       setDialogOpen(false);
       setPendingStatus(null);
       router.refresh();
@@ -96,8 +109,11 @@ export default function OpportunityDetailClient({
     }
   };
 
+  // Status flow indicator
+  const statusFlow = getStatusFlow();
+
   return (
-    <div className="max-w-4xl mx-auto py-8">
+    <div className="w-full mx-auto py-8">
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
@@ -109,7 +125,7 @@ export default function OpportunityDetailClient({
             </div>
             <div className="flex flex-col gap-2 items-end">
               <Badge className={getStageBadgeClass(opportunity.stage)}>
-                {opportunity.stage}
+                {opportunity.stage === "opp_sq" ? "SQ" : opportunity.stage}
               </Badge>
             </div>
           </div>
@@ -148,7 +164,9 @@ export default function OpportunityDetailClient({
                   <div>
                     <p className="text-sm text-gray-500">Stage</p>
                     <Badge className={getStageBadgeClass(opportunity.stage)}>
-                      {opportunity.stage}
+                      {opportunity.stage === "opp_sq"
+                        ? "SQ"
+                        : opportunity.stage}
                     </Badge>
                   </div>
                 </div>
@@ -234,7 +252,9 @@ export default function OpportunityDetailClient({
                         className={getStatusBadgeClass(opportunity.status)}
                         variant="secondary"
                       >
-                        {opportunity.status}
+                        {opportunity.status === "opp_sq"
+                          ? "SQ"
+                          : opportunity.status}
                       </Badge>
                     </div>
                     <div className="flex gap-3">
@@ -276,56 +296,18 @@ export default function OpportunityDetailClient({
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <p className="text-sm text-gray-600 mb-2">Status Flow:</p>
                     <div className="flex items-center gap-2 text-sm">
-                      <span
-                        className={`px-2 py-1 rounded ${
-                          opportunity.status?.toLowerCase() === "converted"
-                            ? "bg-green-100 text-green-800 font-semibold"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        Converted
-                      </span>
-                      <span className="text-gray-400">→</span>
-                      <span
-                        className={`px-2 py-1 rounded ${
-                          opportunity.status?.toLowerCase() === "prospecting"
-                            ? "bg-blue-100 text-blue-800 font-semibold"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        Prospecting
-                      </span>
-                      <span
-                        className={`px-2 py-1 rounded ${
-                          opportunity.status?.toLowerCase() === "leadqualified"
-                            ? "bg-blue-100 text-blue-800 font-semibold"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        LeadQualified
-                      </span>
-                      <span className="text-gray-400">→</span>
-                      <span
-                        className={`px-2 py-1 rounded ${
-                          opportunity.status?.toLowerCase() ===
-                          "opportunityqualified"
-                            ? "bg-blue-100 text-blue-800 font-semibold"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        OpportunityQualified
-                      </span>
-                      <span className="text-gray-400">→</span>
-                      <span className="text-gray-400">or</span>
-                      <span
-                        className={`px-2 py-1 rounded ${
-                          opportunity.status?.toLowerCase() === "lost"
-                            ? "bg-red-100 text-red-800 font-semibold"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        Lost
-                      </span>
+                      {statusFlow.map((status) => (
+                        <span
+                          key={status.value}
+                          className={`px-2 py-1 rounded ${
+                            opportunity.status === status.value
+                              ? "bg-blue-100 text-blue-800 font-semibold"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {status.value === "opp_sq" ? "SQ" : status.label}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>

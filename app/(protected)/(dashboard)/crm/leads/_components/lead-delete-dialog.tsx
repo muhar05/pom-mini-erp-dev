@@ -109,18 +109,21 @@ export default function LeadDeleteDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-white dark:bg-gray-900">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-gray-900">
+          <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Delete Lead
           </DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-100">
             Are you sure you want to delete{" "}
-            <span className="font-semibold text-gray-900">"{leadName}"</span>?
+            <span className="font-semibold text-gray-900 dark:text-white">
+              "{leadName}"
+            </span>
+            ?
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-gray-500 dark:text-gray-300 mt-2">
             This action cannot be undone. All data associated with this lead
             will be permanently removed.
           </p>

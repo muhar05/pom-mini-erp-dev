@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { leads } from "@/types/models";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,8 +22,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/utils/formatDate";
-import { formatStatusDisplay, getStatusPrefix } from "@/utils/statusHelpers";
+import { formatStatusDisplay } from "@/utils/statusHelpers";
 import Link from "next/link";
+import { filterLeads, getStatusBadgeClass } from "@/utils/leadTableHelpers";
+import LeadDeleteDialog from "./lead-delete-dialog";
+import { deleteLeadAction } from "@/app/actions/leads";
+import { useRouter } from "next/navigation";
 
 interface LeadsTableProps {
   leads: leads[];
@@ -35,143 +39,19 @@ interface LeadsTableProps {
   };
 }
 
-// Helper function to get status badge styling based on prefix and status
-function getStatusBadgeClass(status: string | null | undefined): string {
-  if (!status) return "bg-gray-100 text-gray-800 border-gray-200";
-
-  const statusLower = status.toLowerCase();
-  const prefix = getStatusPrefix(statusLower);
-
-  // Handle prefixed statuses
-  if (prefix === "lead") {
-    switch (statusLower) {
-      case "lead_new":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "lead_contacted":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "lead_interested":
-        return "bg-orange-100 text-orange-800 border-orange-200";
-      case "lead_qualified":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      case "lead_unqualified":
-        return "bg-gray-100 text-gray-800 border-gray-200";
-      case "lead_converted":
-        return "bg-emerald-100 text-emerald-800 border-emerald-200";
-    }
-  }
-
-  if (prefix === "opp") {
-    switch (statusLower) {
-      case "opp_new":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "opp_qualified":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      case "opp_proposal":
-        return "bg-indigo-100 text-indigo-800 border-indigo-200";
-      case "opp_negotiation":
-        return "bg-amber-100 text-amber-800 border-amber-200";
-      case "opp_won":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "opp_lost":
-        return "bg-red-100 text-red-800 border-red-200";
-      case "opp_cancelled":
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  }
-
-  // Legacy status handling for backward compatibility
-  switch (statusLower) {
-    case "new":
-      return "bg-blue-100 text-blue-800 border-blue-200";
-    case "contacted":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "qualified":
-    case "leadqualified":
-      return "bg-purple-100 text-purple-800 border-purple-200";
-    case "prospecting":
-      return "bg-orange-100 text-orange-800 border-orange-200";
-    case "closed_won":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "closed_lost":
-      return "bg-red-100 text-red-800 border-red-200";
-    case "nurturing":
-      return "bg-teal-100 text-teal-800 border-teal-200";
-    case "unqualified":
-      return "bg-gray-100 text-gray-800 border-gray-200";
-    case "invalid":
-      return "bg-red-100 text-red-800 border-red-200";
-    case "converted":
-      return "bg-emerald-100 text-emerald-800 border-emerald-200";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-200";
-  }
-}
-
-// Filter function
-function filterLeads(
-  leads: leads[],
-  filters?: {
-    search?: string;
-    status?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  }
-): leads[] {
-  if (!filters) return leads;
-
-  return leads.filter((lead) => {
-    // Search filter
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      const matchesSearch =
-        lead.lead_name?.toLowerCase().includes(searchTerm) ||
-        lead.reference_no?.toLowerCase().includes(searchTerm) ||
-        lead.company?.toLowerCase().includes(searchTerm) ||
-        lead.email?.toLowerCase().includes(searchTerm);
-      if (!matchesSearch) return false;
-    }
-
-    // Status filter
-    if (filters.status && filters.status !== "all") {
-      const leadStatus = lead.status?.toLowerCase() || "";
-      const filterStatus = filters.status.toLowerCase();
-
-      // Handle both prefixed and legacy status filtering
-      const statusMatches =
-        leadStatus === filterStatus ||
-        leadStatus.includes(filterStatus) ||
-        filterStatus.includes(leadStatus);
-
-      if (!statusMatches) return false;
-    }
-
-    // Date filters
-    if (filters.dateFrom || filters.dateTo) {
-      const leadDate = lead.created_at ? new Date(lead.created_at) : null;
-      if (!leadDate) return false;
-
-      if (filters.dateFrom) {
-        const fromDate = new Date(filters.dateFrom);
-        if (leadDate < fromDate) return false;
-      }
-
-      if (filters.dateTo) {
-        const toDate = new Date(filters.dateTo);
-        toDate.setHours(23, 59, 59, 999); // End of day
-        if (leadDate > toDate) return false;
-      }
-    }
-
-    return true;
-  });
-}
-
 export default function LeadsTable({ leads, filters }: LeadsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [localLeads, setLocalLeads] = useState<leads[]>(leads);
+  const router = useRouter();
+
+  // Sync localLeads with props.leads jika leads berubah dari parent
+  useEffect(() => {
+    setLocalLeads(leads);
+  }, [leads]);
 
   // Filter leads based on provided filters
-  const filteredLeads = filterLeads(leads, filters);
+  const filteredLeads = filterLeads(localLeads, filters);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
@@ -180,9 +60,19 @@ export default function LeadsTable({ leads, filters }: LeadsTableProps) {
   const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
 
   // Reset to first page when filters change
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [filters]);
+
+  // Fungsi hapus lead
+  async function handleDeleteLead(formData: FormData) {
+    const result = await deleteLeadAction(formData);
+    if (result?.success) {
+      const deletedId = Number(formData.get("id"));
+      setLocalLeads((prev) => prev.filter((l) => l.id !== deletedId));
+    }
+    return result;
+  }
 
   return (
     <div className="space-y-4">
@@ -267,9 +157,18 @@ export default function LeadsTable({ leads, filters }: LeadsTableProps) {
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete lead
+                        <DropdownMenuItem asChild>
+                          <LeadDeleteDialog
+                            leadId={lead.id}
+                            leadName={lead.lead_name}
+                            onDelete={handleDeleteLead}
+                            trigger={
+                              <span className="flex ml-2 items-center text-red-600 cursor-pointer">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete lead
+                              </span>
+                            }
+                          />
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

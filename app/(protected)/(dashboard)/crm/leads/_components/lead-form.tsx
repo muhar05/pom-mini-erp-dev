@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { CSSObjectWithLabel } from "react-select";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,14 +20,14 @@ import toast from "react-hot-toast";
 import { formatStatusDisplay } from "@/utils/formatStatus";
 import WindowedSelect from "react-windowed-select";
 import { LEAD_STATUS_OPTIONS } from "@/utils/statusHelpers";
-import type {
-  StylesConfig,
-  GroupBase,
-  ControlProps,
-  OptionProps,
-  MultiValueProps,
-  MenuProps,
-} from "react-select";
+import {
+  TYPE_OPTIONS,
+  SOURCE_OPTIONS,
+  PROVINCES,
+  LOCATION_OPTIONS,
+  findOptionValue,
+  selectStyles,
+} from "@/utils/leadFormHelpers";
 
 interface LeadFormProps {
   mode: "create" | "edit";
@@ -37,126 +36,14 @@ interface LeadFormProps {
     formData: FormData
   ) => Promise<void> | Promise<{ success: boolean; message: string }>;
   products: Array<{ id: number; name: string }>;
-  // customers: Array<{
-  //   id: number;
-  //   customer_name: string;
-  //   company?: { company_name?: string };
-  // }>;
-  // companies: Array<{ id: number; company_name: string }>;
 }
 
 interface FormErrors {
   [key: string]: string;
 }
 
-const TYPE_OPTIONS = [
-  { value: "individual", label: "Individual" },
-  { value: "company", label: "Company" },
-  { value: "government", label: "Government" },
-];
-
-const SOURCE_OPTIONS = [
-  { value: "website", label: "Website" },
-  { value: "social_media", label: "Social Media" },
-  { value: "referral", label: "Referral" },
-  { value: "cold_call", label: "Cold Call" },
-  { value: "event", label: "Event" },
-];
-
 // Ganti konstanta STATUS_OPTIONS:
 const STATUS_OPTIONS = LEAD_STATUS_OPTIONS;
-
-const PROVINCES = [
-  "Aceh",
-  "Sumatera Utara",
-  "Sumatera Barat",
-  "Riau",
-  "Jambi",
-  "Sumatera Selatan",
-  "Bengkulu",
-  "Lampung",
-  "Kepulauan Bangka Belitung",
-  "Kepulauan Riau",
-  "DKI Jakarta",
-  "Jawa Barat",
-  "Jawa Tengah",
-  "DI Yogyakarta",
-  "Jawa Timur",
-  "Banten",
-  "Bali",
-  "Nusa Tenggara Barat",
-  "Nusa Tenggara Timur",
-  "Kalimantan Barat",
-  "Kalimantan Tengah",
-  "Kalimantan Selatan",
-  "Kalimantan Timur",
-  "Kalimantan Utara",
-  "Sulawesi Utara",
-  "Sulawesi Tengah",
-  "Sulawesi Selatan",
-  "Sulawesi Tenggara",
-  "Gorontalo",
-  "Sulawesi Barat",
-  "Maluku",
-  "Maluku Utara",
-  "Papua",
-  "Papua Barat",
-  "Papua Selatan",
-  "Papua Tengah",
-  "Papua Pegunungan",
-  "Papua Barat Daya",
-];
-
-const LOCATION_OPTIONS = [
-  ...PROVINCES.map((prov) => ({ value: prov, label: prov })),
-  { value: "luar_negeri", label: "Luar negeri – Sebutkan nama Negara" },
-];
-
-const selectStyles: StylesConfig<any, boolean, GroupBase<any>> = {
-  control: (base: CSSObjectWithLabel, state) => ({
-    ...base,
-    backgroundColor: state.isFocused ? "#F3F4F6" : "#fff",
-    borderColor: state.isFocused ? "#10B981" : "#D1D5DB",
-    boxShadow: state.isFocused ? "0 0 0 2px #10B98133" : "none",
-    color: "#111827",
-    minHeight: 40,
-    fontSize: 15,
-  }),
-  option: (base: CSSObjectWithLabel, state) => ({
-    ...base,
-    backgroundColor: state.isSelected
-      ? "#10B981"
-      : state.isFocused
-      ? "#ECFDF5"
-      : "#fff",
-    color: state.isSelected ? "#fff" : "#111827",
-    fontWeight: state.isSelected ? 600 : 400,
-    fontSize: 15,
-  }),
-  multiValue: (base: CSSObjectWithLabel) => ({
-    ...base,
-    backgroundColor: "#ECFDF5",
-    color: "#047857",
-    fontWeight: 500,
-  }),
-  multiValueLabel: (base: CSSObjectWithLabel) => ({
-    ...base,
-    color: "#047857",
-    fontWeight: 500,
-  }),
-  multiValueRemove: (base: CSSObjectWithLabel) => ({
-    ...base,
-    color: "#047857",
-    ":hover": {
-      backgroundColor: "#10B981",
-      color: "#fff",
-    },
-  }),
-  menu: (base: CSSObjectWithLabel) => ({
-    ...base,
-    zIndex: 20,
-  }),
-};
 
 export default function LeadForm({
   mode,
@@ -196,29 +83,6 @@ LeadFormProps) {
     label: p.name,
     value: p.name,
   }));
-
-  // const customerOptions = customers.map((c) => ({
-  //   value: String(c.id),
-  //   label:
-  //     c.customer_name +
-  //     (c.company?.company_name ? ` - ${c.company.company_name}` : ""),
-  // }));
-
-  // const companyOptions = companies.map((c) => ({
-  //   value: String(c.id),
-  //   label: c.company_name,
-  // }));
-
-  // Filter customer options based on selected company
-  // const filteredCustomerOptions = selectedCompany
-  //   ? customerOptions.filter(
-  //       (c) =>
-  //         customers.find((cu) => cu.id === Number(c.value))?.company
-  //           ?.company_name === selectedCompany.label
-  //     )
-  //   : customerOptions.filter(
-  //       (c) => !customers.find((cu) => cu.id === Number(c.value))?.company
-  //     );
 
   // Client-side validation
   const validateForm = (formData: FormData): boolean => {
@@ -388,34 +252,6 @@ LeadFormProps) {
     } finally {
       setLoading(false);
     }
-  }
-
-  function findOptionValue(
-    raw?: string | null,
-    options?: ReadonlyArray<{ value: string; label: string }>,
-    fallback = ""
-  ) {
-    if (!raw) return fallback;
-    const s = String(raw);
-
-    // 1) exact match by value
-    if (options?.some((o) => o.value === s)) return s;
-
-    // 2) match by value lowercased
-    const lower = s.toLowerCase();
-    if (options?.some((o) => o.value.toLowerCase() === lower)) {
-      return options!.find((o) => o.value.toLowerCase() === lower)!.value;
-    }
-
-    // 3) match by label case-insensitive
-    const byLabel = options?.find((o) => o.label.toLowerCase() === lower);
-    if (byLabel) return byLabel.value;
-
-    // 4) normalized (spaces -> underscore, lower)
-    const normalized = lower.replace(/\s+/g, "_");
-    if (options?.some((o) => o.value === normalized)) return normalized;
-
-    return fallback;
   }
 
   return (
@@ -754,48 +590,6 @@ LeadFormProps) {
             </p>
           )}
         </div>
-
-        {/* Customers multi-select */}
-        {/* <div className="space-y-2">
-          <Label htmlFor="customers">Customers</Label>
-          <WindowedSelect
-            windowThreshold={100}
-            isMulti
-            name="customers"
-            options={filteredCustomerOptions}
-            value={selectedCustomers}
-            onChange={(newValue) =>
-              setSelectedCustomers(Array.isArray(newValue) ? newValue : [])
-            }
-            placeholder="Pilih customer"
-            styles={selectStyles}
-          />
-          {formErrors.customers && (
-            <p className="text-sm text-red-500">{formErrors.customers}</p>
-          )}
-        </div> */}
-
-        {/* Companies single-select */}
-        {/* <div className="space-y-2">
-          <Label htmlFor="company">Company</Label>
-          <WindowedSelect
-            windowThreshold={100}
-            name="company"
-            options={companyOptions}
-            value={selectedCompany}
-            onChange={(newValue) =>
-              setSelectedCompany(
-                newValue as { label: string; value: string } | null
-              )
-            }
-            placeholder="Select company"
-            classNamePrefix="react-select"
-            styles={selectStyles}
-          />
-          {formErrors.company && (
-            <p className="text-sm text-red-500">{formErrors.company}</p>
-          )}
-        </div> */}
       </div>
 
       <div className="space-y-2">
