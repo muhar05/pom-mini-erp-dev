@@ -5,8 +5,9 @@ import type { NextRequest } from "next/server";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = await context;
   const id = Number(params.id);
   const data = await req.json();
   const updated = await updateOpportunityAction(id, data);

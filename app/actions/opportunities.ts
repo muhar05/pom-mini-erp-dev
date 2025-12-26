@@ -9,6 +9,7 @@ import {
   getAllOpportunitiesDb,
 } from "@/data/opportunities";
 import { prisma } from "@/lib/prisma"; // untuk query produk
+import { getUserByIdDb } from "@/data/users";
 
 // Helper untuk hitung total harga dari product_interest
 async function calculatePotentialValue(productInterest: string | null) {
@@ -53,8 +54,15 @@ export async function deleteOpportunityAction(id: number) {
 // GET BY ID
 export async function getOpportunityByIdAction(id: number) {
   const opportunity = await getOpportunityByIdDb(id);
-
   if (!opportunity) throw new Error("Opportunity not found");
+
+  // Ambil user dari id_user dan assigned_to
+  const idUser = opportunity.id_user
+    ? await getUserByIdDb(opportunity.id_user)
+    : null;
+  const assignedToUser = opportunity.assigned_to
+    ? await getUserByIdDb(opportunity.assigned_to)
+    : null;
 
   const potential_value = await calculatePotentialValue(
     opportunity.product_interest ?? ""
@@ -86,7 +94,9 @@ export async function getOpportunityByIdAction(id: number) {
     product_interest: opportunity.product_interest ?? "",
     source: opportunity.source ?? "",
     id_user: opportunity.id_user ?? null,
+    id_user_name: idUser ? idUser.name : "",
     assigned_to: opportunity.assigned_to ?? null,
+    assigned_to_name: assignedToUser ? assignedToUser.name : "",
     // Tambahkan field lain dari leads jika ada
   };
 }

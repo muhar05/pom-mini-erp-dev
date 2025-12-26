@@ -7,9 +7,10 @@ interface EditOpportunityPageProps {
   params: { id: string };
 }
 
-export default async function EditOpportunityPage({
-  params,
-}: EditOpportunityPageProps) {
+export default async function EditOpportunityPage(
+  props: EditOpportunityPageProps
+) {
+  const { params } = await props;
   const opportunity = await getOpportunityByIdAction(Number(params.id));
 
   return (

@@ -303,10 +303,19 @@ export type Opportunity = {
   type: string;
   company: string;
   potential_value: number;
-  stage: string;
   status: string;
   created_at: string;
   updated_at: string;
+  // Tambahan agar sama dengan form
+  contact?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  source?: string | null;
+  product_interest?: string | null;
+  notes?: string | null;
+  note?: string | null;
+  id_user_name?: string;
+  assigned_to_name?: string;
 };
 
 export interface Product {
@@ -324,4 +333,39 @@ export interface Product {
   images?: any;
   created_at: string;
   updated_at: string;
+}
+
+export type OpportunityFormType = {
+  id: string;
+  opportunity_no: string;
+  lead_name: string;
+  contact?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  type?: string | null;
+  company?: string | null;
+  location?: string | null;
+  product_interest?: string | null;
+  source?: string | null;
+  note?: string | null;
+  id_user?: number | null;
+  assigned_to?: number | null;
+  status?: string | null;
+  sales_pic?: string;
+  potential_value: number;
+  created_at: string;
+  updated_at: string;
+  id_user_name?: string;
+  assigned_to_name?: string;
+  customer_name?: string;
+  customer_email?: string;
+  expected_close_date?: string;
+  notes?: string;
+};
+
+export interface OpportunityFormProps {
+  mode: "add" | "edit";
+  opportunity?: OpportunityFormType;
+  onClose?: () => void;
+  onSuccess?: () => void;
 }

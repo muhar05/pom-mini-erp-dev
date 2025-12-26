@@ -21,7 +21,7 @@ export default function QuotationNewPage() {
         title="Create Quotation"
         text="Create a new quotation from opportunity"
       />
-      <div className="max-w-4xl mx-auto py-8">
+      <div className="w-full mx-auto py-8">
         <QuotationForm
           mode="add"
           onClose={handleClose}

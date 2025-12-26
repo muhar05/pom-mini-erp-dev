@@ -16,9 +16,14 @@ import {
   ArrowLeft,
   CheckCircle,
   XCircle,
+  Phone,
+  MapPin,
+  Briefcase,
+  Tag,
+  Info,
+  Clock,
 } from "lucide-react";
 import { Opportunity } from "@/types/models";
-import { updateOpportunityAction } from "@/app/actions/opportunities";
 import {
   Dialog,
   DialogContent,
@@ -28,10 +33,7 @@ import {
   DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
-import {
-  LEAD_STATUS_OPTIONS,
-  OPPORTUNITY_STATUS_OPTIONS,
-} from "@/utils/statusHelpers";
+import { Separator } from "@/components/ui/separator";
 
 interface OpportunityDetailClientProps {
   opportunity: Opportunity;
@@ -39,37 +41,15 @@ interface OpportunityDetailClientProps {
 
 function getStatusBadgeClass(status: string): string {
   switch (status?.toLowerCase()) {
-    case "converted":
-      return "bg-green-100 text-green-800";
-    case "qualified":
-    case "opportunityqualified":
-    case "leadqualified":
-      return "bg-blue-100 text-blue-800";
-    case "lost":
-      return "bg-red-100 text-red-800";
+    case "opp_sq":
+      return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
+    case "opp_lost":
+      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
+    case "prospecting":
+      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
   }
-}
-
-function getStageBadgeClass(stage: string): string {
-  switch (stage?.toLowerCase()) {
-    case "converted":
-      return "bg-green-100 text-green-800";
-    case "qualified":
-    case "opportunityqualified":
-    case "leadqualified":
-      return "bg-blue-100 text-blue-800";
-    case "lost":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-}
-
-function getStatusFlow() {
-  // Gabungkan lead dan opportunity status
-  return [...LEAD_STATUS_OPTIONS, ...OPPORTUNITY_STATUS_OPTIONS];
 }
 
 export default function OpportunityDetailClient({
@@ -77,18 +57,9 @@ export default function OpportunityDetailClient({
 }: OpportunityDetailClientProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-
-  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
-  // Open dialog and set which status to update
-  const openConfirmDialog = (status: string) => {
-    setPendingStatus(status);
-    setDialogOpen(true);
-  };
-
-  // Handle confirm in dialog
   const handleConfirm = async () => {
     if (!pendingStatus) return;
     setIsLoading(true);
@@ -109,240 +80,306 @@ export default function OpportunityDetailClient({
     }
   };
 
-  // Status flow indicator
-  const statusFlow = getStatusFlow();
-
   return (
-    <div className="w-full mx-auto py-8">
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-2xl font-bold">
-                {opportunity.opportunity_no}
+    <div className="w-full mx-auto py-4 space-y-6">
+      {/* Header dengan Back Button dan Actions */}
+      <div className="flex items-center justify-between">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2 dark:border-gray-700 dark:hover:bg-gray-800"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Kolom Kiri: Customer Information */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Customer Card */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2 dark:text-gray-100">
+                  <User className="w-5 h-5" />
+                  Customer Information
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Customer Basic Info */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <User className="w-4 h-4" />
+                    <span>Customer Name</span>
+                  </div>
+                  <p className="font-medium text-lg dark:text-gray-100">
+                    {opportunity.customer_name}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <Mail className="w-4 h-4" />
+                    <span>Customer Email</span>
+                  </div>
+                  <p className="font-medium dark:text-gray-200">
+                    {opportunity.customer_email || "-"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Contact & Company Info */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <User className="w-4 h-4" />
+                    <span>Contact Person</span>
+                  </div>
+                  <p className="font-medium dark:text-gray-200">
+                    {opportunity.contact || "-"}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <Phone className="w-4 h-4" />
+                    <span>Phone</span>
+                  </div>
+                  <p className="font-medium dark:text-gray-200">
+                    {opportunity.phone || "-"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Company Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <Building2 className="w-4 h-4" />
+                    <span>Company</span>
+                  </div>
+                  <p className="font-medium dark:text-gray-200">
+                    {opportunity.company || "-"}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <Tag className="w-4 h-4" />
+                    <span>Customer Type</span>
+                  </div>
+                  <p className="font-medium dark:text-gray-200">
+                    {opportunity.type || "-"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Location & Source */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <MapPin className="w-4 h-4" />
+                    <span>Location</span>
+                  </div>
+                  <p className="font-medium dark:text-gray-200">
+                    {opportunity.location || "-"}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <Info className="w-4 h-4" />
+                    <span>Source</span>
+                  </div>
+                  <p className="font-medium dark:text-gray-200">
+                    {opportunity.source || "-"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Product & Notes Card */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2 dark:text-gray-100">
+                <FileText className="w-5 h-5" />
+                Product & Notes
               </CardTitle>
-              <p className="text-sm text-gray-500 mt-1">Opportunity Details</p>
-            </div>
-            <div className="flex flex-col gap-2 items-end">
-              <Badge className={getStageBadgeClass(opportunity.stage)}>
-                {opportunity.stage === "opp_sq" ? "SQ" : opportunity.stage}
-              </Badge>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Back Button */}
-          <div className="mb-6">
-            <Button
-              size="sm"
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={() => router.back()}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </Button>
-          </div>
-
-          {/* Opportunity Information */}
-          <div className="space-y-6">
-            <div>
-              <h3 className="font-semibold text-lg mb-4">
-                Opportunity Information
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex items-start gap-3">
-                  <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Opportunity Number</p>
-                    <p className="font-medium">{opportunity.opportunity_no}</p>
-                  </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Product Interest */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                  <Tag className="w-4 h-4" />
+                  <span>Product Interest</span>
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <TrendingUp className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Stage</p>
-                    <Badge className={getStageBadgeClass(opportunity.stage)}>
-                      {opportunity.stage === "opp_sq"
-                        ? "SQ"
-                        : opportunity.stage}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <User className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Customer Name</p>
-                    <p className="font-medium">{opportunity.customer_name}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Customer Email</p>
-                    <p className="font-medium">
-                      {opportunity.customer_email || "-"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <Building2 className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Customer Type</p>
-                    <p className="font-medium">{opportunity.type || "-"}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <Building2 className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Company</p>
-                    <p className="font-medium">{opportunity.company || "-"}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <User className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Sales PIC</p>
-                    <p className="font-medium">
-                      {opportunity.sales_pic || "-"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <DollarSign className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Total Harga</p>
-                    <p className="font-medium text-lg">
-                      {opportunity.potential_value.toLocaleString("id-ID", {
-                        style: "currency",
-                        currency: "IDR",
-                      })}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Tanggal Input</p>
-                    <p className="font-medium">{opportunity.created_at}</p>
-                  </div>
+                <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border dark:border-gray-700">
+                  <p className="whitespace-pre-line dark:text-gray-300">
+                    {opportunity.product_interest ||
+                      "No product interest specified"}
+                  </p>
                 </div>
               </div>
-            </div>
 
-            {/* Status Update Section */}
-            {opportunity.status?.toLowerCase() !== "lost" && (
-              <div>
-                <h3 className="font-semibold text-lg mb-4">Update Status</h3>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-1">
-                        Current Status:
-                      </p>
-                      <Badge
-                        className={getStatusBadgeClass(opportunity.status)}
-                        variant="secondary"
-                      >
-                        {opportunity.status === "opp_sq"
-                          ? "SQ"
-                          : opportunity.status}
-                      </Badge>
-                    </div>
-                    <div className="flex gap-3">
-                      {/* Show Qualified button if current status is LeadQualified */}
-                      {opportunity.status?.toLowerCase() ===
-                        "leadqualified" && (
-                        <Button
-                          size="sm"
-                          variant="default"
-                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-                          onClick={() => openConfirmDialog("Qualified")}
-                          disabled={isLoading}
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          Set as Qualified
-                        </Button>
-                      )}
-
-                      {/* Show Lost button for all valid statuses */}
-                      {(opportunity.status?.toLowerCase() === "prospecting" ||
-                        opportunity.status?.toLowerCase() === "qualified" ||
-                        opportunity.status?.toLowerCase() ===
-                          "leadqualified") && (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="flex items-center gap-2"
-                          onClick={() => openConfirmDialog("Lost")}
-                          disabled={isLoading}
-                        >
-                          <XCircle className="w-4 h-4" />
-                          Mark as Lost
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Status flow indicator */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <p className="text-sm text-gray-600 mb-2">Status Flow:</p>
-                    <div className="flex items-center gap-2 text-sm">
-                      {statusFlow.map((status) => (
-                        <span
-                          key={status.value}
-                          className={`px-2 py-1 rounded ${
-                            opportunity.status === status.value
-                              ? "bg-blue-100 text-blue-800 font-semibold"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {status.value === "opp_sq" ? "SQ" : status.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+              {/* Notes */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                  <Info className="w-4 h-4" />
+                  <span>Notes</span>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border dark:border-gray-700">
+                  <p className="whitespace-pre-line dark:text-gray-300">
+                    {opportunity.notes ||
+                      opportunity.note ||
+                      "No notes available"}
+                  </p>
                 </div>
               </div>
-            )}
+            </CardContent>
+          </Card>
+        </div>
 
-            {/* Final status message for Lost opportunities */}
-            {opportunity.status?.toLowerCase() === "lost" && (
-              <div>
-                <h3 className="font-semibold text-lg mb-4">Status</h3>
-                <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                  <div className="flex items-center gap-2">
-                    <XCircle className="w-5 h-5 text-red-600" />
-                    <p className="text-red-800 font-medium">
-                      This opportunity has been marked as Lost and cannot be
-                      updated further.
-                    </p>
+        {/* Kolom Kanan: Opportunity & Status Info */}
+        <div className="space-y-6">
+          {/* Opportunity Card */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2 dark:text-gray-100">
+                <Briefcase className="w-5 h-5" />
+                Opportunity Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <FileText className="w-4 h-4" />
+                    <span>Opportunity Number</span>
                   </div>
+                  <p className="font-medium text-lg dark:text-gray-100">
+                    {opportunity.opportunity_no}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <User className="w-4 h-4" />
+                    <span>Sales PIC</span>
+                  </div>
+                  <p className="font-medium dark:text-gray-200">
+                    {opportunity.sales_pic || opportunity.id_user_name || "-"}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <Calendar className="w-4 h-4" />
+                    <span>Created Date</span>
+                  </div>
+                  <p className="font-medium dark:text-gray-200">
+                    {opportunity.created_at}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <Clock className="w-4 h-4" />
+                    <span>Last Updated</span>
+                  </div>
+                  <p className="font-medium dark:text-gray-200">
+                    {opportunity.updated_at}
+                  </p>
                 </div>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+
+              <Separator className="dark:bg-gray-700" />
+
+              {/* Potential Value */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <DollarSign className="w-4 h-4" />
+                    <span>Potential Value</span>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="font-semibold dark:border-gray-600 dark:text-gray-300"
+                  >
+                    IDR
+                  </Badge>
+                </div>
+                <div className="text-2xl font-bold text-primary dark:text-blue-400">
+                  {opportunity.potential_value.toLocaleString("id-ID", {
+                    minimumFractionDigits: 0,
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Status Update Card */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2 dark:text-gray-100">
+                <TrendingUp className="w-5 h-5" />
+                Status Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Current Status */}
+              <div className="space-y-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Current Status
+                </p>
+                <Badge
+                  className={`${getStatusBadgeClass(
+                    opportunity.status
+                  )} px-3 py-1.5 text-base font-medium w-full justify-center`}
+                >
+                  {opportunity.status === "opp_sq"
+                    ? "SQ"
+                    : opportunity.status === "opp_lost"
+                    ? "Lost"
+                    : opportunity.status === "prospecting"
+                    ? "Prospecting"
+                    : opportunity.status}
+                </Badge>
+              </div>
+
+              {/* Lost Status Message */}
+              {opportunity.status?.toLowerCase() === "lost" && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 dark:bg-red-900/20 dark:border-red-800">
+                  <div className="flex items-center gap-2 text-red-800 dark:text-red-300">
+                    <XCircle className="w-5 h-5" />
+                    <span className="font-medium">Opportunity Lost</span>
+                  </div>
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+                    This opportunity has been marked as Lost and cannot be
+                    updated further.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Dialog for confirmation */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="dark:text-gray-100">
               {pendingStatus === "Lost"
                 ? "Confirm Mark as Lost"
                 : "Confirm Status Change"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="dark:text-gray-400">
               {pendingStatus === "Lost"
                 ? "Are you sure you want to mark this opportunity as Lost? This action cannot be undone."
                 : `Are you sure you want to change status to ${
@@ -357,11 +394,26 @@ export default function OpportunityDetailClient({
               onClick={handleConfirm}
               disabled={isLoading}
               variant={pendingStatus === "Lost" ? "destructive" : "default"}
+              className="gap-2 dark:bg-blue-600 dark:hover:bg-blue-700"
             >
-              {isLoading ? "Processing..." : "Yes, Confirm"}
+              {isLoading ? (
+                <>
+                  <Clock className="w-4 h-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Yes, Confirm
+                </>
+              )}
             </Button>
             <DialogClose asChild>
-              <Button variant="outline" disabled={isLoading}>
+              <Button
+                variant="outline"
+                disabled={isLoading}
+                className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
                 Cancel
               </Button>
             </DialogClose>
