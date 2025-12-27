@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
+  SelectTrigger,
   SelectContent,
   SelectItem,
-  SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +20,7 @@ import {
 } from "@/app/actions/quotations";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "lucide-react";
+import { Calendar, Building, Tag, Mail, Phone, MapPin } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -30,6 +30,9 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import BoqTable, { BoqItem } from "./BoqTable";
+import { getAllCustomersAction } from "@/app/actions/customers";
+import { formatCurrency } from "@/utils/formatCurrency";
+import { User } from "lucide-react";
 
 type Quotation = {
   id?: string;
@@ -52,6 +55,7 @@ type Quotation = {
   valid_until?: string;
   note?: string;
   quotation_detail?: BoqItem[];
+  customer_id?: string | number;
 };
 
 interface QuotationFormProps {
@@ -94,11 +98,15 @@ export default function QuotationForm({
     top: quotation?.top || "cash",
     valid_until: quotation?.valid_until || "",
     note: quotation?.note || "",
+    customer_id: quotation?.customer_id || "",
   });
 
   const [boqItems, setBoqItems] = useState<BoqItem[]>(
     quotation?.quotation_detail || []
   );
+
+  const [customerOptions, setCustomerOptions] = useState<any[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
 
   // Generate quotation number when form loads for new quotations
   useEffect(() => {
@@ -133,7 +141,6 @@ export default function QuotationForm({
         customerName,
         customerEmail,
         company,
-        referenceNo,
       });
 
       // Pre-populate form with lead data
@@ -142,10 +149,21 @@ export default function QuotationForm({
         customer_name: customerName || "",
         customer_email: customerEmail || "",
         company: company || "",
-        opportunity_no: referenceNo || "",
       }));
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    async function fetchCustomers() {
+      try {
+        const res = await getAllCustomersAction();
+        setCustomerOptions(res.data || []);
+      } catch {
+        setCustomerOptions([]);
+      }
+    }
+    fetchCustomers();
+  }, []);
 
   const handleInputChange = (
     field: keyof Quotation,
@@ -155,7 +173,10 @@ export default function QuotationForm({
   };
 
   const calculateTotals = () => {
-    const subtotal = boqItems.reduce((sum, item) => sum + (item.total || 0), 0);
+    const subtotal = boqItems.reduce(
+      (sum, item) => sum + item.unit_price * item.quantity,
+      0
+    );
     const shipping = formData.shipping || 0;
     const discount = formData.discount || 0;
     const tax = formData.tax || 0;
@@ -208,6 +229,29 @@ export default function QuotationForm({
       setLoading(false);
     }
   };
+
+  const handleCustomerChange = (customerId: string) => {
+    const customer = customerOptions.find(
+      (c) => c.id.toString() === customerId
+    );
+    setSelectedCustomer(customer);
+    handleInputChange("customer_id", customerId);
+  };
+
+  // Cek field wajib
+  const isFormValid =
+    !!formData.quotation_no &&
+    !!formData.customer_id &&
+    !!selectedCustomer &&
+    !!formData.sales_pic &&
+    boqItems.length > 0 &&
+    boqItems.every(
+      (item) =>
+        item.product_id &&
+        item.product_name &&
+        item.quantity > 0 &&
+        item.unit_price >= 0
+    );
 
   return (
     <div className="w-full mx-auto py-4 space-y-6">
@@ -311,25 +355,6 @@ export default function QuotationForm({
                         Generating quotation number...
                       </p>
                     )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="opportunity_no"
-                      className="flex items-center gap-1"
-                    >
-                      Opportunity Reference
-                      <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="opportunity_no"
-                      value={formData.opportunity_no}
-                      onChange={(e) =>
-                        handleInputChange("opportunity_no", e.target.value)
-                      }
-                      placeholder="Enter opportunity reference"
-                      required
-                    />
                   </div>
 
                   <div className="space-y-2">
@@ -524,97 +549,103 @@ export default function QuotationForm({
           {/* Kolom Kanan: Customer & Pricing Information */}
           <div className="space-y-6">
             {/* Customer Information Card */}
-            <Card className="dark:bg-gray-800">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
+            <Card className="dark:bg-gray-800 border dark:border-gray-700">
+              <CardHeader className="pb-4 border-b dark:border-gray-700">
+                <CardTitle className="text-lg font-medium flex items-center gap-3 dark:text-white">
                   <Calendar className="w-5 h-5" />
                   Customer Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="customer_name"
-                    className="flex items-center gap-1"
-                  >
-                    Customer Name
-                    <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="customer_name"
-                    value={formData.customer_name}
-                    onChange={(e) =>
-                      handleInputChange("customer_name", e.target.value)
-                    }
-                    placeholder="Select customer"
-                    required
-                    disabled={!!leadData}
-                  />
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="customer_email">Customer Email</Label>
-                  <Input
-                    id="customer_email"
-                    type="email"
-                    value={formData.customer_email}
-                    onChange={(e) =>
-                      handleInputChange("customer_email", e.target.value)
-                    }
-                    placeholder="customer@email.com"
-                    disabled={!!leadData}
-                  />
-                </div>
+              <CardContent className="pt-2">
+                <div className="space-y-5">
+                  {/* Customer Selection */}
+                  <div className="space-y-3">
+                    <Label
+                      htmlFor="customer_id"
+                      className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5"
+                    >
+                      Customer <span className="text-red-500">*</span>
+                    </Label>
 
-                <div className="space-y-2">
-                  <Label htmlFor="type" className="flex items-center gap-1">
-                    Customer Type
-                    <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => handleInputChange("type", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Perusahaan">Perusahaan</SelectItem>
-                      <SelectItem value="Perorangan">Perorangan</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <Select
+                      value={formData.customer_id?.toString() || ""}
+                      onValueChange={handleCustomerChange}
+                      disabled={!!leadData}
+                    >
+                      <SelectTrigger className="h-11 dark:border-gray-600 dark:bg-gray-900 w-full">
+                        <SelectValue placeholder="Pilih customer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customerOptions.map((c) => (
+                          <SelectItem
+                            key={c.id}
+                            value={c.id.toString()}
+                            className="py-2.5"
+                          >
+                            <div className="flex flex-row gap-2">
+                              <span className="font-medium">
+                                {c.customer_name}
+                              </span>
+                              {c.company?.company_name && (
+                                <span className="text-sm">
+                                  {c.company.company_name}
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company Name</Label>
-                  <Input
-                    id="company"
-                    value={formData.company}
-                    onChange={(e) =>
-                      handleInputChange("company", e.target.value)
-                    }
-                    placeholder="Company name"
-                    disabled={!!leadData}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="sales_pic"
-                    className="flex items-center gap-1"
-                  >
-                    Sales PIC
-                    <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="sales_pic"
-                    value={formData.sales_pic}
-                    onChange={(e) =>
-                      handleInputChange("sales_pic", e.target.value)
-                    }
-                    placeholder="Select sales person"
-                    required
-                  />
+                  {/* Customer Details Panel */}
+                  {selectedCustomer && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                      <div>
+                        <Label className="text-xs mb-1 block">Company</Label>
+                        <Input
+                          value={selectedCustomer.company?.company_name || "—"}
+                          disabled
+                          className="bg-gray-100 dark:bg-gray-800/40"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs mb-1 block">Type</Label>
+                        <Input
+                          value={selectedCustomer.type || "—"}
+                          disabled
+                          className="bg-gray-100 dark:bg-gray-800/40"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs mb-1 block">Email</Label>
+                        <Input
+                          value={selectedCustomer.email || "—"}
+                          disabled
+                          className="bg-gray-100 dark:bg-gray-800/40"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs mb-1 block">Phone</Label>
+                        <Input
+                          value={selectedCustomer.phone || "—"}
+                          disabled
+                          className="bg-gray-100 dark:bg-gray-800/40"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label className="text-xs mb-1 block">Address</Label>
+                        <Input
+                          value={
+                            selectedCustomer.address || "No address provided"
+                          }
+                          disabled
+                          className="bg-gray-100 dark:bg-gray-800/40"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -634,7 +665,7 @@ export default function QuotationForm({
                       Subtotal
                     </span>
                     <span className="font-medium">
-                      IDR {formData.total_amount.toLocaleString("id-ID")}
+                      {formatCurrency(formData.total_amount)}
                     </span>
                   </div>
 
@@ -698,11 +729,10 @@ export default function QuotationForm({
                     <span className="font-semibold">Grand Total</span>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-primary">
-                        IDR {formData.grand_total.toLocaleString("id-ID")}
+                        {formatCurrency(formData.grand_total)}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
-                        Subtotal: IDR{" "}
-                        {formData.total_amount.toLocaleString("id-ID")}
+                        Subtotal: {formatCurrency(formData.total_amount)}
                       </div>
                     </div>
                   </div>
@@ -725,7 +755,7 @@ export default function QuotationForm({
           </Button>
           <Button
             type="submit"
-            disabled={loading || generatingQuotationNo}
+            disabled={loading || generatingQuotationNo || !isFormValid}
             className="min-w-[150px]"
           >
             {loading ? (
