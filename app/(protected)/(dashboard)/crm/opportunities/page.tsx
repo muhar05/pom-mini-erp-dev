@@ -1,30 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import OpportunitiesTable from "./_components/opportunities-table";
 import OpportunitiesFilter from "./_components/opportunity-filter";
+import { useOpportunities } from "@/hooks/useOpportunities";
 
 export default function OpportunitiesPage() {
-  const [opportunities, setOpportunities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { opportunities, loading, setOpportunities } = useOpportunities();
   const [filters, setFilters] = useState({});
-
-  useEffect(() => {
-    const fetchOpportunities = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/opportunities");
-        const data = await res.json();
-        setOpportunities(data);
-      } catch (error) {
-        setOpportunities([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchOpportunities();
-  }, []);
 
   return (
     <>

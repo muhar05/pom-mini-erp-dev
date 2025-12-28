@@ -18,7 +18,6 @@ type Quotation = {
   updated_at: string; // ← tambahkan ini
   customer_name: string;
   customer_email: string;
-  sales_pic: string;
   type: string;
   company: string;
   total_amount: number;
@@ -58,8 +57,6 @@ export default function QuotationsTable({
           <TableHead>No</TableHead>
           <TableHead>Quotation No</TableHead>
           <TableHead>Customer</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Sales PIC</TableHead>
           <TableHead>Type</TableHead>
           <TableHead>Company</TableHead>
           <TableHead>Total</TableHead>
@@ -78,15 +75,15 @@ export default function QuotationsTable({
             <TableCell>{idx + 1}</TableCell>
             <TableCell className="font-medium">{q.quotation_no}</TableCell>
             <TableCell>{q.customer_name}</TableCell>
-            <TableCell>{q.customer_email || "-"}</TableCell>
-            <TableCell>{q.sales_pic || "-"}</TableCell>
             <TableCell>{q.type || "-"}</TableCell>
             <TableCell>{q.company || "-"}</TableCell>
             <TableCell>
-              {q.total_amount.toLocaleString("id-ID", {
-                style: "currency",
-                currency: "IDR",
-              })}
+              {typeof q.total_amount === "number"
+                ? q.total_amount.toLocaleString("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  })
+                : "Rp0"}
             </TableCell>
             <TableCell>
               <span

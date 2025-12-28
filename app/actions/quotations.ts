@@ -15,7 +15,7 @@ import {
 } from "@/lib/schemas/quotations";
 import { ZodError } from "zod";
 import { auth } from "@/auth";
-import { users } from "@/types/models";
+import { QuotationFormData, users } from "@/types/models";
 import { isSuperuser, isSales } from "@/utils/leadHelpers";
 import { prisma } from "@/lib/prisma";
 
@@ -57,16 +57,32 @@ async function generateQuotationNo(): Promise<string> {
 }
 
 // CREATE
-export async function createQuotationAction(formData: FormData) {
+export async function createQuotationAction(data: QuotationFormData) {
   const session = await auth();
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
   try {
-    const validatedData = validateQuotationFormData(formData, "create");
+    const validatedData = validateQuotationFormData(data, "create");
 
     if (!validatedData.quotation_no) {
       validatedData.quotation_no = await generateQuotationNo();
+    }
+
+    // Convert target_date to ISO string if present and not already a Date
+    if (
+      validatedData.target_date &&
+      typeof validatedData.target_date === "string"
+    ) {
+      if (!validatedData.target_date.includes("T")) {
+        validatedData.target_date = new Date(
+          validatedData.target_date + "T00:00:00.000Z"
+        ).toISOString();
+      } else {
+        validatedData.target_date = new Date(
+          validatedData.target_date
+        ).toISOString();
+      }
     }
 
     // Calculate totals
@@ -81,9 +97,15 @@ export async function createQuotationAction(formData: FormData) {
     validatedData.total = total;
     validatedData.grand_total = grandTotal;
 
-    const quotation = await createQuotationDb(
-      validatedData as CreateQuotationInput
-    );
+    const { customer_id, quotation_no, quotation_detail, ...rest } =
+      validatedData;
+    const prismaData: CreateQuotationInput = {
+      ...rest,
+      quotation_no: quotation_no ?? (await generateQuotationNo()),
+      quotation_detail: quotation_detail ?? [],
+      customer: { connect: { id: customer_id } },
+    };
+    const quotation = await createQuotationDb(prismaData);
 
     revalidatePath("/crm/quotations");
     return {
@@ -331,9 +353,14 @@ export async function createQuotationFromLeadAction(
     validatedData.total = total;
     validatedData.grand_total = grandTotal;
 
-    const quotation = await createQuotationDb(
-      validatedData as CreateQuotationInput
-    );
+    const { customer_id, ...rest } = validatedData;
+    const prismaData: CreateQuotationInput = {
+      ...rest,
+      customer: { connect: { id: customer_id } },
+      quotation_detail: validatedData.quotation_detail ?? [],
+      quotation_no: validatedData.quotation_no ?? (await generateQuotationNo()),
+    };
+    const quotation = await createQuotationDb(prismaData);
 
     // Optional: Update lead status to indicate quotation created
     await prisma.leads.update({
@@ -410,21 +437,14 @@ export async function createQuotationFromLeadObjectAction(
       });
     }
 
-    const quotation = await createQuotationDb({
-      quotation_no: quotationData.quotation_no || (await generateQuotationNo()),
-      customer_id: customer.id,
-      quotation_detail: quotationData.quotation_detail || [],
-      total: quotationData.total || 0,
-      shipping: quotationData.shipping || 0,
-      discount: quotationData.discount || 0,
-      tax: quotationData.tax || 0,
-      grand_total: quotationData.grand_total || 0,
-      status: quotationData.status || "draft",
-      stage: quotationData.stage,
-      note: quotationData.note,
-      target_date: quotationData.target_date,
-      top: quotationData.top,
-    });
+    const { customer_id, ...rest } = quotationData;
+    const prismaData = {
+      ...rest,
+      customer: { connect: { id: customer_id } },
+      quotation_detail: quotationData.quotation_detail ?? [],
+      quotation_no: quotationData.quotation_no ?? (await generateQuotationNo()),
+    };
+    const quotation = await createQuotationDb(prismaData);
 
     // Update lead status
     await prisma.leads.update({

@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import {
+  getCustomerByIdDb,
+  updateCustomerDb,
+  deleteCustomerDb,
+  getCustomerByEmailDb,
+} from "@/data/customers";
 
 // GET: Ambil customer by ID
 export async function GET(
@@ -16,24 +21,7 @@ export async function GET(
 
   try {
     const id = Number(params.id);
-    const customer = await prisma.customers.findUnique({
-      where: { id },
-      include: {
-        company: {
-          include: {
-            company_level: true,
-          },
-        },
-      },
-    });
-
-    if (!customer) {
-      return NextResponse.json(
-        { error: "Customer not found" },
-        { status: 404 }
-      );
-    }
-
+    const customer = await getCustomerByIdDb(id);
     return NextResponse.json(customer);
   } catch (error) {
     return NextResponse.json(
@@ -56,23 +44,18 @@ export async function PUT(
 
   try {
     const id = Number(params.id);
-    const oldCustomer = await prisma.customers.findUnique({ where: { id } });
-
-    if (!oldCustomer) {
-      return NextResponse.json(
-        { error: "Customer not found" },
-        { status: 404 }
-      );
-    }
+    const oldCustomer = await getCustomerByIdDb(id);
 
     const data = await req.json();
 
     // Validasi email unique jika diubah
     if (data.email && data.email !== oldCustomer.email) {
-      const existingCustomer = await prisma.customers.findFirst({
-        where: { email: data.email },
-      });
-
+      let existingCustomer;
+      try {
+        existingCustomer = await getCustomerByEmailDb(data.email);
+      } catch {
+        existingCustomer = null;
+      }
       if (existingCustomer) {
         return NextResponse.json(
           { error: "Email already exists" },
@@ -81,10 +64,7 @@ export async function PUT(
       }
     }
 
-    const customer = await prisma.customers.update({
-      where: { id },
-      data,
-    });
+    const customer = await updateCustomerDb(id, data);
 
     return NextResponse.json(customer);
   } catch (error) {
@@ -109,16 +89,7 @@ export async function DELETE(
 
   try {
     const id = Number(params.id);
-    const oldCustomer = await prisma.customers.findUnique({ where: { id } });
-
-    if (!oldCustomer) {
-      return NextResponse.json(
-        { error: "Customer not found" },
-        { status: 404 }
-      );
-    }
-
-    await prisma.customers.delete({ where: { id } });
+    await deleteCustomerDb(id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Customer deletion error:", error);

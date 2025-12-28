@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import {
+  getAllCustomersDb,
+  createCustomerDb,
+  getCustomerByEmailDb,
+} from "@/data/customers";
 
 // GET: Ambil semua customers
 export async function GET() {
@@ -12,16 +16,7 @@ export async function GET() {
   }
 
   try {
-    const customers = await prisma.customers.findMany({
-      include: {
-        company: {
-          include: {
-            company_level: true,
-          },
-        },
-      },
-      orderBy: { created_at: "desc" },
-    });
+    const customers = await getAllCustomersDb();
     return NextResponse.json(customers);
   } catch (error) {
     return NextResponse.json(
@@ -44,9 +39,12 @@ export async function POST(req: Request) {
 
     // Validasi email unique jika ada
     if (data.email) {
-      const existingCustomer = await prisma.customers.findFirst({
-        where: { email: data.email },
-      });
+      let existingCustomer;
+      try {
+        existingCustomer = await getCustomerByEmailDb(data.email);
+      } catch {
+        existingCustomer = null;
+      }
 
       if (existingCustomer) {
         return NextResponse.json(
@@ -56,7 +54,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const customer = await prisma.customers.create({ data });
+    const customer = await createCustomerDb(data);
     return NextResponse.json(customer, { status: 201 });
   } catch (error) {
     console.error("Customer creation error:", error);

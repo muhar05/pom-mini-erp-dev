@@ -1,40 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import LeadsTable from "./_components/leads-table";
 import AddLeadButton from "./_components/add-lead-button";
 import LeadsFilter from "./_components/leads-filter";
-import { getAllLeadsAction } from "@/app/actions/leads";
-import { leads } from "@/types/models";
-import LoadingSkeleton from "@/components/loading-skeleton";
+import { useLeads } from "@/hooks/useLeads";
 
 export default function LeadPage() {
-  const [leads, setLeads] = useState<leads[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { leads, loading } = useLeads();
   const [filters, setFilters] = useState<{
     search?: string;
     status?: string;
     dateFrom?: string;
     dateTo?: string;
   }>({});
-
-  // Load leads data
-  useEffect(() => {
-    const loadLeads = async () => {
-      try {
-        setLoading(true);
-        const leadsData = await getAllLeadsAction();
-        setLeads(leadsData);
-      } catch (error) {
-        console.error("Error loading leads:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadLeads();
-  }, []);
 
   const handleFilterChange = (newFilters: {
     search?: string;

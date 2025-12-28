@@ -76,7 +76,7 @@ export interface quotations {
   top?: string | null;
   created_at?: Date | null;
   updated_at?: Date | null;
-  customers?: customers;
+  customer?: customers;
 }
 
 // roles
@@ -369,3 +369,25 @@ export interface OpportunityFormProps {
   onClose?: () => void;
   onSuccess?: () => void;
 }
+
+export type QuotationFormData = {
+  quotation_no: string;
+  customer_id: string | number;
+  quotation_detail: {
+    product_id: number;
+    product_name: string;
+    product_code?: string;
+    quantity: number;
+    unit_price: number;
+  }[];
+  total: number;
+  shipping: number;
+  discount: number;
+  tax: number;
+  grand_total: number;
+  status: string;
+  stage?: string;
+  note?: string;
+  target_date?: string;
+  top?: string;
+};

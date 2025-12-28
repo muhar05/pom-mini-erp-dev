@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import {
+  getQuotationByIdDb,
+  updateQuotationDb,
+  deleteQuotationDb,
+} from "@/data/quotations";
 
 // GET: Ambil quotation by ID
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: Request, context: { params: { id: string } }) {
+  const { params } = context;
   const session = await auth();
   const user = session?.user;
   if (!user) {
@@ -15,17 +17,7 @@ export async function GET(
   }
 
   try {
-    const quotation = await prisma.quotations.findUnique({
-      where: { id: Number(params.id) },
-    });
-
-    if (!quotation) {
-      return NextResponse.json(
-        { error: "Quotation not found" },
-        { status: 404 }
-      );
-    }
-
+    const quotation = await getQuotationByIdDb(Number(params.id));
     return NextResponse.json(quotation);
   } catch (error) {
     return NextResponse.json(
@@ -36,10 +28,8 @@ export async function GET(
 }
 
 // PUT: Update quotation
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(req: Request, context: { params: { id: string } }) {
+  const { params } = context;
   const session = await auth();
   const user = session?.user;
   if (!user) {
@@ -48,11 +38,7 @@ export async function PUT(
 
   try {
     const data = await req.json();
-    const quotation = await prisma.quotations.update({
-      where: { id: Number(params.id) },
-      data,
-    });
-
+    const quotation = await updateQuotationDb(Number(params.id), data);
     return NextResponse.json(quotation);
   } catch (error) {
     console.error("Quotation update error:", error);
@@ -66,8 +52,9 @@ export async function PUT(
 // DELETE: Hapus quotation
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context;
   const session = await auth();
   const user = session?.user;
   if (!user || !isSuperuser(user)) {
@@ -75,10 +62,7 @@ export async function DELETE(
   }
 
   try {
-    await prisma.quotations.delete({
-      where: { id: Number(params.id) },
-    });
-
+    await deleteQuotationDb(Number(params.id));
     return NextResponse.json({ message: "Quotation deleted successfully" });
   } catch (error) {
     console.error("Quotation deletion error:", error);

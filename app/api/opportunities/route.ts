@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { formatStatusDisplay } from "@/utils/statusHelpers";
+import { getAllOpportunitiesDb } from "@/data/opportunities";
+import { getAllProductsDb } from "@/data/products";
 
-// Tambahkan helper hitung total harga
+// Helper hitung total harga
 async function calculatePotentialValue(productInterest: string | null) {
   if (!productInterest) return 0;
   const productNames = productInterest
@@ -11,30 +12,17 @@ async function calculatePotentialValue(productInterest: string | null) {
     .filter(Boolean);
   if (productNames.length === 0) return 0;
 
-  const products = await prisma.products.findMany({
-    where: { name: { in: productNames } },
-    select: { price: true },
-  });
+  // Ambil semua produk dari data layer
+  const allProducts = await getAllProductsDb();
+  // Filter produk yang sesuai dengan productNames
+  const products = allProducts.filter((p) => productNames.includes(p.name));
 
   return products.reduce((sum, p) => sum + Number(p.price ?? 0), 0);
 }
 
 export async function GET() {
-  // Ambil data dari leads dengan status opportunity
-  const opportunities = await prisma.leads.findMany({
-    where: {
-      status: {
-        in: [
-          "prospecting",
-          "opp_lost",
-          "opp_sq",
-          "lead_converted",
-          "converted",
-        ],
-      },
-    },
-    orderBy: { created_at: "desc" },
-  });
+  // Ambil data dari data layer
+  const opportunities = await getAllOpportunitiesDb();
 
   // Mapping ke struktur frontend, hitung total harga
   const data = await Promise.all(

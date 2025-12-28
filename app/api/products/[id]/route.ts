@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import {
+  getProductByIdDb,
+  updateProductDb,
+  deleteProductDb,
+  getProductByCodeDb,
+} from "@/data/products";
 
 // GET: Ambil product by ID
 export async function GET(
@@ -15,10 +20,7 @@ export async function GET(
   }
   try {
     const id = Number(params.id);
-    const product = await prisma.products.findUnique({ where: { id } });
-    if (!product) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
-    }
+    const product = await getProductByIdDb(id);
     return NextResponse.json(product);
   } catch (error) {
     return NextResponse.json(
@@ -40,19 +42,18 @@ export async function PUT(
   }
   try {
     const id = Number(params.id);
-    const oldProduct = await prisma.products.findUnique({ where: { id } });
-    if (!oldProduct) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
-    }
+    const oldProduct = await getProductByIdDb(id);
 
     const data = await req.json();
 
     // Validasi product_code unique jika diubah
     if (data.product_code && data.product_code !== oldProduct.product_code) {
-      const existingProduct = await prisma.products.findUnique({
-        where: { product_code: data.product_code },
-      });
-
+      let existingProduct;
+      try {
+        existingProduct = await getProductByCodeDb(data.product_code);
+      } catch {
+        existingProduct = null;
+      }
       if (existingProduct) {
         return NextResponse.json(
           { error: "Product code already exists" },
@@ -61,12 +62,9 @@ export async function PUT(
       }
     }
 
-    const product = await prisma.products.update({
-      where: { id },
-      data: {
-        ...data,
-        updated_at: new Date(),
-      },
+    const product = await updateProductDb(id, {
+      ...data,
+      updated_at: new Date(),
     });
     return NextResponse.json(product);
   } catch (error) {
@@ -90,12 +88,7 @@ export async function DELETE(
   }
   try {
     const id = Number(params.id);
-    const oldProduct = await prisma.products.findUnique({ where: { id } });
-    if (!oldProduct) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
-    }
-
-    await prisma.products.delete({ where: { id } });
+    await deleteProductDb(id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Product deletion error:", error);

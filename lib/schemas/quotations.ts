@@ -100,47 +100,52 @@ export type CreateQuotationData = z.infer<typeof createQuotationSchema>;
 export type UpdateQuotationData = z.infer<typeof updateQuotationSchema>;
 export type QuotationDetailItem = z.infer<typeof quotationDetailItemSchema>;
 
-// Helper function untuk validasi FormData
+// Helper function untuk validasi FormData atau object
 export function validateQuotationFormData(
-  formData: FormData,
+  formData: FormData | Record<string, any>,
   mode: "create" | "update"
 ) {
-  const data: Record<string, any> = {};
+  let data: Record<string, any> = {};
 
-  // Convert FormData to object
-  for (const [key, value] of formData.entries()) {
-    if (typeof value === "string") {
-      const trimmedValue = value.trim();
-      if (trimmedValue === "") {
-        data[key] = undefined;
-      } else {
-        // Handle numeric fields
-        if (
-          [
-            "customer_id",
-            "total",
-            "shipping",
-            "discount",
-            "tax",
-            "grand_total",
-          ].includes(key)
-        ) {
-          const numValue = Number(trimmedValue);
-          data[key] = isNaN(numValue) ? undefined : numValue;
-        } else if (key === "quotation_detail") {
-          // Parse JSON for quotation_detail
-          try {
-            data[key] = JSON.parse(trimmedValue);
-          } catch {
-            data[key] = undefined;
-          }
+  if (typeof FormData !== "undefined" && formData instanceof FormData) {
+    // Convert FormData to object
+    for (const [key, value] of formData.entries()) {
+      if (typeof value === "string") {
+        const trimmedValue = value.trim();
+        if (trimmedValue === "") {
+          data[key] = undefined;
         } else {
-          data[key] = trimmedValue;
+          // Handle numeric fields
+          if (
+            [
+              "customer_id",
+              "total",
+              "shipping",
+              "discount",
+              "tax",
+              "grand_total",
+            ].includes(key)
+          ) {
+            const numValue = Number(trimmedValue);
+            data[key] = isNaN(numValue) ? undefined : numValue;
+          } else if (key === "quotation_detail") {
+            // Parse JSON for quotation_detail
+            try {
+              data[key] = JSON.parse(trimmedValue);
+            } catch {
+              data[key] = undefined;
+            }
+          } else {
+            data[key] = trimmedValue;
+          }
         }
+      } else {
+        data[key] = value;
       }
-    } else {
-      data[key] = value;
     }
+  } else {
+    // Assume it's a plain object
+    data = { ...formData };
   }
 
   // Validate based on mode

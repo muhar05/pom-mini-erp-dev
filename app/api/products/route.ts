@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import {
+  getAllProductsDb,
+  createProductDb,
+  getProductByCodeDb,
+} from "@/data/products";
 
 // GET: Ambil semua products
 export async function GET() {
@@ -11,9 +15,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
-    const products = await prisma.products.findMany({
-      orderBy: { created_at: "desc" },
-    });
+    const products = await getAllProductsDb();
     return NextResponse.json(products);
   } catch (error) {
     return NextResponse.json(
@@ -34,9 +36,12 @@ export async function POST(req: Request) {
     const data = await req.json();
 
     // Validasi product_code unique
-    const existingProduct = await prisma.products.findUnique({
-      where: { product_code: data.product_code },
-    });
+    let existingProduct;
+    try {
+      existingProduct = await getProductByCodeDb(data.product_code);
+    } catch {
+      existingProduct = null;
+    }
 
     if (existingProduct) {
       return NextResponse.json(
@@ -45,7 +50,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const product = await prisma.products.create({ data });
+    const product = await createProductDb(data);
     return NextResponse.json(product, { status: 201 });
   } catch (error) {
     console.error("Product creation error:", error);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import { getAllQuotationsDb, createQuotationDb } from "@/data/quotations";
 
 // GET: Ambil semua quotations
 export async function GET() {
@@ -12,9 +12,7 @@ export async function GET() {
   }
 
   try {
-    const quotations = await prisma.quotations.findMany({
-      orderBy: { created_at: "desc" },
-    });
+    const quotations = await getAllQuotationsDb();
     return NextResponse.json(quotations);
   } catch (error) {
     return NextResponse.json(
@@ -34,8 +32,17 @@ export async function POST(req: Request) {
 
   try {
     const data = await req.json();
-    const quotation = await prisma.quotations.create({ data });
-    return NextResponse.json(quotation, { status: 201 });
+    // Tampilkan data ke terminal
+    console.log("DATA DITERIMA DARI FRONTEND:", data);
+
+    // Simpan ke database lewat data layer
+    const quotation = await createQuotationDb(data);
+
+    return NextResponse.json({
+      success: true,
+      message: "Quotation created successfully",
+      data: quotation,
+    });
   } catch (error) {
     console.error("Quotation creation error:", error);
     return NextResponse.json(

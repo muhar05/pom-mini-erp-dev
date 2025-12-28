@@ -15,9 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  createQuotationFromLeadAction,
+  createQuotationAction,
   generateQuotationNumberAction,
-} from "@/app/actions/quotations";
+} from "@/app/actions/quotations"; // pastikan import
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Building, Tag, Mail, Phone, MapPin } from "lucide-react";
@@ -32,7 +32,23 @@ import { cn } from "@/lib/utils";
 import BoqTable, { BoqItem } from "./BoqTable";
 import { getAllCustomersAction } from "@/app/actions/customers";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { User } from "lucide-react";
+
+// 1. Ubah type Quotation (atau buat type baru)
+type QuotationFormData = {
+  quotation_no: string;
+  customer_id: string | number;
+  quotation_detail: BoqItem[];
+  total: number;
+  shipping: number;
+  discount: number;
+  tax: number;
+  grand_total: number;
+  status: string;
+  stage?: string;
+  note?: string;
+  target_date?: string;
+  top?: string;
+};
 
 type Quotation = {
   id?: string;
@@ -77,28 +93,22 @@ export default function QuotationForm({
   const [leadData, setLeadData] = useState<any>(null);
   const [generatingQuotationNo, setGeneratingQuotationNo] = useState(false);
   const [showTargetCalendar, setShowTargetCalendar] = useState(false);
-  const [showValidUntilCalendar, setShowValidUntilCalendar] = useState(false);
 
-  const [formData, setFormData] = useState<Quotation>({
+  // 2. Inisialisasi state
+  const [formData, setFormData] = useState<QuotationFormData>({
     quotation_no: quotation?.quotation_no || "",
-    opportunity_no: quotation?.opportunity_no || "",
-    customer_name: quotation?.customer_name || "",
-    customer_email: quotation?.customer_email || "",
-    sales_pic: quotation?.sales_pic || "",
-    type: quotation?.type || "Perusahaan",
-    company: quotation?.company || "",
-    total_amount: quotation?.total_amount || 0,
+    customer_id: quotation?.customer_id || "",
+    quotation_detail: quotation?.quotation_detail || [],
+    total: quotation?.total_amount || 0,
     shipping: quotation?.shipping || 0,
     discount: quotation?.discount || 0,
     tax: quotation?.tax || 0,
     grand_total: quotation?.grand_total || 0,
     status: quotation?.status || "draft",
     stage: quotation?.stage || "draft",
+    note: quotation?.note || "",
     target_date: quotation?.target_date || "",
     top: quotation?.top || "cash",
-    valid_until: quotation?.valid_until || "",
-    note: quotation?.note || "",
-    customer_id: quotation?.customer_id || "",
   });
 
   const [boqItems, setBoqItems] = useState<BoqItem[]>(
@@ -133,7 +143,6 @@ export default function QuotationForm({
     const customerName = searchParams.get("customerName");
     const customerEmail = searchParams.get("customerEmail");
     const company = searchParams.get("company");
-    const referenceNo = searchParams.get("referenceNo");
 
     if (leadId) {
       setLeadData({
@@ -166,8 +175,8 @@ export default function QuotationForm({
   }, []);
 
   const handleInputChange = (
-    field: keyof Quotation,
-    value: string | number
+    field: keyof QuotationFormData,
+    value: string | number | BoqItem[]
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -178,13 +187,16 @@ export default function QuotationForm({
       0
     );
     const shipping = formData.shipping || 0;
-    const discount = formData.discount || 0;
+    const discountPercent = formData.discount || 0;
     const tax = formData.tax || 0;
-    const grandTotal = subtotal + shipping + tax - discount;
+
+    // Diskon dalam persen
+    const discountAmount = (subtotal * discountPercent) / 100;
+    const grandTotal = subtotal + shipping + tax - discountAmount;
 
     setFormData((prev) => ({
       ...prev,
-      total_amount: subtotal,
+      total: subtotal, // <-- was total_amount
       grand_total: grandTotal,
     }));
   };
@@ -193,38 +205,62 @@ export default function QuotationForm({
     calculateTotals();
   }, [boqItems, formData.shipping, formData.discount, formData.tax]);
 
+  // Ganti handleSubmit agar pakai server action
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const formDataObj = new FormData();
+      const dataToSend = {
+        quotation_no: formData.quotation_no,
+        customer_id: Number(formData.customer_id),
+        quotation_detail: boqItems.map((item) => ({
+          ...item,
+          product_id: Number(item.product_id),
+          total: item.unit_price * item.quantity, // <-- Ensure total is set
+        })),
+        total: formData.total,
+        shipping: formData.shipping,
+        discount: formData.discount,
+        tax: formData.tax,
+        grand_total: formData.grand_total,
+        status: formData.status,
+        stage: formData.stage,
+        note: formData.note,
+        target_date: formData.target_date,
+        top: formData.top,
+      };
 
-      // Add all form fields to FormData
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined) {
-          formDataObj.append(key, String(value));
-        }
-      });
+      const result = await createQuotationAction(dataToSend);
 
-      formDataObj.append("quotation_detail", JSON.stringify(boqItems));
-      formDataObj.append("customer_id", "0");
-      formDataObj.append("total", String(formData.total_amount));
-      formDataObj.append("grand_total", String(formData.grand_total));
+      if (result?.success) {
+        // Reset form
+        setFormData({
+          quotation_no: "",
+          customer_id: "",
+          quotation_detail: [],
+          total: 0,
+          shipping: 0,
+          discount: 0,
+          tax: 0,
+          grand_total: 0,
+          status: "draft",
+          stage: "draft",
+          note: "",
+          target_date: "",
+          top: "cash",
+        });
+        setBoqItems([]);
+        setSelectedCustomer(null);
 
-      const result = await createQuotationFromLeadAction(
-        leadData.leadId,
-        formDataObj
-      );
-
-      if (result.success) {
-        alert(`Quotation ${result.data.quotation_no} created successfully!`);
-        onSuccess?.();
+        // Redirect ke halaman utama quotations
         router.push("/crm/quotations");
+      } else {
+        alert(result?.message || "Gagal membuat quotation");
       }
     } catch (error) {
-      console.error("Error saving quotation:", error);
-      alert("Error creating quotation: " + (error as Error).message);
+      console.error("Error sending data:", error);
+      alert("Error: " + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -243,7 +279,6 @@ export default function QuotationForm({
     !!formData.quotation_no &&
     !!formData.customer_id &&
     !!selectedCustomer &&
-    !!formData.sales_pic &&
     boqItems.length > 0 &&
     boqItems.every(
       (item) =>
@@ -252,6 +287,11 @@ export default function QuotationForm({
         item.quantity > 0 &&
         item.unit_price >= 0
     );
+
+  // Helper untuk ambil diskon dan level dari selectedCustomer
+  const companyLevel = selectedCustomer?.company?.company_level;
+  const companyLevelDiscount = companyLevel?.disc1 ?? 0;
+  const companyLevelName = companyLevel?.level_name ?? "";
 
   return (
     <div className="w-full mx-auto py-4 space-y-6">
@@ -406,49 +446,6 @@ export default function QuotationForm({
 
                 {/* Terms Section */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="valid_until">Valid Until</Label>
-                    <Popover
-                      open={showValidUntilCalendar}
-                      onOpenChange={setShowValidUntilCalendar}
-                    >
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formData.valid_until && "text-muted-foreground"
-                          )}
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {formData.valid_until ? (
-                            format(new Date(formData.valid_until), "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <CalendarComponent
-                          mode="single"
-                          selected={
-                            formData.valid_until
-                              ? new Date(formData.valid_until)
-                              : undefined
-                          }
-                          onSelect={(date) => {
-                            handleInputChange(
-                              "valid_until",
-                              date ? format(date, "yyyy-MM-dd") : ""
-                            );
-                            setShowValidUntilCalendar(false);
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="target_date">Target Date</Label>
                     <Popover
@@ -610,6 +607,22 @@ export default function QuotationForm({
                           className="bg-gray-100 dark:bg-gray-800/40"
                         />
                       </div>
+                      {/* Tambahkan ini untuk level perusahaan */}
+                      <div>
+                        <Label className="text-xs mb-1 block">
+                          Company Level
+                        </Label>
+                        <Input
+                          value={
+                            selectedCustomer.company?.company_level?.level_name
+                              ? selectedCustomer.company.company_level
+                                  .level_name
+                              : "—"
+                          }
+                          disabled
+                          className="bg-gray-100 dark:bg-gray-800/40"
+                        />
+                      </div>
                       <div>
                         <Label className="text-xs mb-1 block">Type</Label>
                         <Input
@@ -665,7 +678,7 @@ export default function QuotationForm({
                       Subtotal
                     </span>
                     <span className="font-medium">
-                      {formatCurrency(formData.total_amount)}
+                      {formatCurrency(formData.total)}
                     </span>
                   </div>
 
@@ -675,14 +688,13 @@ export default function QuotationForm({
                     </Label>
                     <Input
                       id="shipping"
-                      type="number"
-                      value={formData.shipping}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "shipping",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
+                      type="text"
+                      value={formatCurrency(formData.shipping)}
+                      onChange={(e) => {
+                        // Hapus karakter non-digit
+                        const raw = e.target.value.replace(/[^\d]/g, "");
+                        handleInputChange("shipping", parseInt(raw) || 0);
+                      }}
                       placeholder="0"
                       min="0"
                     />
@@ -690,7 +702,7 @@ export default function QuotationForm({
 
                   <div className="space-y-2">
                     <Label htmlFor="discount" className="text-sm">
-                      Discount
+                      Discount (%)
                     </Label>
                     <Input
                       id="discount"
@@ -704,7 +716,22 @@ export default function QuotationForm({
                       }
                       placeholder="0"
                       min="0"
+                      max="100"
                     />
+                    {/* Selalu tampilkan level name jika ada */}
+                    {companyLevelName && (
+                      <div className="text-xs text-blue-700 mt-1">
+                        Level perusahaan: <b>{companyLevelName}</b>
+                        {/* Diskon hanya tampil jika > 0 */}
+                        {companyLevelDiscount > 0 && (
+                          <span>
+                            {" "}
+                            &mdash; Diskon default:{" "}
+                            <b>{companyLevelDiscount}%</b>
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -713,11 +740,12 @@ export default function QuotationForm({
                     </Label>
                     <Input
                       id="tax"
-                      type="number"
-                      value={formData.tax}
-                      onChange={(e) =>
-                        handleInputChange("tax", parseInt(e.target.value) || 0)
-                      }
+                      type="text"
+                      value={formatCurrency(formData.tax)}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^\d]/g, "");
+                        handleInputChange("tax", parseInt(raw) || 0);
+                      }}
                       placeholder="0"
                       min="0"
                     />
@@ -732,7 +760,7 @@ export default function QuotationForm({
                         {formatCurrency(formData.grand_total)}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
-                        Subtotal: {formatCurrency(formData.total_amount)}
+                        Subtotal: {formatCurrency(formData.total)}
                       </div>
                     </div>
                   </div>

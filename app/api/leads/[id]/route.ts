@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import { getLeadByIdDb, updateLeadDb, deleteLeadDb } from "@/data/leads";
 
 // PUT: Update lead
 export async function PUT(
@@ -15,7 +15,7 @@ export async function PUT(
   }
   try {
     const id = Number(params.id);
-    const oldLead = await prisma.leads.findUnique({ where: { id } });
+    const oldLead = await getLeadByIdDb(id);
     if (!oldLead) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }
@@ -59,10 +59,7 @@ export async function PUT(
       }
     }
 
-    const lead = await prisma.leads.update({
-      where: { id },
-      data,
-    });
+    const lead = await updateLeadDb(id, data);
     return NextResponse.json(lead);
   } catch (error) {
     return NextResponse.json(
@@ -84,14 +81,14 @@ export async function DELETE(
   }
   try {
     const id = Number(params.id);
-    const oldLead = await prisma.leads.findUnique({ where: { id } });
+    const oldLead = await getLeadByIdDb(id);
     if (!oldLead) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }
     if (isSales(user)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    await prisma.leads.delete({ where: { id } });
+    await deleteLeadDb(id);
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(

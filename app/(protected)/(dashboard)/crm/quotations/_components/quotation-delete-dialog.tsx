@@ -18,7 +18,6 @@ type Quotation = {
   quotation_no: string;
   customer_name: string;
   customer_email: string;
-  sales_pic: string;
   type: string;
   company: string;
   total_amount: number;

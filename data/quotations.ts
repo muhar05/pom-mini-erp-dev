@@ -34,6 +34,13 @@ export async function deleteQuotationDb(id: number) {
 export async function getQuotationByIdDb(id: number) {
   const quotation = await prisma.quotations.findUnique({
     where: { id },
+    include: {
+      customer: {
+        include: {
+          company: true,
+        },
+      },
+    },
   });
   if (!quotation) throw new Error("Quotation not found");
   return quotation;
@@ -43,6 +50,13 @@ export async function getQuotationByIdDb(id: number) {
 export async function getAllQuotationsDb() {
   return prisma.quotations.findMany({
     orderBy: { created_at: "desc" },
+    include: {
+      customer: {
+        include: {
+          company: true,
+        },
+      },
+    },
   });
 }
 
