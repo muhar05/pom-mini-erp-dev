@@ -18,6 +18,7 @@ export async function GET(req: Request, context: { params: { id: string } }) {
 
   try {
     const quotation = await getQuotationByIdDb(Number(params.id));
+    console.log("Fetched quotation:", quotation);   
     return NextResponse.json(quotation);
   } catch (error) {
     return NextResponse.json(

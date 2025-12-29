@@ -207,18 +207,18 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
             fontSize: 20,
             margin: "18px 0 8px 0",
             letterSpacing: 1,
-            textDecoration: "underline",
+            color: "#222",
           }}
         >
           SALES QUOTATION
         </div>
-        <div
+        {/* <div
           style={{
             borderBottom: "2px solid #222",
             width: 220,
             margin: "0 auto 18px auto",
           }}
-        />
+        /> */}
 
         {/* Table of Items */}
         <table

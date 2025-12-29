@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,7 @@ import {
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useQuotationDetail } from "@/hooks/quotations/useQuotationDetail";
+import { useProductById } from "@/hooks/products/useProductById";
 import QuotationExport from "@/components/quotations/quotationExport";
 
 function getStatusBadgeClass(status: string): string {
@@ -94,10 +95,7 @@ export default function QuotationDetailPage() {
   const { quotation, loading } = useQuotationDetail(idParam);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [copied, setCopied] = useState(false);
-  const pdfRef = useRef<HTMLDivElement>(null);
-  const [showExport, setShowExport] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
-
   const handleDelete = () => {
     if (!idParam) return;
     fetch(`/api/quotations/${idParam}`, { method: "DELETE" }).then(() => {
@@ -131,6 +129,46 @@ export default function QuotationDetailPage() {
 
   const canConvertToSO = quotation?.status?.toLowerCase() === "confirmed";
 
+  // Gunakan useMemo agar quotationDetail tidak berubah referensi setiap render
+  const quotationDetail = useMemo(() => {
+    if (Array.isArray(quotation?.quotation_detail)) {
+      return quotation.quotation_detail;
+    }
+    if (quotation?.quotation_detail) {
+      try {
+        return JSON.parse(quotation.quotation_detail);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }, [quotation?.quotation_detail]);
+
+  const [detailWithUnit, setDetailWithUnit] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchUnits() {
+      if (!quotationDetail || quotationDetail.length === 0) {
+        setDetailWithUnit([]);
+        return;
+      }
+      const results = await Promise.all(
+        quotationDetail.map(async (item: any) => {
+          if (!item.product_id) return { ...item, unit: "" }; // kosong jika tidak ada product_id
+          try {
+            const res = await fetch(`/api/products/${item.product_id}`);
+            const prod = await res.json();
+            return { ...item, unit: prod.unit ?? "" }; // ambil langsung dari produk
+          } catch {
+            return { ...item, unit: "" };
+          }
+        })
+      );
+      setDetailWithUnit(results);
+    }
+    fetchUnits();
+  }, [quotationDetail]); // dependency sudah stabil
+
   if (loading) {
     return (
       <div className="flex justify-center items-center p-16 w-full h-full">
@@ -163,13 +201,6 @@ export default function QuotationDetailPage() {
       </div>
     );
   }
-
-  // Perbaiki parsing detail
-  const quotationDetail = Array.isArray(quotation?.quotation_detail)
-    ? quotation.quotation_detail
-    : quotation?.quotation_detail
-    ? JSON.parse(quotation.quotation_detail)
-    : [];
 
   return (
     <>
@@ -585,11 +616,11 @@ export default function QuotationDetailPage() {
             companyName={quotation.customer?.company?.company_name || ""}
             companyAddress={quotation.customer?.company?.address || ""}
             companyPhone={quotation.customer?.company?.phone}
-            items={quotationDetail.map((item: any) => ({
-              partNo: item.part_no || "",
+            items={detailWithUnit.map((item: any) => ({
+              partNo: item.product_code || "", // ambil dari product_code
               desc: item.product_name,
               qty: item.quantity,
-              unit: item.unit || "",
+              unit: item.unit, // ambil langsung dari hasil fetch, tanpa default "pcs"
               unitPrice: item.unit_price,
             }))}
             notes={quotation.note}

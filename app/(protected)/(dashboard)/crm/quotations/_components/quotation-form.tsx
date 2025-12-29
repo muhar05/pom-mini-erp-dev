@@ -98,12 +98,18 @@ export default function QuotationForm({
   const [formData, setFormData] = useState<QuotationFormData>({
     quotation_no: quotation?.quotation_no || "",
     customer_id: quotation?.customer_id || "",
-    quotation_detail: quotation?.quotation_detail || [],
-    total: quotation?.total_amount || 0,
-    shipping: quotation?.shipping || 0,
-    discount: quotation?.discount || 0,
-    tax: quotation?.tax || 0,
-    grand_total: quotation?.grand_total || 0,
+    quotation_detail: quotation?.quotation_detail
+      ? quotation.quotation_detail.map((item) => ({
+          ...item,
+          unit_price: Number(item.unit_price) || 0,
+          quantity: Number(item.quantity) || 0,
+        }))
+      : [],
+    total: Number(quotation?.total_amount) || 0,
+    shipping: Number(quotation?.shipping) || 0,
+    discount: Number(quotation?.discount) || 0,
+    tax: Number(quotation?.tax) || 0,
+    grand_total: Number(quotation?.grand_total) || 0,
     status: quotation?.status || "draft",
     stage: quotation?.stage || "draft",
     note: quotation?.note || "",
@@ -112,7 +118,13 @@ export default function QuotationForm({
   });
 
   const [boqItems, setBoqItems] = useState<BoqItem[]>(
-    quotation?.quotation_detail || []
+    quotation?.quotation_detail
+      ? quotation.quotation_detail.map((item) => ({
+          ...item,
+          unit_price: Number(item.unit_price) || 0,
+          quantity: Number(item.quantity) || 0,
+        }))
+      : []
   );
 
   const [customerOptions, setCustomerOptions] = useState<any[]>([]);
