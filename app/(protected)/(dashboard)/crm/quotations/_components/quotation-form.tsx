@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import BoqTable, { BoqItem } from "./BoqTable";
 import { getAllCustomersAction } from "@/app/actions/customers";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { SQ_STATUS_OPTIONS } from "@/utils/statusHelpers";
 
 // 1. Ubah type Quotation (atau buat type baru)
 type QuotationFormData = {
@@ -417,19 +418,11 @@ export default function QuotationForm({
                         handleInputChange("status", value)
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="Open">Open</SelectItem>
-                        <SelectItem value="Confirmed">Confirmed</SelectItem>
-                        <SelectItem value="Rejected">Rejected</SelectItem>
-                        <SelectItem value="Expired">Expired</SelectItem>
-                        <SelectItem value="Converted to SO">
-                          Converted to SO
+                      {SQ_STATUS_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
                         </SelectItem>
-                      </SelectContent>
+                      ))}
                     </Select>
                   </div>
 

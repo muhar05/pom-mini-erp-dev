@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import QuotationActions from "./quotation-actions";
 import { formatDate } from "@/utils/formatDate";
+import { formatStatusDisplay } from "@/utils/statusHelpers"; // Tambahkan import ini
 
 type Quotation = {
   id: string;
@@ -29,6 +30,7 @@ type Quotation = {
 interface QuotationsTableProps {
   quotations: Quotation[];
   onRowClick?: (id: string) => void;
+  onDeleteQuotation?: (id: string) => void; // Tambahkan ini
 }
 
 function getStatusBadgeClass(status: string): string {
@@ -49,6 +51,7 @@ function getStatusBadgeClass(status: string): string {
 export default function QuotationsTable({
   quotations,
   onRowClick,
+  onDeleteQuotation, // Tambahkan ini
 }: QuotationsTableProps) {
   return (
     <Table>
@@ -91,12 +94,15 @@ export default function QuotationsTable({
                   q.status
                 )}`}
               >
-                {q.status}
+                {formatStatusDisplay(q.status)}
               </span>
             </TableCell>
             <TableCell>{formatDate(q.created_at)}</TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
-              <QuotationActions quotation={q} />
+              <QuotationActions
+                quotation={q}
+                onDelete={() => onDeleteQuotation?.(q.id)} // Tambahkan ini
+              />
             </TableCell>
           </TableRow>
         ))}

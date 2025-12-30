@@ -22,12 +22,13 @@ export const OPPORTUNITY_STATUSES = {
 
 // Sales Quotation Status Enum
 export const SQ_STATUSES = {
-  DRAFT: "sq_draft",
-  SENT: "sq_sent",
-  REVISED: "sq_revised",
-  WIN: "sq_win",
-  LOST: "sq_lost",
-  CANCELLED: "sq_cancelled",
+  DRAFT: "sq_draft", // Menunggu approval Sales Manager & belum dikirim ke customer
+  APPROVED: "sq_approved", // Sudah di-approve Sales Manager, bisa dikirim ke customer
+  SENT: "sq_sent", // Sudah dikirim ke customer
+  REVISED: "sq_revised", // Perlu revisi/negosiasi
+  LOST: "sq_lost", // Customer menolak SQ
+  WIN: "sq_win", // Sudah dapat PO dari customer
+  CONVERTED: "sq_converted", // Sudah berubah menjadi SO
 } as const;
 
 // Sales Order Status Enum
@@ -192,22 +193,29 @@ export function isValidStatusTransition(
       [OPPORTUNITY_STATUSES.SQ]: [],
     },
     sq: {
-      [SQ_STATUSES.DRAFT]: [SQ_STATUSES.SENT, SQ_STATUSES.CANCELLED],
+      [SQ_STATUSES.DRAFT]: [SQ_STATUSES.APPROVED, SQ_STATUSES.SENT],
+      [SQ_STATUSES.APPROVED]: [
+        SQ_STATUSES.SENT,
+        SQ_STATUSES.REVISED,
+        SQ_STATUSES.LOST,
+        SQ_STATUSES.WIN,
+        SQ_STATUSES.CONVERTED,
+      ],
       [SQ_STATUSES.SENT]: [
         SQ_STATUSES.REVISED,
-        SQ_STATUSES.WIN,
         SQ_STATUSES.LOST,
-        SQ_STATUSES.CANCELLED,
+        SQ_STATUSES.WIN,
+        SQ_STATUSES.CONVERTED,
       ],
       [SQ_STATUSES.REVISED]: [
         SQ_STATUSES.SENT,
-        SQ_STATUSES.WIN,
         SQ_STATUSES.LOST,
-        SQ_STATUSES.CANCELLED,
+        SQ_STATUSES.WIN,
+        SQ_STATUSES.CONVERTED,
       ],
-      [SQ_STATUSES.WIN]: [],
       [SQ_STATUSES.LOST]: [],
-      [SQ_STATUSES.CANCELLED]: [],
+      [SQ_STATUSES.WIN]: [],
+      [SQ_STATUSES.CONVERTED]: [],
     },
     so: {
       [SO_STATUSES.DRAFT]: [SO_STATUSES.CONFIRMED, SO_STATUSES.CANCELLED],
@@ -279,12 +287,15 @@ export const OPPORTUNITY_STATUS_OPTIONS = [
   { value: OPPORTUNITY_STATUSES.SQ, label: "SQ" },
 ];
 
-export const SQ_STATUS_OPTIONS = (Object.values(SQ_STATUSES) as string[]).map(
-  (status) => ({
-    value: status,
-    label: formatStatusDisplay(status),
-  })
-);
+export const SQ_STATUS_OPTIONS = [
+  { value: SQ_STATUSES.DRAFT, label: "Draft" },
+  { value: SQ_STATUSES.APPROVED, label: "Approved" },
+  { value: SQ_STATUSES.SENT, label: "Sent" },
+  { value: SQ_STATUSES.REVISED, label: "Negotiation / Revised" },
+  { value: SQ_STATUSES.LOST, label: "Lost" },
+  { value: SQ_STATUSES.WIN, label: "Win" },
+  { value: SQ_STATUSES.CONVERTED, label: "Converted" },
+];
 
 export const SO_STATUS_OPTIONS = (Object.values(SO_STATUSES) as string[]).map(
   (status) => ({

@@ -6,12 +6,13 @@ import QuotationsTable from "./_components/quotations-table";
 import QuotationFilters from "./_components/quotation-filters";
 import AddQuotationButton from "./_components/add-quotation-button";
 import { useQuotations } from "@/hooks/quotations/useQuotations";
+import { useDeleteQuotation } from "@/hooks/quotations/useDeleteQuotation";
+import { toast } from "react-hot-toast"; // Tambahkan ini
 
 export default function QuotationsPage() {
   const { quotations, loading, setQuotations } = useQuotations();
+  const { deleteQuotation, loading: deleting } = useDeleteQuotation();
   const [search, setSearch] = useState(""); // Tambahkan state search
-
-  console.log("All Quotations:", quotations); 
 
   // Filter quotations berdasarkan search (opsional)
   const filteredQuotations = quotations.filter(
@@ -19,8 +20,6 @@ export default function QuotationsPage() {
       q.quotation_no?.toLowerCase().includes(search.toLowerCase()) ||
       q.customer_name?.toLowerCase().includes(search.toLowerCase())
   );
-
-   console.log("Filtered Quotations:", filteredQuotations);
 
   return (
     <>
@@ -43,7 +42,18 @@ export default function QuotationsPage() {
               </div>
             </div>
           ) : (
-            <QuotationsTable quotations={filteredQuotations} />
+            <QuotationsTable
+              quotations={filteredQuotations}
+              onDeleteQuotation={async (id) => {
+                const ok = await deleteQuotation(id);
+                if (ok) {
+                  setQuotations((prev) => prev.filter((q) => q.id !== id));
+                  toast.success("Quotation deleted successfully");
+                } else {
+                  toast.error("Failed to delete quotation");
+                }
+              }}
+            />
           )}
         </div>
       </div>
