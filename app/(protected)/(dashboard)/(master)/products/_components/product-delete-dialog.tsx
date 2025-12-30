@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Product } from "../page";
+import { Product } from "@/types/models";
 import { deleteProductAction } from "@/app/actions/products";
 
 interface ProductDeleteDialogProps {
