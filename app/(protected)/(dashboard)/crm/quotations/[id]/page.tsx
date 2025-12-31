@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { PrintButton } from "@/components/quotations/PrintButton";
+import { formatStatusDisplay } from "@/utils/statusHelpers";
 import {
   Edit,
   Trash2,
@@ -232,14 +233,16 @@ export default function QuotationDetailPage() {
                 </h1>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge className={getStatusBadgeClass(quotation.status)}>
-                    {quotation.status}
+                    <span className="font-semibold">Status:</span>{" "}
+                    {formatStatusDisplay(quotation.status)}
                   </Badge>
                   {quotation.stage && (
                     <Badge
                       className={getStageBadgeClass(quotation.stage)}
                       variant="outline"
                     >
-                      {quotation.stage}
+                      <span className="font-semibold">Stage:</span>{" "}
+                      {formatStatusDisplay(quotation.stage)}
                     </Badge>
                   )}
                 </div>
