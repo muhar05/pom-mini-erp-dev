@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,26 +15,15 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { roles } from "@/types/models";
-import { useRouter } from "next/navigation";
+import { useRoles } from "@/hooks/users/useRoles";
+import { useCreateUser } from "@/hooks/users/useCreateUser";
 
 export default function NewUserPage() {
-  const [roles, setRoles] = useState<roles[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
-
-  useEffect(() => {
-    fetch("/api/users/roles")
-      .then((res) => res.json())
-      .then((data) => setRoles(data))
-      .catch(() => setError("Failed to load roles"));
-  }, []);
+  const { roles, isLoading: rolesLoading, error: rolesError } = useRoles();
+  const { isLoading, error, createUser } = useCreateUser();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
 
     const formData = new FormData(e.currentTarget);
     const userData = {
@@ -43,24 +32,7 @@ export default function NewUserPage() {
       role_id: formData.get("role_id") as string,
     };
 
-    try {
-      const response = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userData),
-      });
-
-      if (response.ok) {
-        router.push("/settings/users");
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to create user");
-      }
-    } catch (error) {
-      setError("Network error. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    await createUser(userData);
   };
 
   return (
@@ -86,9 +58,9 @@ export default function NewUserPage() {
           <CardTitle>User Information</CardTitle>
         </CardHeader>
         <CardContent>
-          {error && (
+          {(error || rolesError) && (
             <div className="bg-red-50 p-4 rounded-lg mb-4">
-              <p className="text-sm text-red-700">{error}</p>
+              <p className="text-sm text-red-700">{error || rolesError}</p>
             </div>
           )}
 
@@ -122,9 +94,17 @@ export default function NewUserPage() {
             {/* Role Field */}
             <div className="space-y-2">
               <Label htmlFor="role">Role *</Label>
-              <Select name="role_id" required disabled={isLoading}>
+              <Select
+                name="role_id"
+                required
+                disabled={isLoading || rolesLoading}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select user role" />
+                  <SelectValue
+                    placeholder={
+                      rolesLoading ? "Loading roles..." : "Select user role"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (

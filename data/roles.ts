@@ -8,3 +8,11 @@ export async function getAllRolesDb() {
     },
   });
 }
+
+export async function createRoleDb(role_name: string) {
+  return prisma.roles.create({
+    data: {
+      role_name,
+    },
+  });
+}
