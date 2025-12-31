@@ -106,12 +106,19 @@ export async function createQuotationAction(data: QuotationFormData) {
       customer: { connect: { id: customer_id } },
     };
     const quotation = await createQuotationDb(prismaData);
-
+    const safeQuotation = {
+      ...quotation,
+      total: quotation.total ? Number(quotation.total) : 0,
+      shipping: quotation.shipping ? Number(quotation.shipping) : 0,
+      discount: quotation.discount ? Number(quotation.discount) : 0,
+      tax: quotation.tax ? Number(quotation.tax) : 0,
+      grand_total: quotation.grand_total ? Number(quotation.grand_total) : 0,
+    };
     revalidatePath("/crm/quotations");
     return {
       success: true,
       message: "Quotation created successfully",
-      data: quotation,
+      data: safeQuotation,
     };
   } catch (error) {
     console.error("Error creating quotation:", error);
@@ -361,6 +368,14 @@ export async function createQuotationFromLeadAction(
       quotation_no: validatedData.quotation_no ?? (await generateQuotationNo()),
     };
     const quotation = await createQuotationDb(prismaData);
+    const safeQuotation = {
+      ...quotation,
+      total: quotation.total ? Number(quotation.total) : 0,
+      shipping: quotation.shipping ? Number(quotation.shipping) : 0,
+      discount: quotation.discount ? Number(quotation.discount) : 0,
+      tax: quotation.tax ? Number(quotation.tax) : 0,
+      grand_total: quotation.grand_total ? Number(quotation.grand_total) : 0,
+    };
 
     // Optional: Update lead status to indicate quotation created
     await prisma.leads.update({
@@ -377,7 +392,7 @@ export async function createQuotationFromLeadAction(
     return {
       success: true,
       message: "Quotation created successfully from lead",
-      data: quotation,
+      data: safeQuotation,
     };
   } catch (error) {
     console.error("Error creating quotation from lead:", error);
@@ -445,6 +460,14 @@ export async function createQuotationFromLeadObjectAction(
       quotation_no: quotationData.quotation_no ?? (await generateQuotationNo()),
     };
     const quotation = await createQuotationDb(prismaData);
+    const safeQuotation = {
+      ...quotation,
+      total: quotation.total ? Number(quotation.total) : 0,
+      shipping: quotation.shipping ? Number(quotation.shipping) : 0,
+      discount: quotation.discount ? Number(quotation.discount) : 0,
+      tax: quotation.tax ? Number(quotation.tax) : 0,
+      grand_total: quotation.grand_total ? Number(quotation.grand_total) : 0,
+    };
 
     // Update lead status
     await prisma.leads.update({
@@ -461,7 +484,7 @@ export async function createQuotationFromLeadObjectAction(
     return {
       success: true,
       message: "Quotation created successfully from lead",
-      data: quotation,
+      data: safeQuotation,
     };
   } catch (error) {
     console.error("Error creating quotation from lead:", error);

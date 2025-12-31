@@ -6,6 +6,7 @@ import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { useQuotationDetail } from "@/hooks/quotations/useQuotationDetail";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { quotations } from "@/types/models";
 
 export default function QuotationEditPage() {
   const { id } = useParams();
@@ -21,9 +22,41 @@ export default function QuotationEditPage() {
     router.back();
   };
 
-  if (loading || !quotation) {
-    return <div className="p-8 text-center">Loading...</div>;
+  // Setelah ambil data quotation dari database:
+  // const quotation = await getQuotationByIdAction(Number(params.id));
+
+  // Konversi Decimal ke number
+  function parseDecimalFields(obj: Partial<quotations>): any {
+    return {
+      ...obj,
+      total: obj.total ? Number(obj.total) : 0,
+      shipping: obj.shipping ? Number(obj.shipping) : 0,
+      discount: obj.discount ? Number(obj.discount) : 0,
+      tax: obj.tax ? Number(obj.tax) : 0,
+      grand_total: obj.grand_total ? Number(obj.grand_total) : 0,
+      opportunity_no: (obj as any).opportunity_no ?? "",
+      customer_name: (obj as any).customer_name ?? "",
+      customer_email: (obj as any).customer_email ?? "",
+      sales_pic: (obj as any).sales_pic ?? "",
+      type: (obj as any).type ?? "",
+      company: (obj as any).company ?? "",
+      // Tambahkan field lain yang dibutuhkan oleh QuotationForm jika perlu
+    };
   }
+
+  if (loading || !quotation) {
+    return (
+      <div className="flex justify-center items-center p-16 w-full h-full">
+        <div className="flex flex-col w-full justify-center items-center">
+          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Only parse after data is loaded and not null
+  const safeQuotation = parseDecimalFields(quotation);
 
   return (
     <>
@@ -43,7 +76,7 @@ export default function QuotationEditPage() {
         <div className="w-full py-4">
           <QuotationForm
             mode="edit"
-            quotation={quotation}
+            quotation={safeQuotation}
             onClose={handleClose}
             onSuccess={handleSuccess}
           />

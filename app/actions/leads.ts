@@ -119,6 +119,28 @@ export async function updateLeadAction(formData: FormData) {
 
     const validatedData = validateLeadFormData(formData, "update");
 
+    // Jika status qualified, ubah ke prospecting dan redirect ke opportunities
+    if (validatedData.status === LEAD_STATUSES.QUALIFIED) {
+      validatedData.status = OPPORTUNITY_STATUSES.PROSPECTING;
+      // Update lead status
+      const updatedLead = await updateLeadDb(id, validatedData);
+      await logLeadActivity(
+        id,
+        Number(user.id),
+        "update",
+        oldLead,
+        updatedLead
+      );
+
+      revalidatePath("/crm/opportunities");
+      return {
+        success: true,
+        message:
+          "Lead status changed to prospecting and moved to opportunities",
+        redirect: "/crm/opportunities",
+      };
+    }
+
     // Set default status if not provided
     if (!validatedData.status) {
       validatedData.status = LEAD_STATUSES.NEW;

@@ -33,6 +33,7 @@ import BoqTable, { BoqItem } from "./BoqTable";
 import { getAllCustomersAction } from "@/app/actions/customers";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { SQ_STATUS_OPTIONS } from "@/utils/statusHelpers";
+import { toast } from "react-hot-toast";
 
 // 1. Ubah type Quotation (atau buat type baru)
 type QuotationFormData = {
@@ -111,7 +112,7 @@ export default function QuotationForm({
     discount: Number(quotation?.discount) || 0,
     tax: Number(quotation?.tax) || 0,
     grand_total: Number(quotation?.grand_total) || 0,
-    status: quotation?.status || "draft",
+    status: quotation?.status || "sq_draft", // ← pastikan default "sq_draft"
     stage: quotation?.stage || "draft",
     note: quotation?.note || "",
     target_date: quotation?.target_date || "",
@@ -247,6 +248,11 @@ export default function QuotationForm({
       const result = await createQuotationAction(dataToSend);
 
       if (result?.success) {
+        toast.success(
+          mode === "add"
+            ? "Quotation created successfully"
+            : "Quotation updated successfully"
+        );
         // Reset form
         setFormData({
           quotation_no: "",
@@ -269,11 +275,10 @@ export default function QuotationForm({
         // Redirect ke halaman utama quotations
         router.push("/crm/quotations");
       } else {
-        alert(result?.message || "Gagal membuat quotation");
+        toast.error(result?.message || "Failed to save quotation");
       }
     } catch (error) {
-      console.error("Error sending data:", error);
-      alert("Error: " + (error as Error).message);
+      toast.error("Error: " + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -305,6 +310,20 @@ export default function QuotationForm({
   const companyLevel = selectedCustomer?.company?.company_level;
   const companyLevelDiscount = companyLevel?.disc1 ?? 0;
   const companyLevelName = companyLevel?.level_name ?? "";
+
+  useEffect(() => {
+    if (
+      mode === "edit" &&
+      formData.customer_id &&
+      customerOptions.length > 0 &&
+      !selectedCustomer
+    ) {
+      const found = customerOptions.find(
+        (c) => c.id.toString() === formData.customer_id.toString()
+      );
+      if (found) setSelectedCustomer(found);
+    }
+  }, [mode, formData.customer_id, customerOptions, selectedCustomer]);
 
   return (
     <div className="w-full mx-auto py-4 space-y-6">
@@ -399,7 +418,7 @@ export default function QuotationForm({
                           ? "Generating..."
                           : "Auto-generated"
                       }
-                      disabled={mode === "edit" || generatingQuotationNo}
+                      disabled={true}
                       required
                       className="font-mono"
                     />
@@ -418,11 +437,16 @@ export default function QuotationForm({
                         handleInputChange("status", value)
                       }
                     >
-                      {SQ_STATUS_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SQ_STATUS_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
 
