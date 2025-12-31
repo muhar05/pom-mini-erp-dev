@@ -10,7 +10,6 @@ export const LEAD_STATUSES = {
   INTERESTED: "lead_interested",
   QUALIFIED: "lead_qualified",
   UNQUALIFIED: "lead_unqualified",
-  CONVERTED: "lead_converted",
 } as const;
 
 // Opportunity Status Enum
@@ -183,9 +182,8 @@ export function isValidStatusTransition(
         LEAD_STATUSES.QUALIFIED,
         LEAD_STATUSES.UNQUALIFIED,
       ],
-      [LEAD_STATUSES.QUALIFIED]: [LEAD_STATUSES.CONVERTED],
+      [LEAD_STATUSES.QUALIFIED]: [], // tidak ada lagi transition ke CONVERTED
       [LEAD_STATUSES.UNQUALIFIED]: [],
-      [LEAD_STATUSES.CONVERTED]: [],
     },
     opp: {
       [OPPORTUNITY_STATUSES.PROSPECTING]: [OPPORTUNITY_STATUSES.LOST],

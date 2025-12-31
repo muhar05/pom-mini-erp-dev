@@ -113,7 +113,7 @@ export async function updateLeadAction(formData: FormData) {
     if (isSales(user) && oldLead.id_user !== user.id) {
       throw new Error("Unauthorized");
     }
-    if (isSales(user) && oldLead.status === LEAD_STATUSES.CONVERTED) {
+    if (isSales(user) && oldLead.status === "prospecting") {
       throw new Error("Lead cannot be edited after conversion.");
     }
 
@@ -158,7 +158,7 @@ export async function updateLeadAction(formData: FormData) {
       if (isSales(user)) {
         // Sales tidak bisa ubah ke status tertentu
         const restrictedStatuses = [
-          LEAD_STATUSES.CONVERTED,
+          "prospecting", // ganti dari LEAD_STATUSES.CONVERTED
           LEAD_STATUSES.UNQUALIFIED,
         ];
         if (restrictedStatuses.includes(validatedData.status as any)) {
@@ -222,7 +222,7 @@ export async function deleteLeadAction(formData: FormData) {
     }
 
     const normalizedStatus = normalizeStatusToNewFormat(lead.status || "");
-    if (normalizedStatus === LEAD_STATUSES.CONVERTED) {
+    if (normalizedStatus === "prospecting") {
       return {
         success: false,
         message: "Lead is already Converted. Are you sure you want to delete?",
@@ -293,7 +293,7 @@ export async function convertLeadAction(id: number) {
 
   // Ubah status menjadi converted dan update reference_no
   const updatedLead = await updateLeadDb(id, {
-    status: LEAD_STATUSES.CONVERTED,
+    status: "prospecting", // ganti dari LEAD_STATUSES.CONVERTED
     reference_no: opportunityNo,
   });
 
