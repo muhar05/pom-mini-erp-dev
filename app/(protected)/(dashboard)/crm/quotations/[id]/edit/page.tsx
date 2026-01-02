@@ -22,9 +22,6 @@ export default function QuotationEditPage() {
     router.back();
   };
 
-  // Setelah ambil data quotation dari database:
-  // const quotation = await getQuotationByIdAction(Number(params.id));
-
   // Konversi Decimal ke number
   function parseDecimalFields(obj: Partial<quotations>): any {
     return {

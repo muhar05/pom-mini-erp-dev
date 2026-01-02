@@ -17,7 +17,7 @@ import { useEffect, useState } from "react";
 import {
   createQuotationAction,
   generateQuotationNumberAction,
-} from "@/app/actions/quotations"; // pastikan import
+} from "@/app/actions/quotations";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Building, Tag, Mail, Phone, MapPin } from "lucide-react";
@@ -34,6 +34,18 @@ import { getAllCustomersAction } from "@/app/actions/customers";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { SQ_STATUS_OPTIONS } from "@/utils/statusHelpers";
 import { toast } from "react-hot-toast";
+import { useSession } from "@/contexts/session-context";
+import { users } from "@/types/models";
+import {
+  getQuotationPermissions,
+  getUserRole,
+  canChangeStatus,
+  canChangeStage,
+  QUOTATION_STATUSES,
+  QUOTATION_STAGES,
+  QuotationPermission,
+  STATUS_STAGE_MAPPING,
+} from "@/utils/quotationPermissions";
 
 // 1. Ubah type Quotation (atau buat type baru)
 type QuotationFormData = {
@@ -91,6 +103,10 @@ export default function QuotationForm({
 }: QuotationFormProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  // Call useSession at the top level (correct hook usage)
+  const session = useSession();
+
   const [loading, setLoading] = useState(false);
   const [leadData, setLeadData] = useState<any>(null);
   const [generatingQuotationNo, setGeneratingQuotationNo] = useState(false);
@@ -131,6 +147,10 @@ export default function QuotationForm({
 
   const [customerOptions, setCustomerOptions] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [user, setUser] = useState<users | null>(null);
+  const [permissions, setPermissions] = useState<QuotationPermission | null>(
+    null
+  );
 
   // Generate quotation number when form loads for new quotations
   useEffect(() => {
@@ -187,6 +207,14 @@ export default function QuotationForm({
     }
     fetchCustomers();
   }, []);
+
+  // Set user info when session changes
+  useEffect(() => {
+    if (session?.user) {
+      setUser(session.user as unknown as users);
+      setPermissions(getQuotationPermissions(session.user as unknown as users));
+    }
+  }, [session]);
 
   const handleInputChange = (
     field: keyof QuotationFormData,
@@ -325,6 +353,68 @@ export default function QuotationForm({
     }
   }, [mode, formData.customer_id, customerOptions, selectedCustomer]);
 
+  // Filter status options based on permissions
+  const getAvailableStatusOptions = () => {
+    if (!permissions) return [];
+
+    return SQ_STATUS_OPTIONS.filter((option) =>
+      permissions.allowedStatuses.includes(option.value)
+    );
+  };
+
+  // Filter stage options based on permissions
+  const getAvailableStageOptions = () => {
+    if (!permissions) return [];
+
+    const allStageOptions = [
+      { value: "draft", label: "Draft" },
+      { value: "review", label: "Review" },
+      { value: "approved", label: "Approved" },
+      { value: "sent", label: "Sent" },
+    ];
+
+    return allStageOptions.filter((option) =>
+      permissions.allowedStages.includes(option.value)
+    );
+  };
+
+  // Validate status change on client side
+  const handleStatusChange = (newStatus: string) => {
+    if (!user) return;
+
+    const statusCheck = canChangeStatus(user, formData.status, newStatus);
+    if (!statusCheck.allowed) {
+      toast.error(statusCheck.message || "Cannot change to this status");
+      return;
+    }
+
+    handleInputChange("status", newStatus);
+
+    // Auto-adjust stage based on status
+    const validStages =
+      STATUS_STAGE_MAPPING[newStatus as keyof typeof STATUS_STAGE_MAPPING];
+    if (validStages && !validStages.includes(formData.stage as any)) {
+      handleInputChange("stage", validStages[0]);
+    }
+  };
+
+  // Validate stage change on client side
+  const handleStageChange = (newStage: string) => {
+    if (!user) return;
+
+    const stageCheck = canChangeStage(
+      user,
+      formData.stage || "draft",
+      newStage
+    );
+    if (!stageCheck.allowed) {
+      toast.error(stageCheck.message || "Cannot change to this stage");
+      return;
+    }
+
+    handleInputChange("stage", newStage);
+  };
+
   return (
     <div className="w-full mx-auto py-4 space-y-6">
       {/* Header */}
@@ -433,15 +523,13 @@ export default function QuotationForm({
                     <Label htmlFor="status">Status</Label>
                     <Select
                       value={formData.status}
-                      onValueChange={(value) =>
-                        handleInputChange("status", value)
-                      }
+                      onValueChange={handleStatusChange}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {SQ_STATUS_OPTIONS.map((opt) => (
+                        {getAvailableStatusOptions().map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
                           </SelectItem>
@@ -454,18 +542,17 @@ export default function QuotationForm({
                     <Label htmlFor="stage">Stage</Label>
                     <Select
                       value={formData.stage}
-                      onValueChange={(value) =>
-                        handleInputChange("stage", value)
-                      }
+                      onValueChange={handleStageChange}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="review">Review</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="sent">Sent</SelectItem>
+                        {getAvailableStageOptions().map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

@@ -223,6 +223,11 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
   manager_sales: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     {
+      title: "My Pending Task",
+      url: "/manager-sales/my-pending-task",
+      icon: ClipboardList,
+    },
+    {
       title: "Pending Task",
       url: "/manager-sales/pending-task",
       icon: ClipboardList,
@@ -235,6 +240,11 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
   ],
   manager_purchasing: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "My Pending Task",
+      url: "/manager-purchasing/my-pending-task",
+      icon: ClipboardList,
+    },
     {
       title: "Purchase Request (PR)",
       url: "/purchasing/purchase-requests",
@@ -249,6 +259,11 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
   ],
   manager_warehouse: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "My Pending Task",
+      url: "/manager-warehouse/my-pending-task",
+      icon: ClipboardList,
+    },
     {
       title: "Stock Reservation (SR)",
       url: "/warehouse/reservations",
@@ -269,6 +284,11 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
   ],
   manager_finance: [
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "My Pending Task",
+      url: "/manager-finance/my-pending-task",
+      icon: ClipboardList,
+    },
     { title: "FAR", url: "/finance/far", icon: BadgeDollarSign },
     { title: "Invoice", url: "/finance/invoice", icon: Receipt },
     {

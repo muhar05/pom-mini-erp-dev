@@ -1,40 +1,12 @@
+// File server-side untuk fungsi yang menggunakan Prisma
+
 import { users, leads } from "@/types/models";
 import { prisma } from "@/lib/prisma";
 
-type UserLike =
-  | { role_name?: string }
-  | { roles?: { role_name?: string } | null }
-  | null
-  | undefined;
+// Re-export client-safe functions
+export { isSuperuser, isSales, type UserLike } from "./userHelpers";
 
-export function isSuperuser(user: UserLike): boolean {
-  if (!user) return false;
-  if ("role_name" in user && user.role_name)
-    return user.role_name.toLowerCase() === "superuser";
-  if (
-    "roles" in user &&
-    user.roles &&
-    "role_name" in user.roles &&
-    user.roles.role_name
-  )
-    return user.roles.role_name.toLowerCase() === "superuser";
-  return false;
-}
-export function isSales(user: UserLike): boolean {
-  if (!user) return false;
-  if ("role_name" in user && user.role_name)
-    return user.role_name.toLowerCase() === "sales";
-  if (
-    "roles" in user &&
-    user.roles &&
-    "role_name" in user.roles &&
-    user.roles.role_name
-  )
-    return user.roles.role_name.toLowerCase() === "sales";
-  return false;
-}
-
-// Log helper
+// Server-side only functions
 export async function logLeadActivity(
   lead_id: number,
   user_id: number,

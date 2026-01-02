@@ -1,6 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import {
+  validateQuotationFormData,
+  CreateQuotationData,
+  UpdateQuotationData,
+} from "@/lib/schemas/quotations";
 import {
   createQuotationDb,
   updateQuotationDb,
@@ -9,15 +17,13 @@ import {
   getAllQuotationsDb,
   CreateQuotationInput,
 } from "@/data/quotations";
-import {
-  validateQuotationFormData,
-  extractQuotationId,
-} from "@/lib/schemas/quotations";
+import { users, QuotationFormData } from "@/types/models";
 import { ZodError } from "zod";
-import { auth } from "@/auth";
-import { QuotationFormData, users } from "@/types/models";
-import { isSuperuser, isSales } from "@/utils/leadHelpers";
-import { prisma } from "@/lib/prisma";
+import {
+  getQuotationPermissions,
+  validateQuotationChange,
+  getUserRole,
+} from "@/utils/quotationPermissions";
 
 // Helper to generate quotation number following pattern: SQ2515020001R0
 async function generateQuotationNo(): Promise<string> {
@@ -139,35 +145,45 @@ export async function createQuotationAction(data: QuotationFormData) {
 }
 
 // UPDATE
-export async function updateQuotationAction(formData: FormData) {
+export async function updateQuotationAction(
+  id: number,
+  data: UpdateQuotationData
+) {
   const session = await auth();
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
   try {
-    const id = Number(extractQuotationId(formData));
-    const oldQuotation = await getQuotationByIdDb(id);
+    // Get current quotation
+    const currentQuotation = await getQuotationByIdDb(id);
 
-    const validatedData = validateQuotationFormData(formData, "update");
-
-    // Recalculate totals if quotation_detail is updated
-    if (validatedData.quotation_detail) {
-      const quotationDetail = validatedData.quotation_detail as any[];
-      const total = quotationDetail.reduce((sum, item) => sum + item.total, 0);
-      const grandTotal =
-        total +
-        Number(validatedData.shipping ?? oldQuotation.shipping ?? 0) +
-        Number(validatedData.tax ?? oldQuotation.tax ?? 0) -
-        Number(validatedData.discount ?? oldQuotation.discount ?? 0);
-
-      validatedData.total = total;
-      validatedData.grand_total = grandTotal;
+    // Get permissions
+    const permissions = getQuotationPermissions(user);
+    if (!permissions.canEdit) {
+      throw new Error("Insufficient permissions to edit quotation");
     }
 
-    const updatedQuotation = await updateQuotationDb(id, validatedData);
+    // Validate status/stage changes if provided
+    if (data.status || data.stage) {
+      const newStatus = data.status || currentQuotation.status || "sq_draft";
+      const newStage = data.stage || currentQuotation.stage || "draft";
+
+      const validation = validateQuotationChange(
+        user,
+        currentQuotation.status || "sq_draft",
+        newStatus,
+        currentQuotation.stage || "draft",
+        newStage
+      );
+
+      if (!validation.valid) {
+        throw new Error(`Validation failed: ${validation.errors.join(", ")}`);
+      }
+    }
+
+    const updatedQuotation = await updateQuotationDb(id, data);
 
     revalidatePath("/crm/quotations");
-    revalidatePath(`/crm/quotations/${id}`);
     return {
       success: true,
       message: "Quotation updated successfully",
@@ -175,19 +191,7 @@ export async function updateQuotationAction(formData: FormData) {
     };
   } catch (error) {
     console.error("Error updating quotation:", error);
-
-    if (error instanceof ZodError) {
-      const errorMessages = error.errors.map((err) => err.message).join(", ");
-      throw new Error(`Validation error: ${errorMessages}`);
-    }
-
-    if (error instanceof Error) {
-      throw new Error(error.message);
-    }
-
-    throw new Error(
-      "Failed to update quotation. Please check your input and try again."
-    );
+    throw error;
   }
 }
 
@@ -503,5 +507,77 @@ export async function generateQuotationNumberAction(): Promise<string> {
   } catch (error) {
     console.error("Error generating quotation number:", error);
     throw new Error("Failed to generate quotation number");
+  }
+}
+
+// Fungsi khusus untuk approve quotation (Manager only)
+export async function approveQuotationAction(id: number, note?: string) {
+  const session = await auth();
+  const user = session?.user as users | undefined;
+  if (!user) throw new Error("Unauthorized");
+
+  const userRole = getUserRole(user);
+  if (userRole !== "manager_sales" && userRole !== "superuser") {
+    throw new Error("Only managers can approve quotations");
+  }
+
+  try {
+    const currentQuotation = await getQuotationByIdDb(id);
+
+    if (currentQuotation.status !== "sq_review") {
+      throw new Error("Can only approve quotations in review status");
+    }
+
+    const updatedQuotation = await updateQuotationDb(id, {
+      status: "sq_approved",
+      stage: "approved",
+      note: note || currentQuotation.note,
+    });
+
+    revalidatePath("/crm/quotations");
+    return {
+      success: true,
+      message: "Quotation approved successfully",
+      data: updatedQuotation,
+    };
+  } catch (error) {
+    console.error("Error approving quotation:", error);
+    throw error;
+  }
+}
+
+// Fungsi khusus untuk reject quotation (Manager only)
+export async function rejectQuotationAction(id: number, reason: string) {
+  const session = await auth();
+  const user = session?.user as users | undefined;
+  if (!user) throw new Error("Unauthorized");
+
+  const userRole = getUserRole(user);
+  if (userRole !== "manager_sales" && userRole !== "superuser") {
+    throw new Error("Only managers can reject quotations");
+  }
+
+  try {
+    const currentQuotation = await getQuotationByIdDb(id);
+
+    if (currentQuotation.status !== "sq_review") {
+      throw new Error("Can only reject quotations in review status");
+    }
+
+    const updatedQuotation = await updateQuotationDb(id, {
+      status: "sq_rejected",
+      stage: "review",
+      note: reason,
+    });
+
+    revalidatePath("/crm/quotations");
+    return {
+      success: true,
+      message: "Quotation rejected successfully",
+      data: updatedQuotation,
+    };
+  } catch (error) {
+    console.error("Error rejecting quotation:", error);
+    throw error;
   }
 }
