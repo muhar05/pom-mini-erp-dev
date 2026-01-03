@@ -30,7 +30,7 @@ export default function CustomerActions({
   return (
     <div className="flex gap-2">
       {/* View */}
-      <Link href={`/crm/customers/${customer.id}`}>
+      <Link href={`/customers/${customer.id}`}>
         <Button
           size="icon"
           variant="ghost"
@@ -42,7 +42,7 @@ export default function CustomerActions({
       </Link>
 
       {/* Edit */}
-      <Link href={`/crm/customers/${customer.id}/edit`}>
+      <Link href={`/customers/${customer.id}/edit`}>
         <Button
           size="icon"
           variant="ghost"
@@ -66,7 +66,7 @@ export default function CustomerActions({
             <Trash2 className="w-4 h-4" />
           </Button>
         }
-        onDelete={() => onDelete?.()}
+        onDelete={onDelete} // Teruskan ke dialog
       />
     </div>
   );

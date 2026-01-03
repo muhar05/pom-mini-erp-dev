@@ -12,6 +12,11 @@ import type { company } from "@/types/models";
 import { formatDate } from "@/utils/formatDate";
 import CompanyActions from "./company-actions";
 
+function truncate(str: string, max: number) {
+  if (!str) return "-";
+  return str.length > max ? str.slice(0, max) + "..." : str;
+}
+
 interface CompaniesTableProps {
   companies: company[];
   filters?: any;
@@ -36,7 +41,9 @@ export default function CompaniesTable({ companies }: CompaniesTableProps) {
           <TableRow key={company.id}>
             <TableCell>{idx + 1}</TableCell>
             <TableCell>{company.company_name}</TableCell>
-            <TableCell>{company.address || "-"}</TableCell>
+            <TableCell title={company.address || "-"}>
+              {truncate(company.address || "-", 24)}
+            </TableCell>
             <TableCell>{company.npwp || "-"}</TableCell>
             <TableCell>
               {company.company_level ? company.company_level.level_name : "-"}

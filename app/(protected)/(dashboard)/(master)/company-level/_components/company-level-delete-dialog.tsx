@@ -12,57 +12,54 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
-import { deleteCompanyAction } from "@/app/actions/companies";
 import { useRouter } from "next/navigation";
-import type { company } from "@/types/models";
+import { CompanyLevel } from "@/hooks/companies/useCompanyLevels";
 
-interface CompanyDeleteDialogProps {
-  company: company;
+interface CompanyLevelDeleteDialogProps {
+  level: CompanyLevel;
+  onDelete: (
+    id_level: number
+  ) => Promise<{ success: boolean; message: string }>;
   trigger: React.ReactNode;
 }
 
-export default function CompanyDeleteDialog({
-  company,
+export default function CompanyLevelDeleteDialog({
+  level,
+  onDelete,
   trigger,
-}: CompanyDeleteDialogProps) {
+}: CompanyLevelDeleteDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function handleDelete() {
     setLoading(true);
-    const loadingToastId = toast.loading("Deleting company...");
+    const loadingToastId = toast.loading("Deleting company level...");
 
     try {
-      const formData = new FormData();
-      formData.set("id", String(company.id));
-      const result = await deleteCompanyAction(formData);
+      const result = await onDelete(level.id_level);
 
       toast.dismiss(loadingToastId);
 
-      if (result?.success !== false) {
-        toast.success(
-          `Company "${company.company_name}" deleted successfully!`,
-          {
-            duration: 4000,
-            style: {
-              background: "#10B981",
-              color: "#fff",
-              fontWeight: "500",
-            },
-            iconTheme: {
-              primary: "#fff",
-              secondary: "#10B981",
-            },
-          }
-        );
+      if (result?.success) {
+        toast.success(`Level "${level.level_name}" deleted successfully!`, {
+          duration: 4000,
+          style: {
+            background: "#10B981",
+            color: "#fff",
+            fontWeight: "500",
+          },
+          iconTheme: {
+            primary: "#fff",
+            secondary: "#10B981",
+          },
+        });
         setTimeout(() => {
           setOpen(false);
-          router.push("/companies");
           router.refresh();
         }, 100);
       } else {
-        toast.error(result?.message || "Failed to delete company", {
+        toast.error(result?.message || "Failed to delete level", {
           duration: 5000,
           style: {
             background: "#EF4444",
@@ -80,7 +77,7 @@ export default function CompanyDeleteDialog({
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "An error occurred while deleting the company";
+          : "An error occurred while deleting the level";
       toast.error(errorMessage, {
         duration: 5000,
         style: {
@@ -104,19 +101,19 @@ export default function CompanyDeleteDialog({
       <DialogContent className="sm:max-w-md bg-white dark:bg-gray-900">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Delete Company
+            Delete Company Level
           </DialogTitle>
         </DialogHeader>
         <div className="py-4">
           <p className="text-sm text-gray-600 dark:text-gray-100">
             Are you sure you want to delete{" "}
             <span className="font-semibold text-gray-900 dark:text-white">
-              "{company.company_name}"
+              "{level.level_name}"
             </span>
             ?
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-300 mt-2">
-            This action cannot be undone. All data associated with this company
+            This action cannot be undone. All data associated with this level
             will be permanently removed.
           </p>
         </div>
@@ -143,7 +140,7 @@ export default function CompanyDeleteDialog({
                 Deleting...
               </span>
             ) : (
-              "Delete Company"
+              "Delete Level"
             )}
           </Button>
         </DialogFooter>

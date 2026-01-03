@@ -7,7 +7,7 @@ export default function CustomerNewPage() {
   const router = useRouter();
 
   const handleSuccess = () => {
-    router.push("/crm/customers");
+    router.push("/customers");
   };
 
   const handleClose = () => {
@@ -15,7 +15,7 @@ export default function CustomerNewPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
+    <div className="w-full mx-auto py-8">
       <CustomerForm
         mode="add"
         onClose={handleClose}

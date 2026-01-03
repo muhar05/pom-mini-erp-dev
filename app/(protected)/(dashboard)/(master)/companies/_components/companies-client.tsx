@@ -6,6 +6,8 @@ import CompanyFilters from "./company-filters";
 import AddCompanyButton from "./add-company-button";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import type { company } from "@/types/models";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 type Company = company & {
   // Tambahkan field UI opsional jika perlu
@@ -45,7 +47,14 @@ export default function CompaniesClient({ companies }: CompaniesClientProps) {
         title="Company List"
         text="Manage and monitor your companies"
       />
-      <AddCompanyButton />
+      <div className="flex gap-2">
+        <AddCompanyButton />
+        <Link href="/company-level" passHref>
+          <Button variant="secondary" className="h-10">
+            Manage Company Level
+          </Button>
+        </Link>
+      </div>
       <CompanyFilters filters={filters} onFilterChange={setFilters} />
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold mb-4">List Companies</h2>

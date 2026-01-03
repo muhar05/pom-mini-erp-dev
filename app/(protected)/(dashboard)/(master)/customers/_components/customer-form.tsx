@@ -12,20 +12,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
+import { useCreateCustomer } from "@/hooks/customers/useCreateCustomer";
+import { useUpdateCustomer } from "@/hooks/customers/useUpdateCustomer";
+import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+
+type Company = {
+  id: number;
+  company_name: string;
+};
 
 type Customer = {
   id?: string;
   customer_name: string;
   email: string;
   phone: string;
-  company: string;
   contact_person: string;
   address: string;
-  city: string;
-  country: string;
   customer_type: string;
   status: string;
+  company_id?: number;
 };
 
 interface CustomerFormProps {
@@ -45,42 +52,69 @@ export default function CustomerForm({
     customer_name: customer?.customer_name || "",
     email: customer?.email || "",
     phone: customer?.phone || "",
-    company: customer?.company || "",
     contact_person: customer?.contact_person || "",
     address: customer?.address || "",
-    city: customer?.city || "",
-    country: customer?.country || "Indonesia",
-    customer_type: customer?.customer_type || "Corporate",
+    customer_type: customer?.customer_type || "Company",
     status: customer?.status || "active",
+    company_id: customer?.company_id,
   });
 
-  const [loading, setLoading] = useState(false);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(true);
 
-  const handleInputChange = (field: keyof Customer, value: string) => {
+  const { createCustomer, loading: creating } = useCreateCustomer();
+  const { updateCustomer, loading: updating } = useUpdateCustomer();
+  const loading = creating || updating;
+  const router = useRouter();
+
+  // Fetch companies
+  useEffect(() => {
+    setLoadingCompanies(true);
+    fetch("/api/companies")
+      .then((res) => res.json())
+      .then((data) => setCompanies(data.data || data))
+      .finally(() => setLoadingCompanies(false));
+  }, []);
+
+  const handleInputChange = (
+    field: keyof Customer,
+    value: string | number | undefined
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+
+    // Prepare payload
+    const payload = {
+      customer_name: formData.customer_name,
+      email: formData.email,
+      phone: formData.phone,
+      address: formData.address,
+      note: "",
+      type: formData.customer_type,
+      company_id: formData.company_id ? Number(formData.company_id) : undefined,
+    };
 
     try {
-      // TODO: Implement actual API call
-      console.log("Submitting customer:", formData);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      if (mode === "add") {
+        await createCustomer(payload);
+        toast.success("Customer created successfully");
+      } else {
+        await updateCustomer(customer?.id!, payload);
+        toast.success("Customer updated successfully");
+      }
       onSuccess?.();
-    } catch (error) {
-      console.error("Error saving customer:", error);
-    } finally {
-      setLoading(false);
+      onClose?.();
+      router.push("/customers");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save customer");
     }
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full mx-auto bg-gray-800">
       <CardHeader>
         <CardTitle>
           {mode === "add" ? "Add New Customer" : "Edit Customer"}
@@ -102,17 +136,6 @@ export default function CustomerForm({
                     handleInputChange("customer_name", e.target.value)
                   }
                   placeholder="Enter customer name"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="company">Company *</Label>
-                <Input
-                  id="company"
-                  value={formData.company}
-                  onChange={(e) => handleInputChange("company", e.target.value)}
-                  placeholder="Enter company name"
                   required
                 />
               </div>
@@ -141,9 +164,37 @@ export default function CustomerForm({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Corporate">Corporate</SelectItem>
+                    <SelectItem value="COMPANY">Company</SelectItem>
                     <SelectItem value="SME">SME</SelectItem>
-                    <SelectItem value="Individual">Individual</SelectItem>
+                    <SelectItem value="INDIVIDUAL">Individual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="company_id">Company</Label>
+                <Select
+                  value={
+                    formData.company_id ? String(formData.company_id) : "none"
+                  }
+                  onValueChange={(value) =>
+                    handleInputChange(
+                      "company_id",
+                      value === "none" ? undefined : Number(value)
+                    )
+                  }
+                  disabled={loadingCompanies}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select company" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Company</SelectItem>
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={String(company.id)}>
+                        {company.company_name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -180,8 +231,6 @@ export default function CustomerForm({
 
           {/* Address Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Address Information</h3>
-
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="address">Address</Label>
@@ -193,46 +242,11 @@ export default function CustomerForm({
                   rows={3}
                 />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => handleInputChange("city", e.target.value)}
-                    placeholder="Enter city"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Select
-                    value={formData.country}
-                    onValueChange={(value) =>
-                      handleInputChange("country", value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Indonesia">Indonesia</SelectItem>
-                      <SelectItem value="Malaysia">Malaysia</SelectItem>
-                      <SelectItem value="Singapore">Singapore</SelectItem>
-                      <SelectItem value="Thailand">Thailand</SelectItem>
-                      <SelectItem value="Philippines">Philippines</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
             </div>
           </div>
 
           {/* Status */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Status</h3>
-
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select

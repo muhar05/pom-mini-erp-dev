@@ -8,15 +8,30 @@ import {
 } from "@/data/customers";
 
 // GET: Ambil semua customers
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   const user = session?.user;
   if (!user || (!isSuperuser(user) && !isSales(user))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const url = new URL(req.url);
+  const unassigned = url.searchParams.get("unassigned");
   try {
-    const customers = await getAllCustomersDb();
+    let customers = await getAllCustomersDb();
+    if (unassigned) {
+      customers = customers.filter((c) => !c.company_id);
+    }
+    // Return only id, customer_name, email for select
+    if (unassigned) {
+      return NextResponse.json(
+        customers.map((c) => ({
+          id: c.id,
+          customer_name: c.customer_name,
+          email: c.email,
+        }))
+      );
+    }
     return NextResponse.json(customers);
   } catch (error) {
     return NextResponse.json(

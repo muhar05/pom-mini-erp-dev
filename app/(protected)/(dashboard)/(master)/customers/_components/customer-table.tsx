@@ -28,6 +28,7 @@ type Customer = customers & {
 interface CustomersTableProps {
   customers: Customer[];
   filters?: any;
+  onDeleteSuccess?: () => void; // Tambahkan prop ini
 }
 
 // Helper function to get status badge styling
@@ -60,6 +61,7 @@ function getTypeBadgeClass(type?: string | null): string {
 export default function CustomersTable({
   customers,
   filters,
+  onDeleteSuccess,
 }: CustomersTableProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
@@ -153,7 +155,7 @@ export default function CustomersTable({
                 <CustomerActions
                   customer={customer}
                   onEdit={() => {}}
-                  onDelete={() => {}}
+                  onDelete={onDeleteSuccess} // Teruskan ke CustomerActions
                 />
               </TableCell>
             </TableRow>

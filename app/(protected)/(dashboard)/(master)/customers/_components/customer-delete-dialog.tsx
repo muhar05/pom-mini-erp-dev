@@ -11,6 +11,9 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useDeleteCustomer } from "@/hooks/customers/useDeleteCustomer";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { customers } from "@/types/models";
 
@@ -35,22 +38,17 @@ export default function CustomerDeleteDialog({
   trigger,
   onDelete,
 }: CustomerDeleteDialogProps) {
-  const [loading, setLoading] = useState(false);
+  const { deleteCustomer, loading } = useDeleteCustomer();
+  const router = useRouter();
 
   const handleDelete = async () => {
-    setLoading(true);
     try {
-      // TODO: Implement actual delete API call
-      console.log("Deleting customer:", customer.id);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      await deleteCustomer(customer.id);
+      toast.success("Customer deleted successfully");
       onDelete?.();
-    } catch (error) {
-      console.error("Error deleting customer:", error);
-    } finally {
-      setLoading(false);
+      router.refresh(); // <--- ini akan reload data tabel customer
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete customer");
     }
   };
 
