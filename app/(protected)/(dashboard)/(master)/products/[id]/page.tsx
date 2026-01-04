@@ -75,7 +75,7 @@ export default async function ProductDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Basic Information */}
-        <Card className="col-span-1 lg:col-span-2">
+        <Card className="col-span-1 lg:col-span-2 bg-gray-800">
           <CardHeader>
             <CardTitle>Basic Information</CardTitle>
           </CardHeader>
@@ -116,7 +116,7 @@ export default async function ProductDetailPage({
         </Card>
 
         {/* Pricing & Inventory */}
-        <Card>
+        <Card className="bg-gray-800">
           <CardHeader>
             <CardTitle>Pricing & Inventory</CardTitle>
           </CardHeader>
@@ -142,8 +142,8 @@ export default async function ProductDetailPage({
       </div>
 
       {/* System Information */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <Card>
+      <div className="w-full lg:grid-cols-2 gap-6 mt-6">
+        <Card className="bg-gray-800 w-full">
           <CardHeader>
             <CardTitle>System Information</CardTitle>
           </CardHeader>

@@ -13,17 +13,11 @@ import { Search } from "lucide-react";
 interface ProductFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  itemGroupFilter: string;
-  onItemGroupChange: (value: string) => void;
-  itemGroups: string[];
 }
 
 export default function ProductFilters({
   searchTerm,
   onSearchChange,
-  itemGroupFilter,
-  onItemGroupChange,
-  itemGroups,
 }: ProductFiltersProps) {
   return (
     <div className="flex flex-wrap gap-4 mb-4">
@@ -36,20 +30,6 @@ export default function ProductFilters({
           onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
-
-      <Select value={itemGroupFilter} onValueChange={onItemGroupChange}>
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Item Group" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Item Groups</SelectItem>
-          {itemGroups.map((group) => (
-            <SelectItem key={group} value={group}>
-              {group}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
 
       <Select>
         <SelectTrigger className="w-[180px]">

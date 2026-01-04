@@ -14,33 +14,30 @@ export function isDecimal(value: any) {
 }
 
 export function serializeDecimal(obj: any): any {
-  if (obj === null || obj === undefined) return obj;
-  if (isDecimal(obj)) {
-    // Jika ada toNumber, pakai itu. Jika tidak, konversi manual.
-    if (typeof obj.toNumber === "function") return obj.toNumber();
-    // Fallback: konversi manual dari struktur Decimal Prisma
-    // (hanya untuk kasus d=[angka], e=eksponen, s=sign)
-    try {
-      // Prisma Decimal: { s: 1, e: 6, d: [7500000] } => 7500000
-      // Prisma Decimal: { s: 1, e: 7, d: [1,2500000] } => 12500000
-      const digits = Array.isArray(obj.d) ? Number(obj.d.join("")) : 0;
-      const value =
-        obj.s * digits * Math.pow(10, obj.e - String(digits).length);
-      return value;
-    } catch {
-      return null;
-    }
-  }
-  if (obj instanceof Date) return obj.toISOString();
+  if (obj == null) return obj;
+  if (typeof obj !== "object") return obj;
   if (Array.isArray(obj)) return obj.map(serializeDecimal);
-  if (typeof obj === "object") {
-    const result: any = {};
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        result[key] = serializeDecimal(obj[key]);
-      }
-    }
-    return result;
+
+  // Handle Date objects
+  if (obj instanceof Date) {
+    return obj; // Jangan serialize Date object
   }
-  return obj;
+
+  const result: any = {};
+  for (const key in obj) {
+    const value = obj[key];
+    if (value instanceof Date) {
+      result[key] = value; // Pertahankan Date object
+    } else if (isDecimal(value)) {
+      result[key] =
+        typeof value.toNumber === "function"
+          ? value.toNumber()
+          : parseFloat(value.toString());
+    } else if (typeof value === "object" && value !== null) {
+      result[key] = serializeDecimal(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
 }

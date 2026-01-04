@@ -122,21 +122,34 @@ export async function DELETE(
   }
 
   try {
-    // Cek apakah quotation ada
-    const quotation = await getQuotationByIdDb(Number(params.id));
-    if (!quotation) {
+    const quotationId = Number(params.id);
+
+    // Directly try to delete - Prisma will throw P2025 if not found
+    await deleteQuotationDb(quotationId);
+
+    return NextResponse.json({
+      success: true,
+      message: "Quotation deleted successfully",
+    });
+  } catch (error) {
+    console.error("Quotation deletion error:", error);
+
+    // Handle specific Prisma error codes
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2025"
+    ) {
       return NextResponse.json(
         { error: "Quotation not found" },
         { status: 404 }
       );
     }
-    await deleteQuotationDb(Number(params.id));
-    return NextResponse.json({ message: "Quotation deleted successfully" });
-  } catch (error) {
-    console.error("Quotation deletion error:", error);
+
     return NextResponse.json(
       { error: "Failed to delete quotation" },
-      { status: 400 }
+      { status: 500 }
     );
   }
 }

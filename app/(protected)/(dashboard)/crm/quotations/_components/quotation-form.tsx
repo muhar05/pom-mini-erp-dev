@@ -128,7 +128,7 @@ export default function QuotationForm({
     discount: Number(quotation?.discount) || 0,
     tax: Number(quotation?.tax) || 0,
     grand_total: Number(quotation?.grand_total) || 0,
-    status: quotation?.status || "sq_draft", // ← pastikan default "sq_draft"
+    status: quotation?.status || "sq_draft", // ✅ Sudah benar
     stage: quotation?.stage || "draft",
     note: quotation?.note || "",
     target_date: quotation?.target_date || "",
@@ -228,17 +228,15 @@ export default function QuotationForm({
       (sum, item) => sum + item.unit_price * item.quantity,
       0
     );
-    const shipping = formData.shipping || 0;
     const discountPercent = formData.discount || 0;
-    const tax = formData.tax || 0;
-
-    // Diskon dalam persen
     const discountAmount = (subtotal * discountPercent) / 100;
-    const grandTotal = subtotal + shipping + tax - discountAmount;
+    const tax = 0.11 * (subtotal - discountAmount); // 11% tax
+    const grandTotal = subtotal - discountAmount + tax;
 
     setFormData((prev) => ({
       ...prev,
-      total: subtotal, // <-- was total_amount
+      total: subtotal,
+      tax: tax,
       grand_total: grandTotal,
     }));
   };
@@ -259,10 +257,10 @@ export default function QuotationForm({
         quotation_detail: boqItems.map((item) => ({
           ...item,
           product_id: Number(item.product_id),
-          total: item.unit_price * item.quantity, // <-- Ensure total is set
+          total: item.unit_price * item.quantity,
         })),
         total: formData.total,
-        shipping: formData.shipping,
+        shipping: 0, // <-- Tetap kirim shipping: 0
         discount: formData.discount,
         tax: formData.tax,
         grand_total: formData.grand_total,
@@ -291,7 +289,7 @@ export default function QuotationForm({
           discount: 0,
           tax: 0,
           grand_total: 0,
-          status: "draft",
+          status: "sq_draft", // ✅ Change from "draft" to "sq_draft"
           stage: "draft",
           note: "",
           target_date: "",
@@ -799,24 +797,6 @@ export default function QuotationForm({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="shipping" className="text-sm">
-                      Shipping Cost
-                    </Label>
-                    <Input
-                      id="shipping"
-                      type="text"
-                      value={formatCurrency(formData.shipping)}
-                      onChange={(e) => {
-                        // Hapus karakter non-digit
-                        const raw = e.target.value.replace(/[^\d]/g, "");
-                        handleInputChange("shipping", parseInt(raw) || 0);
-                      }}
-                      placeholder="0"
-                      min="0"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
                     <Label htmlFor="discount" className="text-sm">
                       Discount (%)
                     </Label>
@@ -852,18 +832,14 @@ export default function QuotationForm({
 
                   <div className="space-y-2">
                     <Label htmlFor="tax" className="text-sm">
-                      Tax
+                      Tax (11%)
                     </Label>
                     <Input
                       id="tax"
                       type="text"
                       value={formatCurrency(formData.tax)}
-                      onChange={(e) => {
-                        const raw = e.target.value.replace(/[^\d]/g, "");
-                        handleInputChange("tax", parseInt(raw) || 0);
-                      }}
-                      placeholder="0"
-                      min="0"
+                      disabled
+                      className="bg-gray-100 dark:bg-gray-800/40"
                     />
                   </div>
 

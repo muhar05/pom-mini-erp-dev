@@ -37,7 +37,7 @@ export default function CustomerEditPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
+    <div className="w-full mx-auto py-8">
       <CustomerForm
         mode="edit"
         customer={customerFormData}

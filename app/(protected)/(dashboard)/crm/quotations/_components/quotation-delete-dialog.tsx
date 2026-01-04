@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { deleteQuotationAction } from "@/app/actions/quotations";
+import { toast } from "react-hot-toast";
 
 type Quotation = {
   id: string;
@@ -43,15 +45,20 @@ export default function QuotationDeleteDialog({
   const handleDelete = async () => {
     setLoading(true);
     try {
-      // TODO: Implement actual delete API call
-      console.log("Deleting quotation:", quotation.id);
+      const formData = new FormData();
+      formData.append("id", quotation.id);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const result = await deleteQuotationAction(formData);
 
-      onDelete?.();
+      if (result.success) {
+        toast.success("Quotation deleted successfully");
+        onDelete?.();
+      } else {
+        toast.error(result.message || "Failed to delete quotation");
+      }
     } catch (error) {
       console.error("Error deleting quotation:", error);
+      toast.error("Failed to delete quotation");
     } finally {
       setLoading(false);
     }

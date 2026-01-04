@@ -1,90 +1,52 @@
-import GenerateContentCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/generate-content-card";
-import SalesStaticCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/sales-static-card";
-import StatCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/stat-card";
-import TabsWithTableCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/tabs-with-table-card";
-import TopCountriesCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/top-countries-card";
-import TopPerformerCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/top-performer-card";
-import TotalSubscriberCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/total-subscriber-card";
-import UserOverviewCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/user-overview-card";
+import CrmStatCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/crm-stat-card";
+import QuotationStatusChart from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/quotation-status-chart";
+import SalesOrderStatusChart from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/sales-order-status-chart";
+import LeadStatusOverview from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/lead-status-overview";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import LoadingSkeleton from "@/components/loading-skeleton";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-const metadata: Metadata = {
-  title: "Super Admin Dashboard | POM MINI ERP",
+export const metadata: Metadata = {
+  title: "CRM Dashboard | POM MINI ERP",
   description:
-    "Super Admin dashboard provides an overview of key metrics and insights for effective management and decision-making.   ",
+    "CRM dashboard provides an overview of leads, quotations, and sales orders for effective management.",
 };
 
 export default async function DashboardPage() {
   return (
     <>
-      <DashboardBreadcrumb title="Super Admin" text="Super Admin" />
+      <DashboardBreadcrumb title="CRM Dashboard" text="Dashboard" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-6">
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-6">
         <Suspense
-          fallback={<LoadingSkeleton height="h-64" text="Loading..." />}
+          fallback={<LoadingSkeleton height="h-32" text="Loading stats..." />}
         >
-          <StatCard />
+          <CrmStatCard />
         </Suspense>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-6">
-        <div className="xl:col-span-12 2xl:col-span-6">
-          <Suspense
-            fallback={<LoadingSkeleton height="h-64" text="Loading..." />}
-          >
-            <SalesStaticCard />
-          </Suspense>
-        </div>
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
+        <Suspense
+          fallback={<LoadingSkeleton height="h-96" text="Loading chart..." />}
+        >
+          <QuotationStatusChart />
+        </Suspense>
 
-        <div className="xl:col-span-6 2xl:col-span-3">
-          <Suspense
-            fallback={<LoadingSkeleton height="h-64" text="Loading..." />}
-          >
-            <TotalSubscriberCard />
-          </Suspense>
-        </div>
+        <Suspense
+          fallback={<LoadingSkeleton height="h-96" text="Loading chart..." />}
+        >
+          <SalesOrderStatusChart />
+        </Suspense>
+      </div>
 
-        <div className="xl:col-span-6 2xl:col-span-3">
-          <Suspense
-            fallback={<LoadingSkeleton height="h-64" text="Loading..." />}
-          >
-            <UserOverviewCard />
-          </Suspense>
-        </div>
-
-        <div className="xl:col-span-12 2xl:col-span-9">
-          <Suspense
-            fallback={<LoadingSkeleton height="h-64" text="Loading..." />}
-          >
-            <TabsWithTableCard />
-          </Suspense>
-        </div>
-
-        <div className="xl:col-span-12 2xl:col-span-3">
-          <Suspense
-            fallback={<LoadingSkeleton height="h-64" text="Loading..." />}
-          >
-            <TopPerformerCard />
-          </Suspense>
-        </div>
-
-        <div className="xl:col-span-12 2xl:col-span-6">
-          <Suspense
-            fallback={<LoadingSkeleton height="h-64" text="Loading..." />}
-          >
-            <TopCountriesCard />
-          </Suspense>
-        </div>
-
-        <div className="xl:col-span-12 2xl:col-span-6">
-          <Suspense
-            fallback={<LoadingSkeleton height="h-64" text="Loading..." />}
-          >
-            <GenerateContentCard />
-          </Suspense>
+      {/* Lead Status Overview */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
+        {/* You can add more components here */}
+        <div className="xl:col-span-2">
+          {/* Future: Recent activities, top customers, etc */}
         </div>
       </div>
     </>

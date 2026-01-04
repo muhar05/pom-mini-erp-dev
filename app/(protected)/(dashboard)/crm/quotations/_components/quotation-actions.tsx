@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import QuotationDeleteDialog from "./quotation-delete-dialog";
+import ConvertToSalesOrderButton from "./convert-to-sales-order-button";
 
 type Quotation = {
   id: string;
@@ -23,12 +24,14 @@ interface QuotationActionsProps {
   quotation: Quotation;
   onEdit?: () => void;
   onDelete?: () => void;
+  loading?: boolean;
 }
 
 export default function QuotationActions({
   quotation,
   onEdit,
   onDelete,
+  loading,
 }: QuotationActionsProps) {
   if (!quotation) return null;
   return (
@@ -71,6 +74,15 @@ export default function QuotationActions({
           </Button>
         }
         onDelete={() => onDelete?.()}
+      />
+
+      {/* Convert to Sales Order */}
+      <ConvertToSalesOrderButton
+        quotationId={parseInt(quotation.id)}
+        quotationNo={quotation.quotation_no}
+        status={quotation.status}
+        grandTotal={quotation.total_amount}
+        disabled={loading}
       />
     </div>
   );

@@ -20,8 +20,6 @@ export default function ProductsClient({
   const [filters, setFilters] = useState<any>({});
   const [page, setPage] = useState(1);
 
-  console.log(products);  
-
   // Filter data (misal: search by name/code)
   const filteredProducts = useMemo(() => {
     let filtered = products;
@@ -61,15 +59,6 @@ export default function ProductsClient({
         searchTerm={filters.search || ""}
         onSearchChange={(v: string) =>
           setFilters((f: any) => ({ ...f, search: v }))
-        }
-        itemGroupFilter={filters.itemGroup || ""}
-        onItemGroupChange={(v: string) =>
-          setFilters((f: any) => ({ ...f, itemGroup: v }))
-        }
-        itemGroups={
-          Array.from(
-            new Set(products.map((p) => p.item_group).filter(Boolean))
-          ) as string[]
         }
       />
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

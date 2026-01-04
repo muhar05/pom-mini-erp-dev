@@ -13,6 +13,7 @@ import { validateCompanyFormData } from "@/lib/schemas/companies";
 import { ZodError } from "zod";
 import { auth } from "@/auth";
 import { users } from "@/types/models";
+import { serializeDecimal } from "@/utils/formatDecimal";
 
 export async function createCompanyAction(formData: FormData) {
   const session = await auth();
@@ -83,5 +84,7 @@ export async function getAllCompaniesAction() {
   const session = await auth();
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
-  return getAllCompaniesDb();
+
+  const companies = await getAllCompaniesDb();
+  return companies.map(serializeDecimal); // Serialize di server
 }

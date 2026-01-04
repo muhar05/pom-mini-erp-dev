@@ -1,6 +1,6 @@
 // utils/quotationPermissions.ts
 import { users } from "@/types/models";
-import { isSuperuser, isSales } from "@/utils/userHelpers"; // Updated import
+import { isSuperuser, isSales } from "@/utils/userHelpers"; // Fix: Change from leadHelpers to userHelpers
 
 export interface QuotationPermission {
   allowedStatuses: string[];

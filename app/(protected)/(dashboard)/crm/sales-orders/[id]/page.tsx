@@ -1,247 +1,341 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDate } from "@/utils/formatDate";
 import {
-  Edit,
-  Trash2,
+  Package,
   FileText,
   User,
-  Mail,
+  Building,
   Calendar,
-  Package,
   DollarSign,
-  Truck,
-  CreditCard,
 } from "lucide-react";
-import { formatDate } from "@/utils/formatDate";
-import Link from "next/link";
-import SalesOrderRelatedData from "../_components/sales-order-related-data";
-
-// Mock data - replace with actual API call
-const mockSalesOrder = {
-  id: "1",
-  so_no: "SO-001",
-  quotation_no: "QT-001",
-  customer_name: "PT. ABC Technology",
-  customer_email: "contact@abctech.com",
-  sales_pic: "John Sales",
-  items_count: 3,
-  total_amount: 50000000,
-  payment_term: "Net 30",
-  delivery_date: "2025-12-20",
-  status: "Open",
-  created_at: "2025-12-13",
-  updated_at: "2025-12-13",
-};
-
-function getStatusBadgeClass(status: string): string {
-  switch (status?.toLowerCase()) {
-    case "open":
-      return "bg-blue-100 text-blue-800";
-    case "confirmed":
-      return "bg-green-100 text-green-800";
-    case "in_progress":
-      return "bg-yellow-100 text-yellow-800";
-    case "completed":
-      return "bg-purple-100 text-purple-800";
-    case "cancelled":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-}
+import { getSalesOrderByIdAction } from "@/app/actions/sales-orders";
+import LoadingSkeleton from "@/components/loading-skeleton";
 
 export default function SalesOrderDetailPage() {
-  const { id } = useParams();
-  const router = useRouter();
-  const [salesOrder, setSalesOrder] = useState(mockSalesOrder);
+  const params = useParams();
+  const [salesOrder, setSalesOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // TODO: Fetch sales order detail by id
   useEffect(() => {
-    // Replace with actual API call
-    console.log("Fetching sales order with id:", id);
-    setSalesOrder({ ...mockSalesOrder, id: id as string });
-  }, [id]);
+    const fetchSalesOrder = async () => {
+      try {
+        setLoading(true);
+        const id = params.id as string;
+        const data = await getSalesOrderByIdAction(id);
+        setSalesOrder(data);
+      } catch (err) {
+        console.error("Error fetching sales order:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch sales order"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleDelete = () => {
-    // TODO: Implement delete functionality
-    console.log("Delete sales order:", id);
-    router.push("/crm/sales-orders");
+    if (params.id) {
+      fetchSalesOrder();
+    }
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <>
+        <DashboardBreadcrumb
+          title="Sales Order Detail"
+          text="View sales order information"
+        />
+        <LoadingSkeleton />
+      </>
+    );
+  }
+
+  if (error || !salesOrder) {
+    return (
+      <>
+        <DashboardBreadcrumb
+          title="Sales Order Detail"
+          text="View sales order information"
+        />
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center text-red-600">
+              {error || "Sales order not found"}
+            </div>
+          </CardContent>
+        </Card>
+      </>
+    );
+  }
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "draft":
+        return "bg-gray-100 text-gray-800";
+      case "open":
+        return "bg-blue-100 text-blue-800";
+      case "confirmed":
+        return "bg-green-100 text-green-800";
+      case "completed":
+        return "bg-purple-100 text-purple-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
   return (
     <>
       <DashboardBreadcrumb
-        title={`Sales Order - ${salesOrder.so_no}`}
-        text="View sales order details"
+        title={`Sales Order ${salesOrder.sale_no}`}
+        text="View sales order details and items"
       />
-      <div className="max-w-4xl mx-auto py-8">
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-2xl font-bold">
-                  {salesOrder.so_no}
-                </CardTitle>
-                <p className="text-sm text-gray-500 mt-1">
-                  Sales Order Details
-                </p>
-              </div>
-              <Badge className={getStatusBadgeClass(salesOrder.status)}>
-                {salesOrder.status}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Action Buttons */}
-            <div className="flex gap-2 mb-6 pb-6 border-b">
-              <Link href={`/crm/sales-orders/${salesOrder.id}/edit`}>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit
-                </Button>
-              </Link>
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex items-center gap-2 text-red-600 hover:text-red-700"
-                onClick={handleDelete}
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </Button>
-            </div>
 
-            {/* Sales Order Information */}
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-semibold text-lg mb-4">
-                  Order Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex items-start gap-3">
-                    <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">SO Number</p>
-                      <p className="font-medium">{salesOrder.so_no}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">
-                        Quotation Reference
-                      </p>
-                      <Link
-                        href={`/crm/quotations/${salesOrder.quotation_no}`}
-                        className="font-medium text-blue-600 hover:underline"
-                      >
-                        {salesOrder.quotation_no}
-                      </Link>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <User className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Customer Name</p>
-                      <p className="font-medium">{salesOrder.customer_name}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Mail className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Customer Email</p>
-                      <p className="font-medium">
-                        {salesOrder.customer_email || "-"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <User className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Sales PIC</p>
-                      <p className="font-medium">
-                        {salesOrder.sales_pic || "-"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Package className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Total Items</p>
-                      <p className="font-medium">
-                        {salesOrder.items_count} items
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <DollarSign className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Total Amount</p>
-                      <p className="font-medium text-lg">
-                        {salesOrder.total_amount.toLocaleString("id-ID", {
-                          style: "currency",
-                          currency: "IDR",
-                        })}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <CreditCard className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Payment Term</p>
-                      <p className="font-medium">
-                        {salesOrder.payment_term || "-"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Truck className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Delivery Date</p>
-                      <p className="font-medium">
-                        {formatDate(salesOrder.delivery_date)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Created At</p>
-                      <p className="font-medium">
-                        {formatDate(salesOrder.created_at)}
-                      </p>
-                    </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Info */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Sales Order Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Sales Order No
+                  </label>
+                  <p className="font-semibold">{salesOrder.sale_no}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Status
+                  </label>
+                  <div className="flex gap-2">
+                    <Badge className={getStatusBadgeClass(salesOrder.status)}>
+                      {salesOrder.status}
+                    </Badge>
+                    <Badge
+                      className={getStatusBadgeClass(salesOrder.sale_status)}
+                    >
+                      {salesOrder.sale_status}
+                    </Badge>
+                    <Badge
+                      className={getStatusBadgeClass(salesOrder.payment_status)}
+                    >
+                      {salesOrder.payment_status}
+                    </Badge>
                   </div>
                 </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">
+                    Created At
+                  </label>
+                  <p>{formatDate(salesOrder.created_at)}</p>
+                </div>
+                {salesOrder.quotation && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">
+                      Reference Quotation
+                    </label>
+                    <p className="font-semibold">
+                      {salesOrder.quotation.quotation_no}
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* Related Data */}
-              <div>
-                <h3 className="font-semibold text-lg mb-4">Related Data</h3>
-                <SalesOrderRelatedData salesOrderId={salesOrder.id} />
+              {salesOrder.note && (
+                <>
+                  <Separator />
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">
+                      Notes
+                    </label>
+                    <p className="mt-1">{salesOrder.note}</p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Customer Info */}
+          {salesOrder.quotation?.customer && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Customer Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">
+                      Customer Name
+                    </label>
+                    <p className="font-semibold">
+                      {salesOrder.quotation.customer.customer_name}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">
+                      Email
+                    </label>
+                    <p>{salesOrder.quotation.customer.email || "-"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">
+                      Phone
+                    </label>
+                    <p>{salesOrder.quotation.customer.phone || "-"}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">
+                      Type
+                    </label>
+                    <p>{salesOrder.quotation.customer.type || "-"}</p>
+                  </div>
+                </div>
+                {salesOrder.quotation.customer.address && (
+                  <>
+                    <Separator className="my-4" />
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">
+                        Address
+                      </label>
+                      <p className="mt-1">
+                        {salesOrder.quotation.customer.address}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Items */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Order Items
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {salesOrder.sale_order_detail?.map(
+                  (item: any, index: number) => (
+                    <div key={item.id} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{item.product_name}</h4>
+                          <div className="grid grid-cols-3 gap-4 mt-2 text-sm text-gray-600">
+                            <div>
+                              <span className="font-medium">Price:</span>{" "}
+                              {formatCurrency(Number(item.price))}
+                            </div>
+                            <div>
+                              <span className="font-medium">Qty:</span>{" "}
+                              {item.qty}
+                            </div>
+                            <div>
+                              <span className="font-medium">Total:</span>{" "}
+                              {formatCurrency(Number(item.total))}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge
+                          className={
+                            item.status === "ACTIVE"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }
+                        >
+                          {item.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  )
+                )}
+                {(!salesOrder.sale_order_detail ||
+                  salesOrder.sale_order_detail.length === 0) && (
+                  <p className="text-center text-gray-500 py-8">
+                    No items found
+                  </p>
+                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Financial Summary */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Financial Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Subtotal:</span>
+                <span className="font-medium">
+                  {formatCurrency(Number(salesOrder.total))}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Discount:</span>
+                <span className="font-medium">
+                  -{formatCurrency(Number(salesOrder.discount))}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Tax (11%):</span>
+                <span className="font-medium">
+                  {formatCurrency(Number(salesOrder.tax))}
+                </span>
+              </div>
+              <Separator />
+              <div className="flex justify-between text-lg font-semibold">
+                <span>Grand Total:</span>
+                <span className="text-green-600">
+                  {formatCurrency(Number(salesOrder.grand_total))}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {salesOrder.file_po_customer && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Customer PO
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600">File:</p>
+                <p className="font-medium break-all">
+                  {salesOrder.file_po_customer}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </>
   );

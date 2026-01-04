@@ -54,7 +54,7 @@ export default function CustomerForm({
     phone: customer?.phone || "",
     contact_person: customer?.contact_person || "",
     address: customer?.address || "",
-    customer_type: customer?.customer_type || "Company",
+    customer_type: customer?.customer_type || "INDIVIDUAL", // Default ke Individual
     status: customer?.status || "active",
     company_id: customer?.company_id,
   });
@@ -80,7 +80,26 @@ export default function CustomerForm({
     field: keyof Customer,
     value: string | number | undefined
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      // Jika field company_id dan value valid, set customer_type ke COMPANY
+      if (field === "company_id") {
+        if (value !== undefined && value !== "none") {
+          return {
+            ...prev,
+            company_id: Number(value),
+            customer_type: "COMPANY",
+          };
+        } else {
+          // Jika tidak memilih company, kembalikan customer_type ke INDIVIDUAL
+          return {
+            ...prev,
+            company_id: undefined,
+            customer_type: "INDIVIDUAL",
+          };
+        }
+      }
+      return { ...prev, [field]: value };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -159,6 +178,7 @@ export default function CustomerForm({
                   onValueChange={(value) =>
                     handleInputChange("customer_type", value)
                   }
+                  disabled
                 >
                   <SelectTrigger>
                     <SelectValue />
