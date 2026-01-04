@@ -78,7 +78,6 @@ export default function SalesOrdersTable({
             <TableHead>Quotation No</TableHead>
             <TableHead>Customer</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Sales PIC</TableHead>
             <TableHead>Items</TableHead>
             <TableHead>Total Amount</TableHead>
             <TableHead>Delivery Date</TableHead>
@@ -99,7 +98,6 @@ export default function SalesOrdersTable({
               <TableCell>{salesOrder.quotation_no}</TableCell>
               <TableCell>{salesOrder.customer_name}</TableCell>
               <TableCell>{salesOrder.customer_email || "-"}</TableCell>
-              <TableCell>{salesOrder.sales_pic || "-"}</TableCell>
               <TableCell>{salesOrder.items_count}</TableCell>
               <TableCell>
                 {salesOrder.total_amount.toLocaleString("id-ID", {

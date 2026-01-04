@@ -49,9 +49,6 @@ async function generateQuotationNo(): Promise<string> {
   let sequentialNumber = 1;
 
   if (lastQuotation) {
-    // Extract the sequential number from the last quotation
-    // Pattern: SQ2515020001R0
-    //                ^^^^
     const lastNumber = lastQuotation.quotation_no.substring(8, 12);
     sequentialNumber = parseInt(lastNumber) + 1;
   }
@@ -91,17 +88,8 @@ export async function createQuotationAction(data: QuotationFormData) {
       }
     }
 
-    // Calculate totals
-    const quotationDetail = validatedData.quotation_detail as any[];
-    const total = quotationDetail.reduce((sum, item) => sum + item.total, 0);
-    const grandTotal =
-      total +
-      (validatedData.shipping || 0) +
-      (validatedData.tax || 0) -
-      (validatedData.discount || 0);
-
-    validatedData.total = total;
-    validatedData.grand_total = grandTotal;
+    validatedData.total = data.total;
+    validatedData.grand_total = data.grand_total;
 
     const { customer_id, quotation_no, quotation_detail, ...rest } =
       validatedData;
@@ -210,12 +198,26 @@ export async function deleteQuotationAction(formData: FormData) {
     const id = Number(formData.get("id"));
     if (!id) throw new Error("Quotation ID is required");
 
+    // Use direct database call instead of fetch
     await deleteQuotationDb(id);
 
     revalidatePath("/crm/quotations");
     return { success: true, message: "Quotation deleted successfully" };
   } catch (error) {
     console.error("Error deleting quotation:", error);
+
+    // Handle Prisma P2025 error (record not found)
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2025"
+    ) {
+      return {
+        success: false,
+        message: "Quotation not found or already deleted",
+      };
+    }
 
     if (error instanceof Error) {
       return { success: false, message: error.message };

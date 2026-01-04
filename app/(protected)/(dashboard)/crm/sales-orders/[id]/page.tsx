@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
@@ -15,12 +16,14 @@ import {
   Building,
   Calendar,
   DollarSign,
+  ArrowLeft,
 } from "lucide-react";
 import { getSalesOrderByIdAction } from "@/app/actions/sales-orders";
 import LoadingSkeleton from "@/components/loading-skeleton";
 
 export default function SalesOrderDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const [salesOrder, setSalesOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +49,10 @@ export default function SalesOrderDetailPage() {
       fetchSalesOrder();
     }
   }, [params.id]);
+
+  const handleBack = () => {
+    router.push("/crm/sales-orders");
+  };
 
   if (loading) {
     return (
@@ -100,6 +107,18 @@ export default function SalesOrderDetailPage() {
         title={`Sales Order ${salesOrder.sale_no}`}
         text="View sales order details and items"
       />
+
+      {/* Back Button */}
+      <div className="mb-6">
+        <Button
+          variant="outline"
+          onClick={handleBack}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Sales Orders
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Info */}

@@ -10,17 +10,18 @@ import {
 } from "@/components/ui/table";
 import QuotationActions from "./quotation-actions";
 import { formatDate } from "@/utils/formatDate";
-import { formatStatusDisplay } from "@/utils/statusHelpers"; // Tambahkan import ini
+import { formatStatusDisplay } from "@/utils/statusHelpers";
 
 type Quotation = {
   id: string;
   quotation_no: string;
   created_at: string;
-  updated_at: string; // ← tambahkan ini
+  updated_at: string;
   customer_name: string;
   customer_email: string;
   type: string;
   company: string;
+  grand_total: number;
   total_amount: number;
   status: string;
   last_update: string;
@@ -30,7 +31,7 @@ type Quotation = {
 interface QuotationsTableProps {
   quotations: Quotation[];
   onRowClick?: (id: string) => void;
-  onDeleteQuotation?: (id: string) => void; // Tambahkan ini
+  onRefresh?: () => void; // Tambah prop untuk refresh
 }
 
 function getStatusBadgeClass(status: string): string {
@@ -51,7 +52,7 @@ function getStatusBadgeClass(status: string): string {
 export default function QuotationsTable({
   quotations,
   onRowClick,
-  onDeleteQuotation, // Tambahkan ini
+  onRefresh, // Tambah parameter
 }: QuotationsTableProps) {
   return (
     <Table>
@@ -81,8 +82,8 @@ export default function QuotationsTable({
             <TableCell>{q.type || "-"}</TableCell>
             <TableCell>{q.company || "-"}</TableCell>
             <TableCell>
-              {typeof q.total_amount === "number"
-                ? q.total_amount.toLocaleString("id-ID", {
+              {typeof q.grand_total === "number"
+                ? q.grand_total.toLocaleString("id-ID", {
                     style: "currency",
                     currency: "IDR",
                   })
@@ -101,14 +102,14 @@ export default function QuotationsTable({
             <TableCell onClick={(e) => e.stopPropagation()}>
               <QuotationActions
                 quotation={q}
-                onDelete={() => onDeleteQuotation?.(q.id)} // Tambahkan ini
+                onRefresh={onRefresh} // Pass refresh callback
               />
             </TableCell>
           </TableRow>
         ))}
         {quotations.length === 0 && (
           <TableRow>
-            <TableCell colSpan={11} className="text-center py-8 text-gray-500">
+            <TableCell colSpan={9} className="text-center py-8 text-gray-500">
               No quotations found.
               <a
                 href="/crm/quotations/new"

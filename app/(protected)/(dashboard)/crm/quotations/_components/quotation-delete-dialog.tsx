@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { deleteQuotationAction } from "@/app/actions/quotations";
 import { toast } from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 type Quotation = {
   id: string;
@@ -32,15 +33,17 @@ type Quotation = {
 interface QuotationDeleteDialogProps {
   quotation: Quotation;
   trigger: React.ReactNode;
-  onDelete?: () => void;
+  onSuccess?: () => void; // Tambah callback untuk success
 }
 
 export default function QuotationDeleteDialog({
   quotation,
   trigger,
-  onDelete,
+  onSuccess,
 }: QuotationDeleteDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   const handleDelete = async () => {
     setLoading(true);
@@ -52,20 +55,30 @@ export default function QuotationDeleteDialog({
 
       if (result.success) {
         toast.success("Quotation deleted successfully");
-        onDelete?.();
+        setOpen(false);
+
+        // Panggil callback untuk refresh data
+        onSuccess?.();
+
+        // Backup refresh jika callback tidak ada
+        setTimeout(() => {
+          router.refresh();
+        }, 100);
       } else {
         toast.error(result.message || "Failed to delete quotation");
       }
     } catch (error) {
       console.error("Error deleting quotation:", error);
-      toast.error("Failed to delete quotation");
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to delete quotation";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>

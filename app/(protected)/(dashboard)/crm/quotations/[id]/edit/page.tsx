@@ -41,6 +41,19 @@ export default function QuotationEditPage() {
     };
   }
 
+  // Early return if no valid id
+  if (!idParam) {
+    return (
+      <div className="flex justify-center items-center p-16 w-full h-full">
+        <div className="flex flex-col w-full justify-center items-center">
+          <span className="text-sm text-muted-foreground">
+            Invalid quotation ID
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   if (loading || !quotation) {
     return (
       <div className="flex justify-center items-center p-16 w-full h-full">
@@ -62,14 +75,17 @@ export default function QuotationEditPage() {
         text="Update quotation information"
       />
       <div className="w-full mx-auto py-4">
-        <Button
-          variant="outline"
-          className="mb-4 flex items-center gap-2"
-          onClick={handleClose}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <Button
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={handleClose}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+        </div>
+
         <div className="w-full py-4">
           <QuotationForm
             mode="edit"

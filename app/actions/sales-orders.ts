@@ -291,7 +291,7 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
 
     // Validasi belum pernah dikonversi - Check directly in database
     const existingSalesOrder = await prisma.sales_orders.findFirst({
-      where: { quotation_id: quotationId }, // <-- langsung number
+      where: { quotation_id: quotationId },
     });
 
     if (existingSalesOrder) {
@@ -303,15 +303,24 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
     // 2. Generate sale_no otomatis
     const saleNo = await generateSaleOrderNo();
 
-    // 3. Buat Sales Order
+    // 3. Convert Decimal fields to numbers before using them
+    const total = quotation.total ? Number(quotation.total) : 0;
+    const discount = quotation.discount ? Number(quotation.discount) : 0;
+    const shipping = quotation.shipping ? Number(quotation.shipping) : 0;
+    const tax = quotation.tax ? Number(quotation.tax) : 0;
+    const grand_total = quotation.grand_total
+      ? Number(quotation.grand_total)
+      : 0;
+
+    // 4. Buat Sales Order
     const salesOrderData = {
       sale_no: saleNo,
       quotation_id: quotationId,
-      total: quotation.total || 0,
-      discount: quotation.discount || 0,
-      shipping: quotation.shipping || 0,
-      tax: quotation.tax || 0,
-      grand_total: quotation.grand_total || 0,
+      total: total,
+      discount: discount,
+      shipping: shipping,
+      tax: tax,
+      grand_total: grand_total,
       status: "DRAFT",
       sale_status: "OPEN",
       payment_status: "UNPAID",
@@ -322,33 +331,52 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
       data: salesOrderData,
     });
 
-    // 4. Buat Sales Order Detail dari quotation_detail
+    // 5. Buat Sales Order Detail dari quotation_detail
     const quotationDetails = quotation.quotation_detail as any[];
     if (quotationDetails && Array.isArray(quotationDetails)) {
+      const createdDetails = [];
       for (const item of quotationDetails) {
-        await prisma.sale_order_detail.create({
+        const createdDetail = await prisma.sale_order_detail.create({
           data: {
             sale_id: salesOrder.id,
             product_id: item.product_id ? BigInt(item.product_id) : null,
             product_name: item.product_name,
-            price: item.unit_price || item.price || 0,
-            qty: item.quantity || item.qty || 0,
+            price: Number(item.unit_price || item.price || 0), // Convert to Number
+            qty: Number(item.quantity || item.qty || 0), // Convert to Number
+            total: Number(
+              (item.unit_price || item.price || 0) *
+                (item.quantity || item.qty || 0)
+            ), // Calculate and convert
             status: "ACTIVE",
           },
+        });
+
+        // Convert BigInt and Decimal for safe return
+        createdDetails.push({
+          ...createdDetail,
+          id: createdDetail.id.toString(),
+          sale_id: createdDetail.sale_id.toString(),
+          product_id: createdDetail.product_id
+            ? createdDetail.product_id.toString()
+            : null,
+          price: createdDetail.price ? Number(createdDetail.price) : 0,
+          qty: Number(createdDetail.qty),
+          total: createdDetail.total ? Number(createdDetail.total) : 0,
         });
       }
     }
 
-    // 5. Lock Quotation - Update status menjadi CONVERTED
+    // 6. Lock Quotation - Update status menjadi CONVERTED
     await prisma.quotations.update({
       where: { id: quotationId },
       data: {
-        status: "CONVERTED",
+        status: "sq_converted",
+        stage: "closed",
         updated_at: new Date(),
       },
     });
 
-    // 6. Audit dan log aktivitas user
+    // 7. Audit dan log aktivitas user
     await prisma.user_logs.create({
       data: {
         user_id: typeof user.id === "string" ? parseInt(user.id) : user.id,
@@ -369,16 +397,21 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
       },
     });
 
-    // Convert BigInt untuk response
+    // 8. Convert all BigInt and Decimal fields to safe types for client
     const safeSalesOrder = {
-      ...salesOrder,
       id: salesOrder.id.toString(),
+      sale_no: salesOrder.sale_no,
       quotation_id: salesOrder.quotation_id?.toString() || null,
-      total: salesOrder.total ? Number(salesOrder.total) : 0,
-      shipping: salesOrder.shipping ? Number(salesOrder.shipping) : 0,
-      discount: salesOrder.discount ? Number(salesOrder.discount) : 0,
-      tax: salesOrder.tax ? Number(salesOrder.tax) : 0,
-      grand_total: salesOrder.grand_total ? Number(salesOrder.grand_total) : 0,
+      total: Number(salesOrder.total),
+      shipping: Number(salesOrder.shipping),
+      discount: Number(salesOrder.discount),
+      tax: Number(salesOrder.tax),
+      grand_total: Number(salesOrder.grand_total),
+      status: salesOrder.status,
+      sale_status: salesOrder.sale_status,
+      payment_status: salesOrder.payment_status,
+      note: salesOrder.note,
+      created_at: salesOrder.created_at?.toISOString(),
     };
 
     revalidatePath("/crm/quotations");

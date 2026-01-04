@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { FileText, ArrowRight } from "lucide-react";
 import { convertQuotationToSalesOrderAction } from "@/app/actions/sales-orders";
+import { updateQuotationAction } from "@/app/actions/quotations";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
@@ -19,6 +20,7 @@ interface ConvertToSalesOrderButtonProps {
   quotationId: number;
   quotationNo: string;
   status: string;
+  stage?: string;
   grandTotal: number;
   disabled?: boolean;
 }
@@ -27,6 +29,7 @@ export default function ConvertToSalesOrderButton({
   quotationId,
   quotationNo,
   status,
+  stage,
   grandTotal,
   disabled = false,
 }: ConvertToSalesOrderButtonProps) {
@@ -34,20 +37,39 @@ export default function ConvertToSalesOrderButton({
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
-  // Only show for approved quotations
-  const canConvert = status === "sq_approved" || status === "approved";
+  // Update kondisi untuk menerima lebih banyak status yang valid
+  const canConvert =
+    status === "sq_win" ||
+    status === "win" ||
+    status === "sq_approved" || // Tambahkan ini
+    status === "approved" ||
+    (status === "sq_sent" && stage === "sent");
+
+  // Debug logging (remove in production)
+  console.log("ConvertToSalesOrderButton:", {
+    status,
+    stage,
+    canConvert,
+    quotationId,
+    quotationNo,
+  });
 
   const handleConvert = async () => {
     setLoading(true);
     try {
-      const result = await convertQuotationToSalesOrderAction(quotationId);
+      // Direct convert - server action sudah handle update status
+      const convertResult = await convertQuotationToSalesOrderAction(
+        quotationId
+      );
 
-      if (result.success) {
-        toast.success(result.message);
+      if (convertResult.success) {
+        toast.success("Quotation successfully converted to Sales Order");
         setOpen(false);
 
         // Redirect to sales order detail page
-        router.push(`/crm/sales-orders/${result.data.sales_order_id}`);
+        router.push(`/crm/sales-orders/${convertResult.data.sales_order_id}`);
+      } else {
+        toast.error(convertResult.message || "Failed to convert quotation");
       }
     } catch (error) {
       console.error("Error converting quotation:", error);
@@ -59,6 +81,7 @@ export default function ConvertToSalesOrderButton({
     }
   };
 
+  // Hanya tampilkan button jika memenuhi kondisi convert
   if (!canConvert || disabled) {
     return null;
   }
@@ -86,6 +109,14 @@ export default function ConvertToSalesOrderButton({
               <strong>Quotation:</strong> {quotationNo}
             </div>
             <div>
+              <strong>Current Status:</strong> {status}
+            </div>
+            {stage && (
+              <div>
+                <strong>Current Stage:</strong> {stage}
+              </div>
+            )}
+            <div>
               <strong>Amount:</strong>{" "}
               {grandTotal.toLocaleString("id-ID", {
                 style: "currency",
@@ -98,9 +129,14 @@ export default function ConvertToSalesOrderButton({
               <strong>Warning:</strong> After conversion:
             </div>
             <ul className="list-disc list-inside space-y-1">
-              <li>Quotation status will be changed to CONVERTED</li>
-              <li>Quotation data cannot be modified</li>
-              <li>A new Sales Order will be created</li>
+              <li>
+                Quotation status will be changed to <strong>CONVERTED</strong>
+              </li>
+              <li>
+                Quotation stage will be changed to <strong>CLOSED</strong>
+              </li>
+              <li>Quotation data cannot be modified anymore</li>
+              <li>A new Sales Order will be created automatically</li>
               <li>This action cannot be undone</li>
             </ul>
           </div>

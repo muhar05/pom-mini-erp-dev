@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { quotations } from "@/types/models";
 
 // Tipe untuk tabel, bisa pakai langsung dari models atau buat tipe baru jika perlu
@@ -22,10 +22,15 @@ export function useQuotations() {
   const [quotationsData, setQuotationsData] = useState<QuotationTable[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchQuotations = useCallback(() => {
     setLoading(true);
     fetch("/api/quotations")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data: quotations[]) => {
         // Mapping dari tipe quotations (models) ke QuotationTable
         const mapped: QuotationTable[] = data.map((q) => ({
@@ -51,12 +56,21 @@ export function useQuotations() {
         }));
         setQuotationsData(mapped);
       })
+      .catch((error) => {
+        console.error("Error fetching quotations:", error);
+        setQuotationsData([]); // Set empty array on error
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchQuotations();
+  }, [fetchQuotations]);
 
   return {
     quotations: quotationsData,
     loading,
     setQuotations: setQuotationsData,
+    refetch: fetchQuotations, // Tambahkan refetch function
   };
 }

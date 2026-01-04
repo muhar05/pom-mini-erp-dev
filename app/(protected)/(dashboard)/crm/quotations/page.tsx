@@ -1,25 +1,29 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import QuotationsTable from "./_components/quotations-table";
 import QuotationFilters from "./_components/quotation-filters";
 import AddQuotationButton from "./_components/add-quotation-button";
 import { useQuotations } from "@/hooks/quotations/useQuotations";
-import { useDeleteQuotation } from "@/hooks/quotations/useDeleteQuotation";
-import { toast } from "react-hot-toast"; // Tambahkan ini
 
 export default function QuotationsPage() {
-  const { quotations, loading, setQuotations } = useQuotations();
-  const { deleteQuotation, loading: deleting } = useDeleteQuotation();
-  const [search, setSearch] = useState(""); // Tambahkan state search
+  const { quotations, loading, refetch } = useQuotations(); // Gunakan refetch
+  const [search, setSearch] = useState("");
 
-  // Filter quotations berdasarkan search (opsional)
+  // Filter quotations berdasarkan search
   const filteredQuotations = quotations.filter(
     (q: any) =>
       q.quotation_no?.toLowerCase().includes(search.toLowerCase()) ||
       q.customer_name?.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Setelah filter
+  const mappedQuotations = filteredQuotations.map((q: any) => ({
+    ...q,
+    grand_total: q.grand_total ?? q.total_amount ?? 0,
+    total_amount: q.grand_total ?? q.total_amount ?? 0,
+  }));
 
   return (
     <>
@@ -43,16 +47,8 @@ export default function QuotationsPage() {
             </div>
           ) : (
             <QuotationsTable
-              quotations={filteredQuotations}
-              onDeleteQuotation={async (id) => {
-                const ok = await deleteQuotation(id);
-                if (ok) {
-                  setQuotations((prev) => prev.filter((q) => q.id !== id));
-                  toast.success("Quotation deleted successfully");
-                } else {
-                  toast.error("Failed to delete quotation");
-                }
-              }}
+              quotations={mappedQuotations}
+              onRefresh={refetch} // Pass refetch function
             />
           )}
         </div>

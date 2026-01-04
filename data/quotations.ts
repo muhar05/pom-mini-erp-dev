@@ -23,7 +23,7 @@ export async function updateQuotationDb(
   });
 }
 
-// DELETE
+// DELETE - biarkan Prisma yang handle error P2025
 export async function deleteQuotationDb(id: number) {
   return prisma.quotations.delete({
     where: { id },
