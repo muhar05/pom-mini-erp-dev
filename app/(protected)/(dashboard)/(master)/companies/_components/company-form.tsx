@@ -99,7 +99,7 @@ export default function CompanyForm({
 
   return (
     <div className="w-full mx-auto mt-8">
-      <Card className="bg-gray-800">
+      <Card className="dark:bg-gray-800">
         <CardHeader>
           <CardTitle>
             {mode === "edit" ? "Edit Company" : "Create Company"}

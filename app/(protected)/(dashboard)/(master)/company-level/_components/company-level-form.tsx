@@ -65,7 +65,7 @@ export default function CompanyLevelForm({
 
   return (
     <div className="w-full mx-auto mt-8">
-      <Card className="bg-gray-800">
+      <Card className="dark:bg-gray-800">
         <CardHeader>
           <CardTitle>
             {defaultValues ? "Edit Company Level" : "Add Company Level"}

@@ -1,13 +1,10 @@
 "use server";
 
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { users } from "@/types/models";
-import { isSuperuser, isSales } from "@/utils/leadHelpers";
 import { revalidatePath } from "next/cache";
-import { ZodError } from "zod";
 import {
-  CreateSalesOrderInput,
-  UpdateSalesOrderInput,
   createSalesOrderDb,
   updateSalesOrderDb,
   deleteSalesOrderDb,
@@ -19,7 +16,12 @@ import {
   CreateSalesOrderData,
   UpdateSalesOrderData,
 } from "@/lib/schemas/sales-orders";
-import { prisma } from "@/lib/prisma";
+import { ZodError } from "zod";
+import { isSuperuser } from "@/utils/leadHelpers";
+import {
+  getSalesOrderPermissions,
+  isValidStatusTransition,
+} from "@/utils/salesOrderPermissions";
 
 // Helper to generate sale order number following pattern: SO2515020001
 async function generateSaleOrderNo(): Promise<string> {
@@ -136,23 +138,77 @@ export async function updateSalesOrderAction(
   if (!user) throw new Error("Unauthorized");
 
   try {
-    // Convert quotation_id from string to BigInt if present
-    const { quotation_id, ...rest } = data;
+    const currentSO = await getSalesOrderByIdDb(id);
+    const permissions = getSalesOrderPermissions(currentSO, user);
+
+    // Check if any non-editable fields are being updated
+    const updateKeys = Object.keys(data);
+    const nonEditableFields = updateKeys.filter(
+      (key) => !permissions.editableFields.includes(key)
+    );
+
+    if (nonEditableFields.length > 0) {
+      throw new Error(
+        `You don't have permission to update these fields: ${nonEditableFields.join(
+          ", "
+        )}`
+      );
+    }
+
+    // Validate status transitions if status is being updated
+    if (
+      data.sale_status &&
+      currentSO.sale_status &&
+      !isValidStatusTransition(currentSO.sale_status, data.sale_status)
+    ) {
+      throw new Error(
+        `Invalid status transition from ${currentSO.sale_status} to ${data.sale_status}`
+      );
+    }
+
+    const validatedData = validateSalesOrderFormData(data, "update");
+
+    // Convert string IDs to appropriate types
+    const { quotation_id, ...rest } = validatedData;
     const prismaData = {
       ...rest,
       quotation_id: quotation_id ? Number(quotation_id) : undefined,
     } as any;
 
-    const updatedSalesOrder = await updateSalesOrderDb(id, prismaData);
+    const salesOrder = await updateSalesOrderDb(id, prismaData);
+
+    // Convert response
+    const safeSalesOrder = {
+      ...salesOrder,
+      id: salesOrder.id.toString(),
+      quotation_id: salesOrder.quotation_id?.toString() || null,
+      total: salesOrder.total ? Number(salesOrder.total) : 0,
+      shipping: salesOrder.shipping ? Number(salesOrder.shipping) : 0,
+      discount: salesOrder.discount ? Number(salesOrder.discount) : 0,
+      tax: salesOrder.tax ? Number(salesOrder.tax) : 0,
+      grand_total: salesOrder.grand_total ? Number(salesOrder.grand_total) : 0,
+    };
 
     revalidatePath("/sales/orders");
     return {
       success: true,
       message: "Sales order updated successfully",
-      data: updatedSalesOrder,
+      data: safeSalesOrder,
     };
   } catch (error) {
-    console.error("Error updating sales order:", error);
+    console.error("Sales order update error:", error);
+    if (error instanceof ZodError) {
+      const fieldErrors = error.errors.reduce((acc, err) => {
+        if (err.path) {
+          acc[err.path.join(".")] = err.message;
+        }
+        return acc;
+      }, {} as Record<string, string>);
+
+      throw new Error(
+        `Validation failed: ${Object.values(fieldErrors).join(", ")}`
+      );
+    }
     throw error;
   }
 }
@@ -429,6 +485,233 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
     };
   } catch (error) {
     console.error("Error converting quotation to sales order:", error);
+    throw error;
+  }
+}
+
+// CONFIRM SALES ORDER - New action
+export async function confirmSalesOrderAction(id: string) {
+  const session = await auth();
+  const user = session?.user as users | undefined;
+  if (!user) throw new Error("Unauthorized");
+
+  try {
+    // Get current sales order
+    const currentSO = await getSalesOrderByIdDb(id);
+
+    // Validate current status
+    if (currentSO.sale_status !== "OPEN") {
+      throw new Error("Only OPEN sales orders can be confirmed");
+    }
+
+    // Check permissions
+    const permissions = getSalesOrderPermissions(currentSO, user);
+    if (!permissions.canConfirm) {
+      throw new Error("You don't have permission to confirm this sales order");
+    }
+
+    // Update status to CONFIRMED
+    const updatedSO = await updateSalesOrderDb(id, {
+      sale_status: "CONFIRMED",
+      status: "ACTIVE", // Also update general status
+    });
+
+    // Trigger automatic stock check and reservation
+    await handlePostConfirmationProcess(updatedSO);
+
+    // Log activity
+    await prisma.user_logs.create({
+      data: {
+        user_id: typeof user.id === "string" ? parseInt(user.id) : user.id,
+        activity: `Confirmed sales order ${currentSO.sale_no}`,
+        method: "PUT",
+        endpoint: "/actions/confirm-sales-order",
+        old_data: { sale_status: currentSO.sale_status },
+        new_data: { sale_status: "CONFIRMED" },
+      },
+    });
+
+    revalidatePath("/sales/orders");
+    return {
+      success: true,
+      message: "Sales order confirmed successfully",
+      data: {
+        ...updatedSO,
+        id: updatedSO.id.toString(),
+        quotation_id: updatedSO.quotation_id?.toString() || null,
+        total: updatedSO.total ? Number(updatedSO.total) : 0,
+        shipping: updatedSO.shipping ? Number(updatedSO.shipping) : 0,
+        discount: updatedSO.discount ? Number(updatedSO.discount) : 0,
+        tax: updatedSO.tax ? Number(updatedSO.tax) : 0,
+        grand_total: updatedSO.grand_total ? Number(updatedSO.grand_total) : 0,
+      },
+    };
+  } catch (error) {
+    console.error("Error confirming sales order:", error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Failed to confirm sales order");
+  }
+}
+
+// Handle post-confirmation automatic processes
+async function handlePostConfirmationProcess(salesOrder: any) {
+  try {
+    // 1. Check stock availability for all items
+    const orderDetails = await prisma.sale_order_detail.findMany({
+      where: { sale_id: salesOrder.id },
+    });
+
+    for (const detail of orderDetails) {
+      if (detail.product_id) {
+        const product = await prisma.products.findUnique({
+          where: { id: Number(detail.product_id) }, // Convert BigInt to number
+        });
+
+        if (product && (product.stock ?? 0) >= detail.qty) {
+          // Stock sufficient - create stock reservation
+          await prisma.stock_reservations.create({
+            data: {
+              item_detail: {
+                product_id: detail.product_id.toString(),
+                product_name: detail.product_name,
+                qty: detail.qty,
+              },
+              lead_id: salesOrder.id,
+              type: "SALES_ORDER",
+              status: "RESERVED",
+              created_at: new Date(),
+            },
+          });
+
+          // Reduce available stock
+          await prisma.products.update({
+            where: { id: Number(detail.product_id) }, // Convert BigInt to number
+            data: { stock: (product.stock ?? 0) - detail.qty },
+          });
+        } else {
+          // Stock insufficient - create draft purchase order
+          const existingPO = await prisma.purchase_orders.findFirst({
+            where: {
+              supplier_so: salesOrder.id.toString(),
+              status: "DRAFT",
+            },
+          });
+
+          if (!existingPO) {
+            const poNo = await generatePurchaseOrderNumber();
+            await prisma.purchase_orders.create({
+              data: {
+                po_no: poNo,
+                po_detail_items: [
+                  {
+                    product_id: detail.product_id.toString(),
+                    product_name: detail.product_name,
+                    qty: detail.qty,
+                    price: detail.price,
+                  },
+                ],
+                status: "DRAFT",
+                total: detail.total || 0,
+                supplier_so: salesOrder.id.toString(),
+                created_at: new Date(),
+              },
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in post-confirmation process:", error);
+    // Don't throw error here as confirmation was successful
+    // Just log the issue for manual handling
+  }
+}
+
+// Helper to generate PO number (implement based on your pattern)
+async function generatePurchaseOrderNumber(): Promise<string> {
+  const now = new Date();
+  const year = String(now.getFullYear()).slice(-2);
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+
+  const prefix = `PO${year}${month}`;
+
+  const lastPO = await prisma.purchase_orders.findFirst({
+    where: { po_no: { startsWith: prefix } },
+    orderBy: { po_no: "desc" },
+  });
+
+  let sequence = 1;
+  if (lastPO) {
+    const lastNumber = lastPO.po_no.substring(5);
+    sequence = parseInt(lastNumber) + 1;
+  }
+
+  return `${prefix}${String(sequence).padStart(4, "0")}`;
+}
+
+// UPDATE NOTE ONLY - New limited action
+export async function updateSalesOrderNoteAction(id: string, note: string) {
+  const session = await auth();
+  const user = session?.user as users | undefined;
+  if (!user) throw new Error("Unauthorized");
+
+  try {
+    const currentSO = await getSalesOrderByIdDb(id);
+    const permissions = getSalesOrderPermissions(currentSO, user);
+
+    if (!permissions.canUpdateNote) {
+      throw new Error(
+        "You don't have permission to update notes for this sales order"
+      );
+    }
+
+    const updatedSO = await updateSalesOrderDb(id, {
+      note: note,
+    });
+
+    revalidatePath("/sales/orders");
+    return {
+      success: true,
+      message: "Sales order note updated successfully",
+    };
+  } catch (error) {
+    console.error("Error updating sales order note:", error);
+    throw error;
+  }
+}
+
+// UPLOAD PO CUSTOMER FILE - New limited action
+export async function updateSalesOrderPOFileAction(
+  id: string,
+  filePath: string
+) {
+  const session = await auth();
+  const user = session?.user as users | undefined;
+  if (!user) throw new Error("Unauthorized");
+
+  try {
+    const currentSO = await getSalesOrderByIdDb(id);
+    const permissions = getSalesOrderPermissions(currentSO, user);
+
+    if (!permissions.canUploadPO) {
+      throw new Error(
+        "You don't have permission to upload PO file for this sales order"
+      );
+    }
+
+    const updatedSO = await updateSalesOrderDb(id, {
+      file_po_customer: filePath,
+    });
+
+    revalidatePath("/sales/orders");
+    return {
+      success: true,
+      message: "Customer PO file updated successfully",
+    };
+  } catch (error) {
+    console.error("Error updating customer PO file:", error);
     throw error;
   }
 }

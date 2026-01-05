@@ -1,24 +1,38 @@
 "use client";
 
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { PrintButton } from "@/components/quotations/PrintButton";
 import {
+  Edit,
+  Trash2,
+  ShoppingBag,
+  Download,
   ArrowLeft,
-  Building2,
-  Calendar,
-  CheckCircle,
   Copy,
+  CheckCircle,
+  XCircle,
   DollarSign,
-  FileText,
+  Calendar,
+  Truck,
+  Percent,
+  Receipt,
+  User,
   Mail,
-  MoreVertical,
+  Building2,
+  FileText,
+  Clock,
+  Tag,
   Package,
+  CreditCard,
+  MoreVertical,
   Printer,
   Share2,
-  ShoppingBag,
-  User,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -27,15 +41,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import { useQuotationDetail } from "@/hooks/quotations/useQuotationDetail";
-import { formatStatusDisplay } from "@/utils/statusHelpers";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "react-hot-toast";
-import Link from "next/link";
-import ConvertToSalesOrderButton from "../_components/convert-to-sales-order-button";
+import { useQuotationDetail } from "@/hooks/quotations/useQuotationDetail";
+import { useProductById } from "@/hooks/products/useProductById";
+import QuotationExport from "@/components/quotations/quotationExport";
 
 function getStatusBadgeClass(status: string): string {
   switch (status?.toLowerCase()) {
@@ -74,15 +93,22 @@ export default function QuotationDetailPage() {
   const idParam = Array.isArray(params.id) ? params.id[0] : params.id;
   const router = useRouter();
   const { quotation, loading } = useQuotationDetail(idParam);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [copied, setCopied] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const handleDelete = () => {
+    if (!idParam) return;
+    fetch(`/api/quotations/${idParam}`, { method: "DELETE" }).then(() => {
+      setShowDeleteDialog(false);
+      router.push("/crm/quotations");
+    });
+  };
 
-  const handlePrint = () => {
+  const handleExportPDF = () => {
     window.print();
   };
 
   const handleCopyQuotationNo = () => {
-    if (!quotation?.quotation_no) return;
     navigator.clipboard.writeText(quotation.quotation_no);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -128,11 +154,11 @@ export default function QuotationDetailPage() {
       }
       const results = await Promise.all(
         quotationDetail.map(async (item: any) => {
-          if (!item.product_id) return { ...item, unit: "" };
+          if (!item.product_id) return { ...item, unit: "" }; // kosong jika tidak ada product_id
           try {
             const res = await fetch(`/api/products/${item.product_id}`);
             const prod = await res.json();
-            return { ...item, unit: prod.unit ?? "" };
+            return { ...item, unit: prod.unit ?? "" }; // ambil langsung dari produk
           } catch {
             return { ...item, unit: "" };
           }
@@ -141,7 +167,7 @@ export default function QuotationDetailPage() {
       setDetailWithUnit(results);
     }
     fetchUnits();
-  }, [quotationDetail]);
+  }, [quotationDetail]); // dependency sudah stabil
 
   if (loading) {
     return (
@@ -206,16 +232,14 @@ export default function QuotationDetailPage() {
                 </h1>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge className={getStatusBadgeClass(quotation.status)}>
-                    <span className="font-semibold">Status:</span>{" "}
-                    {formatStatusDisplay(quotation.status)}
+                    {quotation.status}
                   </Badge>
                   {quotation.stage && (
                     <Badge
                       className={getStageBadgeClass(quotation.stage)}
                       variant="outline"
                     >
-                      <span className="font-semibold">Stage:</span>{" "}
-                      {formatStatusDisplay(quotation.stage)}
+                      {quotation.stage}
                     </Badge>
                   )}
                 </div>
@@ -245,9 +269,8 @@ export default function QuotationDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handlePrint}>
-                  <Printer className="w-4 h-4 mr-2" />
-                  Print
+                <DropdownMenuItem>
+                  <PrintButton printRef={printRef} />
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Share2 className="w-4 h-4 mr-2" />
@@ -256,15 +279,17 @@ export default function QuotationDetailPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Convert to Sales Order Button - dipindahkan ke sini */}
-            <ConvertToSalesOrderButton
-              quotationId={parseInt(idParam || "0")}
-              quotationNo={quotation.quotation_no || ""}
-              status={quotation.status || ""}
-              stage={quotation.stage || ""}
-              grandTotal={Number(quotation.grand_total) || 0}
-              disabled={loading}
-            />
+            {canConvertToSO && (
+              <Link href={`/crm/sales-orders/new?quotation_id=${quotation.id}`}>
+                <Button
+                  size="sm"
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  Create SO
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -285,7 +310,7 @@ export default function QuotationDetailPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <User className="w-4 h-4" />
-                      Customer Name
+                      <span>Customer Name</span>
                     </div>
                     <p className="font-medium dark:text-gray-100">
                       {quotation.customer?.customer_name || "-"}
@@ -295,7 +320,7 @@ export default function QuotationDetailPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <Mail className="w-4 h-4" />
-                      Email Address
+                      <span>Email</span>
                     </div>
                     <p className="font-medium dark:text-gray-200">
                       {quotation.customer?.email || "-"}
@@ -305,7 +330,7 @@ export default function QuotationDetailPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <Building2 className="w-4 h-4" />
-                      Company
+                      <span>Company</span>
                     </div>
                     <p className="font-medium dark:text-gray-200">
                       {quotation.customer?.company?.company_name || "-"}
@@ -329,58 +354,45 @@ export default function QuotationDetailPage() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b dark:border-gray-700">
-                          <th className="text-left py-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            No
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Item
                           </th>
-                          <th className="text-left py-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Description
-                          </th>
-                          <th className="text-right py-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                             Qty
                           </th>
-                          <th className="text-right py-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Unit
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Price
                           </th>
-                          <th className="text-right py-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Unit Price
-                          </th>
-                          <th className="text-right py-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
                             Total
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {detailWithUnit.map((item: any, index: number) => (
+                        {quotationDetail.map((item: any, index: number) => (
                           <tr
                             key={index}
-                            className="border-b dark:border-gray-800"
+                            className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                           >
-                            <td className="py-3 text-sm dark:text-gray-300">
-                              {index + 1}
-                            </td>
-                            <td className="py-3 text-sm dark:text-gray-300">
-                              <div>
-                                <p className="font-medium">
-                                  {item.product_name}
-                                </p>
-                                {item.product_code && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    Code: {item.product_code}
-                                  </p>
-                                )}
+                            <td className="py-3 px-4">
+                              <div className="font-medium dark:text-gray-200">
+                                {item.product_name || "-"}
                               </div>
                             </td>
-                            <td className="py-3 text-sm text-right dark:text-gray-300">
-                              {item.quantity}
+                            <td className="py-3 px-4">
+                              <div className="dark:text-gray-200">
+                                {item.quantity || 0}
+                              </div>
                             </td>
-                            <td className="py-3 text-sm text-right dark:text-gray-300">
-                              {item.unit || "-"}
+                            <td className="py-3 px-4">
+                              <div className="dark:text-gray-200">
+                                {formatCurrency(item.unit_price || 0)}
+                              </div>
                             </td>
-                            <td className="py-3 text-sm text-right dark:text-gray-300">
-                              {formatCurrency(item.unit_price)}
-                            </td>
-                            <td className="py-3 text-sm text-right font-medium dark:text-gray-300">
-                              {formatCurrency(item.quantity * item.unit_price)}
+                            <td className="py-3 px-4">
+                              <div className="font-medium dark:text-gray-100">
+                                {formatCurrency(item.total || 0)}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -433,49 +445,59 @@ export default function QuotationDetailPage() {
                       Subtotal
                     </span>
                     <span className="font-medium dark:text-gray-200">
-                      {formatCurrency(quotation.total)}
+                      {formatCurrency(quotation.total || 0)}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Discount ({quotation.discount}%)
+                    <div className="flex items-center gap-2">
+                      <Truck className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Shipping
+                      </span>
+                    </div>
+                    <span className="font-medium dark:text-gray-200">
+                      {formatCurrency(quotation.shipping || 0)}
                     </span>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <Percent className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Discount
+                      </span>
+                    </div>
                     <span className="font-medium text-red-600 dark:text-red-400">
-                      -
-                      {formatCurrency(
-                        (quotation.total * quotation.discount) / 100
-                      )}
+                      {/* Tampilkan persentase, fallback ke 0% jika tidak ada */}
+                      - {quotation.discount ? `${quotation.discount}%` : "0%"}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Tax (11%)
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <Receipt className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Tax
+                      </span>
+                    </div>
                     <span className="font-medium dark:text-gray-200">
-                      {formatCurrency(quotation.tax)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Shipping
-                    </span>
-                    <span className="font-medium dark:text-gray-200">
-                      {formatCurrency(quotation.shipping)}
+                      {formatCurrency(quotation.tax || 0)}
                     </span>
                   </div>
 
                   <Separator className="dark:bg-gray-700" />
 
                   <div className="flex justify-between items-center pt-2">
-                    <span className="font-semibold text-lg dark:text-gray-100">
+                    <span className="font-semibold dark:text-gray-100">
                       Grand Total
                     </span>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-primary dark:text-blue-400">
-                        {formatCurrency(quotation.grand_total)}
+                        {formatCurrency(quotation.grand_total || 0)}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Including all charges
                       </div>
                     </div>
                   </div>
@@ -494,8 +516,9 @@ export default function QuotationDetailPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Created Date
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <Calendar className="w-4 h-4" />
+                      <span>Created Date</span>
                     </div>
                     <p className="font-medium dark:text-gray-200">
                       {formatDate(quotation.created_at)}
@@ -503,8 +526,9 @@ export default function QuotationDetailPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Last Updated
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <Clock className="w-4 h-4" />
+                      <span>Last Updated</span>
                     </div>
                     <p className="font-medium dark:text-gray-200">
                       {formatDate(quotation.updated_at)}
@@ -512,28 +536,98 @@ export default function QuotationDetailPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Target Date
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <Calendar className="w-4 h-4" />
+                      <span>Target Date</span>
                     </div>
                     <p className="font-medium dark:text-gray-200">
                       {quotation.target_date
                         ? formatDate(quotation.target_date)
-                        : "Not specified"}
+                        : "-"}
                     </p>
                   </div>
 
                   <div className="space-y-1">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Terms of Payment
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <CreditCard className="w-4 h-4" />
+                      <span>Payment Terms</span>
                     </div>
-                    <p className="font-medium dark:text-gray-200">
-                      {quotation.top || "Cash"}
-                    </p>
+                    <Badge
+                      variant="outline"
+                      className="dark:border-gray-600 dark:text-gray-300"
+                    >
+                      {quotation.top || "Not specified"}
+                    </Badge>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">
+              Delete Quotation?
+            </DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Are you sure you want to delete quotation{" "}
+              <span className="font-semibold text-red-600 dark:text-red-400">
+                {quotation.quotation_no}
+              </span>
+              ? This action cannot be undone. All related data will be
+              permanently removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button
+                variant="outline"
+                className="dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              onClick={handleDelete}
+              className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Quotation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Komponen yang akan di-print */}
+      <div style={{ display: "none" }}>
+        <div ref={printRef}>
+          <QuotationExport
+            sqNumber={quotation.quotation_no}
+            date={formatDate(quotation.created_at)}
+            paymentTerm={quotation.top || "-"}
+            currency="IDR"
+            customerName={quotation.customer?.customer_name || "-"}
+            customerAddress={quotation.customer?.address || "-"}
+            customerEmail={quotation.customer?.email}
+            companyName={quotation.customer?.company?.company_name || ""}
+            companyAddress={quotation.customer?.company?.address || ""}
+            companyPhone={quotation.customer?.company?.phone}
+            items={detailWithUnit.map((item: any) => ({
+              partNo: item.product_code || "", // ambil dari product_code
+              desc: item.product_name,
+              qty: item.quantity,
+              unit: item.unit, // ambil langsung dari hasil fetch, tanpa default "pcs"
+              unitPrice: item.unit_price,
+            }))}
+            notes={quotation.note}
+            project={quotation.project}
+            signatureName={quotation.sales_name}
+            fileName={`quotation_${quotation.quotation_no}.pdf`}
+          />
         </div>
       </div>
     </>

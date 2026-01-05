@@ -116,7 +116,7 @@ export default async function ProductDetailPage({
         </Card>
 
         {/* Pricing & Inventory */}
-        <Card className="bg-gray-800">
+        <Card className="dark:bg-gray-800">
           <CardHeader>
             <CardTitle>Pricing & Inventory</CardTitle>
           </CardHeader>
@@ -143,7 +143,7 @@ export default async function ProductDetailPage({
 
       {/* System Information */}
       <div className="w-full lg:grid-cols-2 gap-6 mt-6">
-        <Card className="bg-gray-800 w-full">
+        <Card className="dark:bg-gray-800 w-full">
           <CardHeader>
             <CardTitle>System Information</CardTitle>
           </CardHeader>

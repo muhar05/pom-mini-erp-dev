@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 export default function CompanyDetail({ company }: { company: company }) {
   return (
     <div className="w-full mx-auto mt-8">
-      <Card className="bg-gray-800">
+      <Card className="dark:bg-gray-800">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             {company.company_name}

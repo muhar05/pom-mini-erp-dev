@@ -1,23 +1,56 @@
 "use client";
 
-import React, { useState } from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import SalesOrdersTable from "./_components/sales-orders-table";
-import AddSalesOrderButton from "./_components/add-sales-order-button";
 import SalesOrderFilters from "./_components/sales-order-filters";
-import { useSession } from "@/contexts/session-context";
 import SalesOrderDetailDrawer from "./_components/sales-order-detail-drawer";
+import LoadingSkeleton from "@/components/loading-skeleton";
 import Pagination from "@/components/ui/pagination";
-import {
-  useSalesOrders,
-  SalesOrder as HookSalesOrder,
-} from "@/hooks/sales-orders/useSalesOrders";
+import { useSalesOrders } from "@/hooks/sales-orders/useSalesOrders";
+import { useSession } from "@/contexts/session-context";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertCircle, Package } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+// Type for hook data (from useSalesOrders)
+interface HookSalesOrder {
+  id: string;
+  sale_no: string;
+  quotation_id?: string | null;
+  total?: number | null;
+  discount?: number | null;
+  shipping?: number | null;
+  tax?: number | null;
+  grand_total?: number | null;
+  status?: string | null;
+  sale_status?: string | null;
+  payment_status?: string | null;
+  file_po_customer?: string | null;
+  created_at?: Date | null;
+  quotation?: {
+    id: number;
+    quotation_no: string;
+    customer?: {
+      id: number;
+      customer_name: string;
+      email?: string | null;
+    } | null;
+  } | null;
+  sale_order_detail?: Array<{
+    id: string;
+    product_name: string;
+    qty: number;
+  }> | null;
+}
 
 // Type for components (matches existing component interfaces)
 type ComponentSalesOrder = {
   id: string;
   so_no: string;
   quotation_no: string;
+  quotation_id?: string;
   customer_name: string;
   customer_email: string;
   sales_pic: string;
@@ -26,13 +59,15 @@ type ComponentSalesOrder = {
   payment_term: string;
   delivery_date: string;
   status: string;
+  sale_status?: string;
+  payment_status?: string;
   created_at: string;
   updated_at: string;
 };
 
 export default function SalesOrdersPage() {
   const { user } = useSession();
-  const { salesOrders, loading, error } = useSalesOrders();
+  const { salesOrders, loading, error, refresh } = useSalesOrders();
   const isSuperadmin = user?.role === "superadmin";
 
   const [filters, setFilters] = useState<{
@@ -66,16 +101,19 @@ export default function SalesOrdersPage() {
     return hookData.map((so) => ({
       id: so.id,
       so_no: so.sale_no,
-      quotation_no: so.quotation_id || "",
+      quotation_no: so.quotation?.quotation_no || "",
+      quotation_id: so.quotation_id || "",
       customer_name:
         so.quotation?.customer?.customer_name || "Unknown Customer",
       customer_email: so.quotation?.customer?.email || "",
       sales_pic: "Sales Person", // TODO: Add user relation
       items_count: so.sale_order_detail?.length || 0,
-      total_amount: so.grand_total || 0,
+      total_amount: so.grand_total ? Number(so.grand_total) : 0,
       payment_term: "Net 30", // TODO: Add payment term field
       delivery_date: new Date().toISOString().split("T")[0], // TODO: Add delivery date
       status: so.sale_status || so.status || "DRAFT",
+      sale_status: so.sale_status || "OPEN",
+      payment_status: so.payment_status || "UNPAID",
       created_at: so.created_at
         ? new Date(so.created_at).toISOString()
         : new Date().toISOString(),
@@ -134,15 +172,10 @@ export default function SalesOrdersPage() {
       <>
         <DashboardBreadcrumb
           title="Sales Orders"
-          text="Manage and monitor your sales orders"
+          text="Monitor and manage your sales order pipeline"
         />
         <div className="flex justify-center items-center p-16 w-full h-full">
-          <div className="flex flex-col w-full justify-center items-center">
-            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
-            <span className="text-sm text-muted-foreground">
-              Loading sales orders...
-            </span>
-          </div>
+          <LoadingSkeleton />
         </div>
       </>
     );
@@ -153,18 +186,18 @@ export default function SalesOrdersPage() {
       <>
         <DashboardBreadcrumb
           title="Sales Orders"
-          text="Manage and monitor your sales orders"
+          text="Monitor and manage your sales order pipeline"
         />
         <div className="flex justify-center items-center p-16 w-full h-full">
-          <div className="flex flex-col w-full justify-center items-center">
-            <div className="text-red-500 text-sm mb-3">Error: {error}</div>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Retry
-            </button>
-          </div>
+          <Card className="max-w-md">
+            <CardContent className="p-6 text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <p className="text-red-600 mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </>
     );
@@ -174,29 +207,64 @@ export default function SalesOrdersPage() {
     <>
       <DashboardBreadcrumb
         title="Sales Orders"
-        text="Manage and monitor your sales orders"
+        text="Monitor and manage your sales order pipeline"
       />
+
+      {/* Info Card about Sales Order Flow */}
+      <Card className="mb-6 border-blue-200 bg-blue-50">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Package className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div className="space-y-1">
+              <h4 className="font-medium text-blue-900">
+                Sales Order Management
+              </h4>
+              <p className="text-sm text-blue-800">
+                Sales Orders are automatically created from approved quotations.
+                Use the table below to monitor progress, confirm orders, and
+                manage the fulfillment process.
+              </p>
+              <Link href="/crm/quotations">
+                <Button size="sm" variant="outline" className="mt-2">
+                  Go to Quotations →
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <SalesOrderFilters
         onFilterChange={handleFilterChange}
         filters={filters}
       />
+
       <div className="grid grid-cols-1 gap-6 mt-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">List Sales Orders</h2>
-          <SalesOrdersTable salesOrders={pagedData} />
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Sales Orders</span>
+              <span className="text-sm font-normal text-gray-500">
+                {convertedData.length} total orders
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SalesOrdersTable
+              salesOrders={pagedData}
+              onUpdate={refresh} // Pass refresh to refresh data after actions
             />
-          )}
-          <SalesOrderDetailDrawer
-            salesOrder={convertedData.find((so) => so.id === selected) || null}
-            isOpen={!!selected}
-            onClose={() => setSelected(null)}
-          />
-        </div>
+            {totalPages > 1 && (
+              <div className="mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </>
   );

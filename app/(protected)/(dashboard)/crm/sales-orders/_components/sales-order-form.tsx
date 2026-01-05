@@ -337,7 +337,7 @@ export default function SalesOrderForm({
 
   return (
     <div className="mx-auto p-6 w-full">
-      <Card className="bg-gray-800">
+      <Card className="dark:bg-gray-800">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -615,7 +615,7 @@ export default function SalesOrderForm({
 
       {/* Summary Card */}
       {selectedQuotation && (
-        <Card className="mt-6 bg-gray-800">
+        <Card className="mt-6 dark:bg-gray-800">
           <CardHeader>
             <CardTitle>Selected Quotation Details</CardTitle>
           </CardHeader>
