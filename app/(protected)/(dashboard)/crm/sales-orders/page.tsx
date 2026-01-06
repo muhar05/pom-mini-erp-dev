@@ -11,8 +11,9 @@ import { useSession } from "@/contexts/session-context";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Package } from "lucide-react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import Link from "next/link";
 
 // Type for hook data (from useSalesOrders)
 interface HookSalesOrder {
@@ -36,12 +37,16 @@ interface HookSalesOrder {
       id: number;
       customer_name: string;
       email?: string | null;
+      phone?: string | null;
+      address?: string | null;
     } | null;
   } | null;
   sale_order_detail?: Array<{
     id: string;
     product_name: string;
     qty: number;
+    price: number;
+    total?: number | null;
   }> | null;
 }
 
@@ -53,6 +58,8 @@ type ComponentSalesOrder = {
   quotation_id?: string;
   customer_name: string;
   customer_email: string;
+  customer_phone?: string;
+  customer_address?: string;
   sales_pic: string;
   items_count: number;
   total_amount: number;
@@ -63,6 +70,13 @@ type ComponentSalesOrder = {
   payment_status?: string;
   created_at: string;
   updated_at: string;
+  items_details?: Array<{
+    id: string;
+    product_name: string;
+    qty: number;
+    price: number;
+    total: number;
+  }>;
 };
 
 export default function SalesOrdersPage() {
@@ -101,11 +115,12 @@ export default function SalesOrdersPage() {
     return hookData.map((so) => ({
       id: so.id,
       so_no: so.sale_no,
-      quotation_no: so.quotation?.quotation_no || "",
+      quotation_no: so.quotation?.quotation_no || "Direct Order",
       quotation_id: so.quotation_id || "",
-      customer_name:
-        so.quotation?.customer?.customer_name || "Unknown Customer",
+      customer_name: so.quotation?.customer?.customer_name || "Manual Customer", // Handle manual customers
       customer_email: so.quotation?.customer?.email || "",
+      customer_phone: so.quotation?.customer?.phone || "",
+      customer_address: so.quotation?.customer?.address || "",
       sales_pic: "Sales Person", // TODO: Add user relation
       items_count: so.sale_order_detail?.length || 0,
       total_amount: so.grand_total ? Number(so.grand_total) : 0,
@@ -120,6 +135,15 @@ export default function SalesOrdersPage() {
       updated_at: so.created_at
         ? new Date(so.created_at).toISOString()
         : new Date().toISOString(),
+      // Add detailed items information
+      items_details:
+        so.sale_order_detail?.map((item) => ({
+          id: item.id,
+          product_name: item.product_name,
+          qty: item.qty,
+          price: item.price,
+          total: item.total || item.price * item.qty,
+        })) || [],
     }));
   };
 
@@ -175,7 +199,10 @@ export default function SalesOrdersPage() {
           text="Monitor and manage your sales order pipeline"
         />
         <div className="flex justify-center items-center p-16 w-full h-full">
-          <LoadingSkeleton />
+          <div className="flex flex-col w-full justify-center items-center">
+            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+            <span className="text-sm text-muted-foreground">Loading...</span>
+          </div>
         </div>
       </>
     );
@@ -210,29 +237,16 @@ export default function SalesOrdersPage() {
         text="Monitor and manage your sales order pipeline"
       />
 
-      {/* Info Card about Sales Order Flow */}
-      <Card className="mb-6 border-blue-200 bg-blue-50">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <Package className="h-5 w-5 text-blue-600 mt-0.5" />
-            <div className="space-y-1">
-              <h4 className="font-medium text-blue-900">
-                Sales Order Management
-              </h4>
-              <p className="text-sm text-blue-800">
-                Sales Orders are automatically created from approved quotations.
-                Use the table below to monitor progress, confirm orders, and
-                manage the fulfillment process.
-              </p>
-              <Link href="/crm/quotations">
-                <Button size="sm" variant="outline" className="mt-2">
-                  Go to Quotations →
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Add New Sales Order Button */}
+      <div className="flex justify-between items-center mb-6">
+        <div></div>
+        <Link href="/crm/sales-orders/new">
+          <Button className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add New Sales Order
+          </Button>
+        </Link>
+      </div>
 
       <SalesOrderFilters
         onFilterChange={handleFilterChange}

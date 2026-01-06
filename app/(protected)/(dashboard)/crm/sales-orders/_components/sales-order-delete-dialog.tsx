@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { deleteSalesOrderAction } from "@/app/actions/sales-orders";
+import toast from "react-hot-toast";
 
 type SalesOrder = {
   id: string;
@@ -41,26 +43,35 @@ export default function SalesOrderDeleteDialog({
   onDelete,
 }: SalesOrderDeleteDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const handleDelete = async () => {
     setLoading(true);
     try {
-      // TODO: Implement actual delete API call
-      console.log("Deleting sales order:", salesOrder.id);
+      const formData = new FormData();
+      formData.append("id", salesOrder.id);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const result = await deleteSalesOrderAction(formData);
 
-      onDelete?.();
+      if (result.success) {
+        toast.success(result.message);
+        setOpen(false);
+        onDelete?.();
+      } else {
+        toast.error(result.message || "Failed to delete sales order");
+      }
     } catch (error) {
       console.error("Error deleting sales order:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete sales order"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>

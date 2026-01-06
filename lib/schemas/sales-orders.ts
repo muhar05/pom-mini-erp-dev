@@ -8,6 +8,7 @@ const saleNoSchema = z
   .trim();
 
 const quotationIdSchema = z.string().optional(); // BigInt as string
+const customerIdSchema = z.string().optional(); // BigInt as string
 
 // Sale order detail item schema
 const saleOrderDetailItemSchema = z.object({
@@ -40,6 +41,7 @@ const paymentStatusSchema = z
 // Main sales order schema for CREATE
 export const createSalesOrderSchema = z.object({
   sale_no: saleNoSchema,
+  customer_id: customerIdSchema, // Add customer_id support
   quotation_id: quotationIdSchema,
   total: z.number().min(0).optional().default(0),
   discount: z.number().min(0).optional().default(0),
@@ -59,6 +61,7 @@ export const createSalesOrderSchema = z.object({
 // Schema untuk update (all fields optional except required validations)
 export const updateSalesOrderSchema = z.object({
   sale_no: z.string().max(50).trim().optional(),
+  customer_id: z.string().optional(), // Add customer_id support
   quotation_id: z.string().optional(),
   total: z.number().min(0).optional(),
   discount: z.number().min(0).optional(),

@@ -58,25 +58,14 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
         { title: "Customer List", url: "/customers", icon: UserRound },
         { title: "Company List", url: "/companies", icon: Building2 },
         { title: "Product List", url: "/products", icon: Package },
+        { title: "Vendor List", url: "/purchasing/vendors", icon: Building2 },
       ],
     },
 
     {
       title: "Purchasing",
       icon: FileBox,
-      items: [
-        {
-          title: "Purchase Request (PR)",
-          url: "/purchasing/purchase-requests",
-          icon: ClipboardList,
-        },
-        {
-          title: "Purchase Order (PO)",
-          url: "/purchasing/purchase-orders",
-          icon: FileBox,
-        },
-        { title: "Vendor List", url: "/purchasing/vendors", icon: Building2 },
-      ],
+      url: "/purchasing",
     },
 
     {
@@ -128,17 +117,6 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       icon: Wallet,
       items: [
         { title: "FAR", url: "/finance/far", icon: BadgeDollarSign },
-        { title: "Invoice", url: "/finance/invoice", icon: Receipt },
-        {
-          title: "Payment Schedule",
-          url: "/finance/payment-schedule",
-          icon: Banknote,
-        },
-        {
-          title: "Customer Payment",
-          url: "/finance/customer-payment",
-          icon: HandCoins,
-        },
       ],
     },
 
@@ -148,7 +126,6 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       items: [
         { title: "Users", url: "/settings/users", icon: Users },
         { title: "Company", url: "/settings/company", icon: Building2 },
-        // Tambahkan icon jika ada sub-items lain yang diaktifkan
       ],
     },
 

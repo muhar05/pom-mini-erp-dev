@@ -97,6 +97,11 @@ export default function SalesOrderActions({
     }
   };
 
+  const handleDeleteCallback = () => {
+    onUpdate?.(); // Refresh the table data
+    onDelete?.(); // Call additional delete callback if provided
+  };
+
   // Prepare basic data for export (we don't have full details in table view)
   const exportItems = [
     {
@@ -253,7 +258,7 @@ export default function SalesOrderActions({
                 <Trash2 className="w-4 h-4" />
               </Button>
             }
-            onDelete={() => onDelete?.()}
+            onDelete={handleDeleteCallback}
           />
         )}
       </div>

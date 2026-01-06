@@ -169,16 +169,13 @@ export async function deleteSalesOrderDb(id: string) {
 export async function getSalesOrderByIdDb(id: string) {
   const salesOrder = await prisma.sales_orders.findUnique({
     where: { id: BigInt(id) },
+    include: {
+      quotation: {
+        include: { customer: true },
+      },
+    },
   });
   if (!salesOrder) throw new Error("Sales order not found");
-
-  // Fetch related data separately if needed
-  const quotation = salesOrder.quotation_id
-    ? await prisma.quotations.findUnique({
-        where: { id: Number(salesOrder.quotation_id) },
-        include: { customer: true },
-      })
-    : null;
 
   const saleOrderDetails = await prisma.sale_order_detail.findMany({
     where: { sale_id: salesOrder.id },
@@ -198,31 +195,41 @@ export async function getSalesOrderByIdDb(id: string) {
     grand_total: salesOrder.grand_total ? Number(salesOrder.grand_total) : 0,
   };
 
-  // Convert quotation Decimal fields if quotation exists
-  const safeQuotation = quotation
+  // Convert quotation and customer data if exists
+  const safeQuotation = salesOrder.quotation
     ? {
-        ...quotation,
-        id: quotation.id,
-        customer_id: quotation.customer_id
-          ? Number(quotation.customer_id)
+        ...salesOrder.quotation,
+        id: salesOrder.quotation.id,
+        customer_id: salesOrder.quotation.customer_id
+          ? Number(salesOrder.quotation.customer_id)
           : null,
-        total: quotation.total ? Number(quotation.total) : 0,
-        discount: quotation.discount ? Number(quotation.discount) : 0,
-        shipping: quotation.shipping ? Number(quotation.shipping) : 0,
-        tax: quotation.tax ? Number(quotation.tax) : 0,
-        grand_total: quotation.grand_total ? Number(quotation.grand_total) : 0,
-        top: quotation.top ? Number(quotation.top) : 0,
-        // Convert quotation_detail if it exists
-        quotation_detail: quotation.quotation_detail
-          ? (quotation.quotation_detail as any[]).map((item: any) => ({
-              ...item,
-              product_id: item.product_id ? Number(item.product_id) : null,
-              unit_price: item.unit_price ? Number(item.unit_price) : 0,
-              price: item.price ? Number(item.price) : 0,
-              quantity: item.quantity ? Number(item.quantity) : 0,
-              qty: item.qty ? Number(item.qty) : 0,
-              total: item.total ? Number(item.total) : 0,
-            }))
+        total: salesOrder.quotation.total
+          ? Number(salesOrder.quotation.total)
+          : 0,
+        discount: salesOrder.quotation.discount
+          ? Number(salesOrder.quotation.discount)
+          : 0,
+        shipping: salesOrder.quotation.shipping
+          ? Number(salesOrder.quotation.shipping)
+          : 0,
+        tax: salesOrder.quotation.tax ? Number(salesOrder.quotation.tax) : 0,
+        grand_total: salesOrder.quotation.grand_total
+          ? Number(salesOrder.quotation.grand_total)
+          : 0,
+        top: salesOrder.quotation.top ? Number(salesOrder.quotation.top) : 0,
+        customer: salesOrder.quotation.customer,
+        quotation_detail: salesOrder.quotation.quotation_detail
+          ? (salesOrder.quotation.quotation_detail as any[]).map(
+              (item: any) => ({
+                ...item,
+                product_id: item.product_id ? Number(item.product_id) : null,
+                unit_price: item.unit_price ? Number(item.unit_price) : 0,
+                price: item.price ? Number(item.price) : 0,
+                quantity: item.quantity ? Number(item.quantity) : 0,
+                qty: item.qty ? Number(item.qty) : 0,
+                total: item.total ? Number(item.total) : 0,
+              })
+            )
           : [],
       }
     : null;
@@ -233,9 +240,8 @@ export async function getSalesOrderByIdDb(id: string) {
     id: detail.id.toString(),
     sale_id: detail.sale_id.toString(),
     product_id: detail.product_id ? detail.product_id.toString() : null,
-    price: detail.price ? Number(detail.price) : 0,
-    qty: Number(detail.qty),
-    total: detail.total ? Number(detail.total) : 0,
+    price: Number(detail.price),
+    total: detail.total ? Number(detail.total) : null,
   }));
 
   return {
@@ -247,60 +253,15 @@ export async function getSalesOrderByIdDb(id: string) {
 
 // GET ALL
 export async function getAllSalesOrdersDb() {
-  const salesOrders = await prisma.sales_orders.findMany({
+  return prisma.sales_orders.findMany({
+    include: {
+      quotation: {
+        include: { customer: true },
+      },
+      sale_order_detail: true,
+    },
     orderBy: { created_at: "desc" },
   });
-
-  // Fetch related data for each sales order
-  const enrichedSalesOrders = await Promise.all(
-    salesOrders.map(async (salesOrder) => {
-      const quotation = salesOrder.quotation_id
-        ? await prisma.quotations.findUnique({
-            where: { id: Number(salesOrder.quotation_id) },
-            include: { customer: true },
-          })
-        : null;
-
-      const saleOrderDetails = await prisma.sale_order_detail.findMany({
-        where: { sale_id: salesOrder.id },
-      });
-
-      // Convert Decimal and BigInt fields to safe types for client
-      const safeSalesOrder = {
-        ...salesOrder,
-        id: salesOrder.id.toString(),
-        quotation_id: salesOrder.quotation_id
-          ? Number(salesOrder.quotation_id)
-          : null,
-        total: salesOrder.total ? Number(salesOrder.total) : 0,
-        discount: salesOrder.discount ? Number(salesOrder.discount) : 0,
-        shipping: salesOrder.shipping ? Number(salesOrder.shipping) : 0,
-        tax: salesOrder.tax ? Number(salesOrder.tax) : 0,
-        grand_total: salesOrder.grand_total
-          ? Number(salesOrder.grand_total)
-          : 0,
-      };
-
-      // Convert sale order details
-      const safeSaleOrderDetails = saleOrderDetails.map((detail) => ({
-        ...detail,
-        id: detail.id.toString(),
-        sale_id: detail.sale_id.toString(),
-        product_id: detail.product_id ? detail.product_id.toString() : null,
-        price: detail.price ? Number(detail.price) : 0,
-        qty: Number(detail.qty),
-        total: detail.total ? Number(detail.total) : 0,
-      }));
-
-      return {
-        ...safeSalesOrder,
-        quotation,
-        sale_order_detail: safeSaleOrderDetails,
-      };
-    })
-  );
-
-  return enrichedSalesOrders;
 }
 
 // ADD new function for checking conversion

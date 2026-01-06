@@ -50,7 +50,6 @@ model quotations {
   id               Int            @id @default(autoincrement())
   quotation_no     String         @db.VarChar(50)
   customer_id      Int
-  customer         customers      @relation(fields: [customer_id], references: [id])
   quotation_detail Json
   total            Decimal?       @default(0) @db.Decimal(18, 2)
   shipping         Decimal?       @default(0) @db.Decimal(18, 2)
@@ -64,7 +63,8 @@ model quotations {
   top              String?        @db.VarChar(50)
   created_at       DateTime?      @default(now()) @db.Timestamp(6)
   updated_at       DateTime?      @default(now()) @db.Timestamp(6)
-  sales_orders     sales_orders[] @relation("QuotationToSalesOrder") // New relation
+  customer         customers      @relation(fields: [customer_id], references: [id])
+  sales_orders     sales_orders[] @relation("QuotationToSalesOrder")
 }
 
 model roles {
@@ -117,17 +117,18 @@ model company_level {
 }
 
 model customers {
-  id            Int           @id @default(autoincrement())
-  customer_name String        @db.VarChar(200)
+  id            Int            @id @default(autoincrement())
+  customer_name String         @db.VarChar(200)
   address       String?
-  phone         String?       @db.VarChar(50)
-  email         String?       @db.VarChar(150)
-  type          String?       @db.VarChar(50)
+  phone         String?        @db.VarChar(50)
+  email         String?        @db.VarChar(150)
+  type          String?        @db.VarChar(50)
   company_id    Int?
   note          String?
-  created_at    DateTime?     @default(now()) @db.Timestamp(6)
-  company       company?      @relation(fields: [company_id], references: [id], onUpdate: NoAction)
+  created_at    DateTime?      @default(now()) @db.Timestamp(6)
+  company       company?       @relation(fields: [company_id], references: [id], onUpdate: NoAction)
   quotations    quotations[]
+  sales_orders  sales_orders[]
 }
 
 model user_logs {
@@ -211,7 +212,7 @@ model sale_order_detail {
   qty          Int
   total        Decimal?     @default(dbgenerated("(price * (qty)::numeric)")) @db.Decimal(15, 2)
   status       String?      @default("ACTIVE") @db.VarChar(30)
-  sales_order  sales_orders @relation(fields: [sale_id], references: [id], onDelete: Cascade) // New relation
+  sales_order  sales_orders @relation(fields: [sale_id], references: [id], onDelete: Cascade)
 }
 
 model sales_orders {
@@ -229,8 +230,10 @@ model sales_orders {
   payment_status    String?             @default("UNPAID") @db.VarChar(30)
   file_po_customer  String?
   created_at        DateTime?           @default(now()) @db.Timestamp(6)
-  quotation         quotations?         @relation("QuotationToSalesOrder", fields: [quotation_id], references: [id]) // New relation
-  sale_order_detail sale_order_detail[] // New relation
+  customer_id       Int?
+  sale_order_detail sale_order_detail[]
+  customers         customers?          @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  quotation         quotations?         @relation("QuotationToSalesOrder", fields: [quotation_id], references: [id])
 }
 
 model stock_reservations {

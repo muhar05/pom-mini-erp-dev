@@ -21,6 +21,8 @@ type SalesOrder = {
   quotation_id?: string;
   customer_name: string;
   customer_email: string;
+  customer_phone?: string;
+  customer_address?: string;
   sales_pic: string;
   items_count: number;
   total_amount: number;
@@ -31,6 +33,14 @@ type SalesOrder = {
   payment_status?: string;
   created_at: string;
   updated_at: string;
+  // Add detailed item information
+  items_details?: Array<{
+    id: string;
+    product_name: string;
+    qty: number;
+    price: number;
+    total: number;
+  }>;
 };
 
 interface SalesOrdersTableProps {
@@ -120,24 +130,55 @@ export default function SalesOrdersTable({
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">
-                    {salesOrder.quotation_no || salesOrder.quotation_id || "-"}
+                    {salesOrder.quotation_no === "Direct Order" ? (
+                      <span className="text-orange-600">Direct Order</span>
+                    ) : (
+                      salesOrder.quotation_no || salesOrder.quotation_id || "-"
+                    )}
                   </Badge>
                 </div>
               </TableCell>
               <TableCell>
                 <div>
-                  <div className="font-medium">{salesOrder.customer_name}</div>
+                  <div className="font-medium">
+                    {salesOrder.customer_name || "Unknown Customer"}
+                  </div>
                   <div className="text-sm text-gray-500">
-                    {salesOrder.customer_email || "-"}
+                    {salesOrder.customer_email ||
+                      salesOrder.customer_phone ||
+                      "No contact info"}
                   </div>
                 </div>
               </TableCell>
-              <TableCell>{salesOrder.items_count}</TableCell>
               <TableCell>
-                {salesOrder.total_amount.toLocaleString("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                })}
+                <div className="flex flex-col">
+                  <span className="font-medium">
+                    {salesOrder.items_count} items
+                  </span>
+                  {salesOrder.items_details &&
+                    salesOrder.items_details.length > 0 && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {salesOrder.items_details.slice(0, 2).map((item, i) => (
+                          <div key={i} className="truncate max-w-[120px]">
+                            {item.product_name} ({item.qty}x)
+                          </div>
+                        ))}
+                        {salesOrder.items_details.length > 2 && (
+                          <div className="text-xs text-blue-600">
+                            +{salesOrder.items_details.length - 2} more...
+                          </div>
+                        )}
+                      </div>
+                    )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="font-medium">
+                  {salesOrder.total_amount.toLocaleString("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  })}
+                </div>
               </TableCell>
               <TableCell>
                 <Badge
@@ -177,12 +218,19 @@ export default function SalesOrdersTable({
                 <div className="flex flex-col items-center gap-2">
                   <p>No sales orders found.</p>
                   <p className="text-sm">
-                    Sales Orders are created automatically when you{" "}
+                    Sales Orders can be created from{" "}
                     <a
                       href="/crm/quotations"
                       className="text-blue-600 hover:underline font-medium"
                     >
-                      convert approved quotations
+                      approved quotations
+                    </a>{" "}
+                    or{" "}
+                    <a
+                      href="/crm/sales-orders/add"
+                      className="text-blue-600 hover:underline font-medium"
+                    >
+                      created directly
                     </a>
                     .
                   </p>
