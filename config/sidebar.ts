@@ -65,7 +65,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
     {
       title: "Purchasing",
       icon: FileBox,
-      url: "/purchasing",
+      url: "/purchasing/purchase-orders",
     },
 
     {
