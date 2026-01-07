@@ -26,6 +26,9 @@ import {
   Printer,
   MoreVertical,
   Download,
+  Truck,
+  Percent,
+  Receipt,
 } from "lucide-react";
 import { getSalesOrderByIdAction } from "@/app/actions/sales-orders";
 import LoadingSkeleton from "@/components/loading-skeleton";
@@ -42,6 +45,20 @@ export default function SalesOrderDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<SOExportHandle>(null);
+
+  // Calculate discount amount in rupiah (fixed calculation)
+  const calculateDiscountAmount = () => {
+    const subtotal = Number(salesOrder?.total) || 0;
+    const discountPercent = Number(salesOrder?.discount) || 0;
+    // Discount di database adalah persentase, bukan rupiah
+    return (subtotal * discountPercent) / 100;
+  };
+
+  // Calculate discount percentage (return the stored value directly)
+  const calculateDiscountPercentage = () => {
+    const discountPercent = Number(salesOrder?.discount) || 0;
+    return discountPercent; // Langsung return karena sudah dalam bentuk persentase
+  };
 
   useEffect(() => {
     const fetchSalesOrder = async () => {
@@ -444,14 +461,30 @@ export default function SalesOrderDetailPage() {
                     {formatCurrency(Number(salesOrder.total))}
                   </span>
                 </div>
+
+                {/* Show discount even if small amount, but only if > 0 */}
+                {calculateDiscountAmount() > 0 && (
+                  <div className="flex justify-between">
+                    <div className="flex items-center gap-2">
+                      <Percent className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">
+                        Discount
+                        {calculateDiscountPercentage() > 0
+                          ? ` (${calculateDiscountPercentage()}%)`
+                          : ""}
+                      </span>
+                    </div>
+                    <span className="font-medium text-red-600">
+                      -{formatCurrency(calculateDiscountAmount())}
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Discount:</span>
-                  <span className="font-medium">
-                    -{formatCurrency(Number(salesOrder.discount))}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tax (11%):</span>
+                  <div className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-600">Tax (11%):</span>
+                  </div>
                   <span className="font-medium">
                     {formatCurrency(Number(salesOrder.tax))}
                   </span>
@@ -508,6 +541,8 @@ export default function SalesOrderDetailPage() {
             status={salesOrder.status}
             saleStatus={salesOrder.sale_status}
             paymentStatus={salesOrder.payment_status}
+            discount={calculateDiscountPercentage()}
+            discountAmount={calculateDiscountAmount()}
           />
         </div>
       </div>

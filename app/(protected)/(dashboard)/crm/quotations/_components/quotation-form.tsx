@@ -830,6 +830,21 @@ export default function QuotationForm({
                     )}
                   </div>
 
+                  {/* Display discount amount in rupiah */}
+                  {formData.discount > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Discount Amount
+                      </span>
+                      <span className="font-medium text-red-600">
+                        -
+                        {formatCurrency(
+                          (formData.total * formData.discount) / 100
+                        )}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="tax" className="text-sm">
                       Tax (11%)

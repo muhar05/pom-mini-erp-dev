@@ -40,6 +40,10 @@ type Props = {
   status?: string;
   saleStatus?: string;
   paymentStatus?: string;
+
+  // Add discount props (similar to quotation export)
+  discount?: number; // discount percentage
+  discountAmount?: number; // discount amount in rupiah
 };
 
 const SalesOrderExport = forwardRef<SOExportHandle, Props>(
@@ -63,11 +67,17 @@ const SalesOrderExport = forwardRef<SOExportHandle, Props>(
       status,
       saleStatus,
       paymentStatus,
+      discount = 0,
+      discountAmount = 0,
     } = props;
 
     const divRef = useRef<HTMLDivElement | null>(null);
 
-    const total = items.reduce((s, it) => s + it.total, 0);
+    // Fixed calculation to match the corrected logic from detail page
+    const subtotal = items.reduce((s, it) => s + it.total, 0);
+    // discountAmount is already calculated correctly in the detail page
+    const finalDiscountAmount = discountAmount; // Use the passed discountAmount directly
+    const total = subtotal - finalDiscountAmount;
     const vat = Math.round(total * 0.11);
     const grandTotal = total + vat;
 
@@ -281,6 +291,18 @@ const SalesOrderExport = forwardRef<SOExportHandle, Props>(
         >
           <table style={{ fontSize: 11, minWidth: 220 }}>
             <tbody>
+              <tr>
+                <td style={{ padding: "4px 8px" }}>Subtotal</td>
+                <td style={tdCellRight}>{fmt(subtotal)}</td>
+              </tr>
+              {finalDiscountAmount > 0 && (
+                <tr>
+                  <td style={{ padding: "4px 8px" }}>
+                    Discount {discount > 0 ? `(${discount}%)` : ""}
+                  </td>
+                  <td style={tdCellRight}>-{fmt(finalDiscountAmount)}</td>
+                </tr>
+              )}
               <tr>
                 <td style={{ padding: "4px 8px" }}>Total</td>
                 <td style={tdCellRight}>{fmt(total)}</td>

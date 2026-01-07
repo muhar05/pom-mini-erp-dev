@@ -127,6 +127,13 @@ export default function QuotationDetailPage() {
     }).format(amount || 0);
   };
 
+  // Calculate discount amount in rupiah
+  const calculateDiscountAmount = () => {
+    const subtotal = quotation?.total || 0;
+    const discountPercent = quotation?.discount || 0;
+    return (subtotal * discountPercent) / 100;
+  };
+
   const canConvertToSO = quotation?.status?.toLowerCase() === "confirmed";
 
   // Gunakan useMemo agar quotationDetail tidak berubah referensi setiap render
@@ -465,12 +472,12 @@ export default function QuotationDetailPage() {
                     <div className="flex items-center gap-2">
                       <Percent className="w-4 h-4 text-gray-400" />
                       <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Discount
+                        Discount{" "}
+                        {quotation.discount ? `(${quotation.discount}%)` : ""}
                       </span>
                     </div>
                     <span className="font-medium text-red-600 dark:text-red-400">
-                      {/* Tampilkan persentase, fallback ke 0% jika tidak ada */}
-                      - {quotation.discount ? `${quotation.discount}%` : "0%"}
+                      -{formatCurrency(calculateDiscountAmount())}
                     </span>
                   </div>
 
@@ -627,6 +634,8 @@ export default function QuotationDetailPage() {
             project={quotation.project}
             signatureName={quotation.sales_name}
             fileName={`quotation_${quotation.quotation_no}.pdf`}
+            discount={quotation.discount || 0}
+            discountAmount={calculateDiscountAmount()}
           />
         </div>
       </div>

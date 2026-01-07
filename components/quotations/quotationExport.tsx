@@ -35,6 +35,10 @@ type Props = {
   signatureName?: string;
 
   fileName?: string;
+
+  // Add discount props
+  discount?: number; // discount percentage
+  discountAmount?: number; // discount amount in rupiah
 };
 
 const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
@@ -55,11 +59,15 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
       project,
       signatureName,
       fileName = "sales-quotation.pdf",
+      discount = 0,
+      discountAmount = 0,
     } = props;
 
     const divRef = useRef<HTMLDivElement | null>(null);
 
-    const total = items.reduce((s, it) => s + it.qty * it.unitPrice, 0);
+    const subtotal = items.reduce((s, it) => s + it.qty * it.unitPrice, 0);
+    const finalDiscountAmount = discountAmount || (subtotal * discount) / 100;
+    const total = subtotal - finalDiscountAmount;
     const vat = Math.round(total * 0.11);
     const grandTotal = total + vat;
 
@@ -279,6 +287,18 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
         >
           <table style={{ fontSize: 11, minWidth: 220 }}>
             <tbody>
+              <tr>
+                <td style={{ padding: "4px 8px" }}>Subtotal</td>
+                <td style={tdCellRight}>{fmt(subtotal)}</td>
+              </tr>
+              {finalDiscountAmount > 0 && (
+                <tr>
+                  <td style={{ padding: "4px 8px" }}>
+                    Discount {discount > 0 ? `(${discount}%)` : ""}
+                  </td>
+                  <td style={tdCellRight}>-{fmt(finalDiscountAmount)}</td>
+                </tr>
+              )}
               <tr>
                 <td style={{ padding: "4px 8px" }}>Total</td>
                 <td style={tdCellRight}>{fmt(total)}</td>
