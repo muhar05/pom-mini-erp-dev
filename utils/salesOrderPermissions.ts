@@ -24,6 +24,18 @@ export const PAYMENT_STATUSES = {
   OVERDUE: "OVERDUE",
 } as const;
 
+// Helper untuk check superuser
+export function isSuperuser(user: users | any): boolean {
+  return user?.roles?.role_name === "superadmin" || user?.role === "superadmin";
+}
+
+// Helper untuk check sales role
+export function isSales(user: users | any): boolean {
+  return ["sales", "manager_sales", "superadmin"].includes(
+    user?.roles?.role_name || user?.role || ""
+  );
+}
+
 // Sales Order permissions berdasarkan status dan role
 export interface SalesOrderPermissions {
   canEdit: boolean;

@@ -1,54 +1,19 @@
 "use client";
 
+import { useState } from "react";
+import { useSession } from "@/contexts/session-context";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import SalesOrdersTable from "./_components/sales-orders-table";
 import SalesOrderFilters from "./_components/sales-order-filters";
-import SalesOrderDetailDrawer from "./_components/sales-order-detail-drawer";
-import LoadingSkeleton from "@/components/loading-skeleton";
-import Pagination from "@/components/ui/pagination";
-import { useSalesOrders } from "@/hooks/sales-orders/useSalesOrders";
-import { useSession } from "@/contexts/session-context";
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
-
-// Type for hook data (from useSalesOrders)
-interface HookSalesOrder {
-  id: string;
-  sale_no: string;
-  quotation_id?: string | null;
-  total?: number | null;
-  discount?: number | null;
-  shipping?: number | null;
-  tax?: number | null;
-  grand_total?: number | null;
-  status?: string | null;
-  sale_status?: string | null;
-  payment_status?: string | null;
-  file_po_customer?: string | null;
-  created_at?: Date | null;
-  quotation?: {
-    id: number;
-    quotation_no: string;
-    customer?: {
-      id: number;
-      customer_name: string;
-      email?: string | null;
-      phone?: string | null;
-      address?: string | null;
-    } | null;
-  } | null;
-  sale_order_detail?: Array<{
-    id: string;
-    product_name: string;
-    qty: number;
-    price: number;
-    total?: number | null;
-  }> | null;
-}
+import {
+  useSalesOrders,
+  SalesOrder,
+} from "@/hooks/sales-orders/useSalesOrders";
+import LoadingSkeleton from "@/components/loading-skeleton";
 
 // Type for components (matches existing component interfaces)
 type ComponentSalesOrder = {
@@ -110,50 +75,69 @@ export default function SalesOrdersPage() {
 
   // Convert hook data to component format
   const convertToComponentFormat = (
-    hookData: HookSalesOrder[]
+    hookData: SalesOrder[]
   ): ComponentSalesOrder[] => {
-    return hookData.map((so) => ({
-      id: so.id,
-      so_no: so.sale_no,
-      quotation_no: so.quotation?.quotation_no || "Direct Order",
-      quotation_id: so.quotation_id || "",
-      customer_name: so.quotation?.customer?.customer_name || "Manual Customer", // Handle manual customers
-      customer_email: so.quotation?.customer?.email || "",
-      customer_phone: so.quotation?.customer?.phone || "",
-      customer_address: so.quotation?.customer?.address || "",
-      sales_pic: "Sales Person", // TODO: Add user relation
-      items_count: so.sale_order_detail?.length || 0,
-      total_amount: so.grand_total ? Number(so.grand_total) : 0,
-      payment_term: "Net 30", // TODO: Add payment term field
-      delivery_date: new Date().toISOString().split("T")[0], // TODO: Add delivery date
-      status: so.sale_status || so.status || "DRAFT",
-      sale_status: so.sale_status || "OPEN",
-      payment_status: so.payment_status || "UNPAID",
-      created_at: so.created_at
-        ? new Date(so.created_at).toISOString()
-        : new Date().toISOString(),
-      updated_at: so.created_at
-        ? new Date(so.created_at).toISOString()
-        : new Date().toISOString(),
-      // Add detailed items information
-      items_details:
-        so.sale_order_detail?.map((item) => ({
-          id: item.id,
-          product_name: item.product_name,
-          qty: item.qty,
-          price: item.price,
-          total: item.total || item.price * item.qty,
-        })) || [],
-    }));
+    return hookData.map((so) => {
+      // Determine customer source - prioritize direct customer, fallback to quotation customer
+      const customer = so.customers || so.quotation?.customer;
+
+      // Determine quotation info
+      const quotationInfo = so.quotation_id
+        ? so.quotation?.quotation_no || `QT-${so.quotation_id}`
+        : "Direct Order";
+
+      return {
+        id: so.id,
+        so_no: so.sale_no,
+        quotation_no: quotationInfo,
+        quotation_id: so.quotation_id || "",
+        customer_name: customer?.customer_name || "No Customer",
+        customer_email: customer?.email || "",
+        customer_phone: customer?.phone || "",
+        customer_address: customer?.address || "",
+        sales_pic: "Sales Person", // TODO: Add user relation
+        items_count: so.sale_order_detail?.length || 0,
+        total_amount: so.grand_total ? Number(so.grand_total) : 0,
+        payment_term: "Net 30", // TODO: Add payment term field
+        delivery_date: new Date().toISOString().split("T")[0], // TODO: Add delivery date
+        status: so.sale_status || so.status || "DRAFT",
+        sale_status: so.sale_status || "OPEN",
+        payment_status: so.payment_status || "UNPAID",
+        created_at: so.created_at
+          ? new Date(so.created_at).toISOString()
+          : new Date().toISOString(),
+        updated_at: so.created_at
+          ? new Date(so.created_at).toISOString()
+          : new Date().toISOString(),
+        // Add detailed items information
+        items_details:
+          so.sale_order_detail?.map((item) => ({
+            id: item.id,
+            product_name: item.product_name,
+            qty: item.qty,
+            price: item.price,
+            total: item.total || item.price * item.qty,
+          })) || [],
+      };
+    });
   };
 
   // Filter & search logic
   const filteredData = salesOrders.filter((so) => {
+    // Get customer for search matching
+    const customer = so.customers || so.quotation?.customer;
+
     const searchMatch =
       !filters.search ||
       so.sale_no.toLowerCase().includes(filters.search.toLowerCase()) ||
-      (so.quotation_id &&
-        so.quotation_id.toLowerCase().includes(filters.search.toLowerCase()));
+      (so.quotation?.quotation_no &&
+        so.quotation.quotation_no
+          .toLowerCase()
+          .includes(filters.search.toLowerCase())) ||
+      (customer?.customer_name &&
+        customer.customer_name
+          .toLowerCase()
+          .includes(filters.search.toLowerCase()));
 
     const statusMatch = !filters.status || so.status === filters.status;
     const saleStatusMatch =
@@ -216,15 +200,12 @@ export default function SalesOrdersPage() {
           text="Monitor and manage your sales order pipeline"
         />
         <div className="flex justify-center items-center p-16 w-full h-full">
-          <Card className="max-w-md">
-            <CardContent className="p-6 text-center">
-              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <p className="text-red-600 mb-4">{error}</p>
-              <Button onClick={() => window.location.reload()}>
-                Try Again
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Failed to load sales orders</p>
+            <Button onClick={refresh} variant="outline">
+              Retry
+            </Button>
+          </div>
         </div>
       </>
     );
@@ -243,7 +224,7 @@ export default function SalesOrdersPage() {
         <Link href="/crm/sales-orders/new">
           <Button className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            Add New Sales Order
+            New Sales Order
           </Button>
         </Link>
       </div>
@@ -256,25 +237,33 @@ export default function SalesOrdersPage() {
       <div className="grid grid-cols-1 gap-6 mt-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Sales Orders</span>
-              <span className="text-sm font-normal text-gray-500">
-                {convertedData.length} total orders
-              </span>
-            </CardTitle>
+            <CardTitle>Sales Orders</CardTitle>
           </CardHeader>
           <CardContent>
-            <SalesOrdersTable
-              salesOrders={pagedData}
-              onUpdate={refresh} // Pass refresh to refresh data after actions
-            />
+            <SalesOrdersTable salesOrders={pagedData} onUpdate={refresh} />
+
+            {/* Pagination */}
             {totalPages > 1 && (
-              <div className="mt-4">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
+              <div className="flex justify-center mt-4 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <span className="flex items-center px-3">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
               </div>
             )}
           </CardContent>

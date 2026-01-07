@@ -12,11 +12,13 @@ const customerIdSchema = z.string().optional(); // BigInt as string
 
 // Sale order detail item schema
 const saleOrderDetailItemSchema = z.object({
-  product_id: z.string().optional(), // BigInt as string
+  id: z.string().optional(),
+  product_id: z.number().nullable().optional(),
   product_name: z.string().min(1, "Product name is required"),
+  product_code: z.string().optional(),
   price: z.number().min(0, "Price must be greater than or equal to 0"),
   qty: z.number().int().min(1, "Quantity must be at least 1"),
-  total: z.number().min(0).optional(),
+  total: z.number().min(0).optional(), // Make optional since database calculates this
   status: z.string().optional().default("ACTIVE"),
 });
 
@@ -56,6 +58,8 @@ export const createSalesOrderSchema = z.object({
   sale_status: saleStatusSchema,
   payment_status: paymentStatusSchema,
   file_po_customer: z.string().optional(),
+  // Add BOQ items - make optional with empty array default
+  boq_items: z.array(saleOrderDetailItemSchema).optional().default([]),
 });
 
 // Schema untuk update (all fields optional except required validations)
@@ -73,6 +77,8 @@ export const updateSalesOrderSchema = z.object({
   sale_status: z.string().max(30).optional(),
   payment_status: z.string().max(30).optional(),
   file_po_customer: z.string().optional(),
+  // Add BOQ items for update - completely optional
+  boq_items: z.array(saleOrderDetailItemSchema).optional(),
 });
 
 // Export base schema
@@ -114,9 +120,24 @@ export function validateSalesOrderFormData(
         data[key] = value;
       }
     }
+
+    // Handle BOQ items if present
+    const boqItemsJson = formData.get("boq_items");
+    if (boqItemsJson && typeof boqItemsJson === "string") {
+      try {
+        data.boq_items = JSON.parse(boqItemsJson);
+      } catch {
+        data.boq_items = [];
+      }
+    }
   } else {
     // Assume it's a plain object
     data = { ...formData };
+  }
+
+  // Ensure boq_items has default value if not provided
+  if (!data.boq_items) {
+    data.boq_items = [];
   }
 
   // Validate based on mode

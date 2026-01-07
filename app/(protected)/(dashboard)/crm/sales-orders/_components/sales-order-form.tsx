@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -14,38 +12,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Package,
-  FileText,
-  Users,
-  Calendar,
-  CreditCard,
-  Calculator,
-  Truck,
-  Plus,
-  Trash2,
-  Upload,
-} from "lucide-react";
-import { toast } from "react-hot-toast";
-import { ZodError } from "zod";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Upload, Plus, Trash2, Package } from "lucide-react";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { useSession } from "@/contexts/session-context";
-import { users } from "@/types/models";
-
-// Import actions
+import {
+  CreateSalesOrderData,
+  UpdateSalesOrderData,
+  validateSalesOrderFormData,
+} from "@/lib/schemas/sales-orders";
 import {
   createSalesOrderAction,
   updateSalesOrderAction,
   generateSalesOrderNumberAction,
 } from "@/app/actions/sales-orders";
-import {
-  CreateSalesOrderData,
-  UpdateSalesOrderData,
-} from "@/lib/schemas/sales-orders";
 import { getAllCustomersAction } from "@/app/actions/customers";
-import { getAllQuotationsAction } from "@/app/actions/quotations";
 import { getAllProductsAction } from "@/app/actions/products";
-import { validateSalesOrderFormData } from "@/lib/schemas/sales-orders";
+import { getAllQuotationsAction } from "@/app/actions/quotations";
+import { getSalesOrderByIdAction } from "@/app/actions/sales-orders";
+import { useSession } from "@/contexts/session-context";
+import { users } from "@/types/models";
+import { ZodError } from "zod";
+import toast from "react-hot-toast";
 
 // Add BOQ Item interface similar to quotation
 interface BoqItem {
@@ -167,6 +157,96 @@ export default function SalesOrderForm({
 
   // Add BOQ state
   const [boqItems, setBoqItems] = useState<BoqItem[]>([]);
+
+  // Load existing BOQ items for edit mode
+  useEffect(() => {
+    const loadExistingData = async () => {
+      if (mode === "edit" && salesOrder?.id) {
+        try {
+          const fullSalesOrderData = await getSalesOrderByIdAction(
+            salesOrder.id
+          );
+
+          // Update form data with all fields from database
+          setFormData((prev) => ({
+            ...prev,
+            sale_no: fullSalesOrderData.sale_no || prev.sale_no,
+            customer_id:
+              fullSalesOrderData.customer_id?.toString() || prev.customer_id,
+            quotation_id:
+              fullSalesOrderData.quotation_id?.toString() || prev.quotation_id,
+            total: Number(fullSalesOrderData.total) || prev.total,
+            discount: Number(fullSalesOrderData.discount) || prev.discount,
+            shipping: Number(fullSalesOrderData.shipping) || prev.shipping,
+            tax: Number(fullSalesOrderData.tax) || prev.tax,
+            grand_total:
+              Number(fullSalesOrderData.grand_total) || prev.grand_total,
+            status: fullSalesOrderData.status || prev.status,
+            note: fullSalesOrderData.note || prev.note,
+            sale_status: fullSalesOrderData.sale_status || prev.sale_status,
+            payment_status:
+              fullSalesOrderData.payment_status || prev.payment_status,
+            file_po_customer:
+              fullSalesOrderData.file_po_customer || prev.file_po_customer,
+          }));
+
+          // Load BOQ items from sale_order_detail
+          if (
+            fullSalesOrderData.sale_order_detail &&
+            fullSalesOrderData.sale_order_detail.length > 0
+          ) {
+            const existingItems: BoqItem[] =
+              fullSalesOrderData.sale_order_detail.map((item: any) => ({
+                id: item.id || `existing-${Date.now()}-${Math.random()}`,
+                product_id: item.product_id ? Number(item.product_id) : null,
+                product_name: item.product_name || "",
+                product_code: item.product_code || "",
+                quantity: Number(item.qty) || 1,
+                unit_price: Number(item.price) || 0,
+                total:
+                  Number(item.total) || Number(item.price) * Number(item.qty),
+              }));
+            setBoqItems(existingItems);
+          }
+
+          // Set selected customer - prioritize direct customer, fallback to quotation customer
+          const customer =
+            fullSalesOrderData.customers ||
+            fullSalesOrderData.quotation?.customer;
+          if (customer) {
+            const matchedCustomer = customerOptions.find(
+              (c) =>
+                c.id === customer.id ||
+                c.id.toString() === customer.id.toString()
+            );
+            if (matchedCustomer) {
+              setSelectedCustomer(matchedCustomer);
+            }
+          }
+
+          // Set selected quotation if exists
+          if (fullSalesOrderData.quotation_id && fullSalesOrderData.quotation) {
+            const matchedQuotation = quotationOptions.find(
+              (q) =>
+                q.id === fullSalesOrderData.quotation_id ||
+                q.id.toString() === fullSalesOrderData.quotation_id?.toString()
+            );
+            if (matchedQuotation) {
+              setSelectedQuotation(matchedQuotation);
+            }
+          }
+        } catch (error) {
+          console.error("Error loading existing sales order data:", error);
+          toast.error(
+            "Failed to load existing data: " +
+              (error instanceof Error ? error.message : "Unknown error")
+          );
+        }
+      }
+    };
+
+    loadExistingData();
+  }, [mode, salesOrder?.id, customerOptions.length, quotationOptions.length]);
 
   // Generate sales order number for new sales orders
   useEffect(() => {
@@ -440,8 +520,8 @@ export default function SalesOrderForm({
       if (error instanceof ZodError) {
         const newErrors: FormErrors = {};
         error.errors.forEach((err) => {
-          const path = err.path[0] as keyof FormErrors;
-          newErrors[path] = err.message;
+          const field = err.path.join(".");
+          newErrors[field] = err.message;
         });
         setFormErrors(newErrors);
         return false;
@@ -454,7 +534,6 @@ export default function SalesOrderForm({
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fix the form errors");
       return;
     }
 
@@ -465,6 +544,7 @@ export default function SalesOrderForm({
         const dataToSend: CreateSalesOrderData = {
           sale_no: formData.sale_no,
           quotation_id: formData.quotation_id || undefined,
+          customer_id: formData.customer_id || undefined, // Add customer_id support
           total: formData.total,
           discount: formData.discount,
           shipping: formData.shipping,
@@ -475,6 +555,16 @@ export default function SalesOrderForm({
           sale_status: formData.sale_status,
           payment_status: formData.payment_status,
           file_po_customer: formData.file_po_customer || undefined,
+          // Add BOQ items
+          boq_items: boqItems.map((item) => ({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            product_code: item.product_code,
+            price: item.unit_price,
+            qty: item.quantity,
+            total: item.total,
+            status: "ACTIVE",
+          })),
         };
 
         const result = await createSalesOrderAction(dataToSend);
@@ -482,39 +572,20 @@ export default function SalesOrderForm({
         if (result?.success) {
           toast.success("Sales order created successfully");
 
-          // Reset form for new entry
-          setFormData({
-            sale_no: "",
-            customer_id: "",
-            quotation_id: "",
-            total: 0,
-            discount: 0,
-            shipping: 0,
-            tax: 0,
-            grand_total: 0,
-            status: "DRAFT",
-            note: "",
-            sale_status: "OPEN",
-            payment_status: "UNPAID",
-            file_po_customer: "",
-          });
-
-          setSelectedCustomer(null);
-          setSelectedQuotation(null);
-          setBoqItems([]);
-          setSelectedFile(null);
-
           if (onSuccess) {
             onSuccess();
           } else {
             router.push("/crm/sales-orders");
           }
+        } else {
+          toast.error(result?.message || "Failed to create sales order");
         }
       } else {
         // Update mode
         const dataToSend: UpdateSalesOrderData = {
           sale_no: formData.sale_no,
           quotation_id: formData.quotation_id || undefined,
+          customer_id: formData.customer_id || undefined, // Add customer_id
           total: formData.total,
           discount: formData.discount,
           shipping: formData.shipping,
@@ -525,6 +596,16 @@ export default function SalesOrderForm({
           sale_status: formData.sale_status,
           payment_status: formData.payment_status,
           file_po_customer: formData.file_po_customer || undefined,
+          // Add BOQ items for update
+          boq_items: boqItems.map((item) => ({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            product_code: item.product_code,
+            price: item.unit_price,
+            qty: item.quantity,
+            total: item.total,
+            status: "ACTIVE",
+          })),
         };
 
         const result = await updateSalesOrderAction(
@@ -540,6 +621,8 @@ export default function SalesOrderForm({
           } else {
             router.push("/crm/sales-orders");
           }
+        } else {
+          toast.error(result?.message || "Failed to update sales order");
         }
       }
     } catch (error) {
@@ -557,62 +640,54 @@ export default function SalesOrderForm({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Basic Information */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Sales Order Information Card */}
-            <Card className="dark:bg-gray-800">
+            {/* Basic Info Card */}
+            <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  {mode === "add"
-                    ? "Create New Sales Order"
-                    : "Edit Sales Order"}
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="w-5 h-5" />
+                  Sales Order Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="sale_no"
-                      className="flex items-center gap-2"
-                    >
-                      <FileText className="h-4 w-4" />
-                      Sales Order Number *
-                    </Label>
-                    <Input
-                      id="sale_no"
-                      name="sale_no"
-                      value={formData.sale_no}
-                      onChange={(e) =>
-                        handleInputChange("sale_no", e.target.value)
-                      }
-                      placeholder={
-                        generatingNumber ? "Generating..." : "SO number"
-                      }
-                      disabled={generatingNumber || mode === "edit"}
-                      className={formErrors.sale_no ? "border-red-500" : ""}
-                    />
+                  {/* Sales Order Number */}
+                  <div>
+                    <Label htmlFor="sale_no">Sales Order Number *</Label>
+                    <div className="relative">
+                      <Input
+                        id="sale_no"
+                        value={formData.sale_no}
+                        onChange={(e) =>
+                          handleInputChange("sale_no", e.target.value)
+                        }
+                        disabled={generatingNumber || mode === "edit"} // Disable in edit mode
+                        placeholder="Auto-generated"
+                        className="font-mono"
+                      />
+                      {generatingNumber && (
+                        <div className="absolute right-2 top-2">
+                          <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+                        </div>
+                      )}
+                    </div>
                     {formErrors.sale_no && (
-                      <p className="text-red-500 text-sm mt-1">
+                      <p className="text-sm text-red-500 mt-1">
                         {formErrors.sale_no}
                       </p>
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="status"
-                      className="flex items-center gap-2 mb-1"
-                    >
-                      <Calendar className="h-4 w-4" />
-                      Status
-                    </Label>
+                  {/* Status */}
+                  <div>
+                    <Label htmlFor="status">Status</Label>
                     <Select
                       value={formData.status}
                       onValueChange={(value) =>
                         handleInputChange("status", value)
                       }
                     >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select status" />
+                      <SelectTrigger>
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {STATUS_OPTIONS.map((option) => (
@@ -623,430 +698,169 @@ export default function SalesOrderForm({
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
 
-                {/* Product Items Section */}
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <Label className="flex items-center gap-2 text-lg font-semibold">
-                      <Package className="h-5 w-5" />
-                      Product Items *
-                    </Label>
-                    <Button
-                      type="button"
-                      onClick={addBoqItem}
-                      className="flex items-center gap-2"
-                      size="sm"
+                  {/* Sale Status */}
+                  <div>
+                    <Label htmlFor="sale_status">Sale Status</Label>
+                    <Select
+                      value={formData.sale_status}
+                      onValueChange={(value) =>
+                        handleInputChange("sale_status", value)
+                      }
                     >
-                      <Plus className="h-4 w-4" />
-                      Add Item
-                    </Button>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SALE_STATUS_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  {boqItems.length === 0 ? (
-                    <Card>
-                      <CardContent className="p-6 text-center">
-                        <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                        <p className="text-gray-500 mb-3">No items added yet</p>
-                        <Button
-                          type="button"
-                          onClick={addBoqItem}
-                          className="flex items-center gap-2"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Add First Item
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-4">
-                      {boqItems.map((item, index) => (
-                        <Card key={item.id}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-end mb-3">
-                              <Button
-                                type="button"
-                                onClick={() => removeBoqItem(item.id!)}
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-500 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                              <div className="lg:col-span-2 space-y-2">
-                                <Label className="mb-2">Product</Label>
-                                <Select
-                                  value={
-                                    item.product_id
-                                      ? item.product_id.toString()
-                                      : "manual"
-                                  }
-                                  onValueChange={(value) =>
-                                    updateBoqItem(
-                                      item.id!,
-                                      "product_id",
-                                      value === "manual" ? null : Number(value)
-                                    )
-                                  }
-                                >
-                                  <SelectTrigger className="mt-1">
-                                    <SelectValue placeholder="Select product">
-                                      {item.product_id ? (
-                                        <span className="truncate block max-w-[180px]">
-                                          {productOptions.find(
-                                            (p) => p.id === item.product_id
-                                          )
-                                            ? `${
-                                                productOptions.find(
-                                                  (p) =>
-                                                    p.id === item.product_id
-                                                )?.product_code
-                                              } - ${
-                                                productOptions.find(
-                                                  (p) =>
-                                                    p.id === item.product_id
-                                                )?.name
-                                              }`
-                                            : "Unknown Product"}
-                                        </span>
-                                      ) : (
-                                        "Select product"
-                                      )}
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="manual">
-                                      -- Manual Entry --
-                                    </SelectItem>
-                                    {productOptions.map((product) => (
-                                      <SelectItem
-                                        key={product.id}
-                                        value={product.id.toString()}
-                                      >
-                                        {product.product_code} - {product.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <div className="mt-2 md:mt-0">
-                                <Label className="mb-2">Quantity</Label>
-                                <Input
-                                  type="number"
-                                  value={item.quantity}
-                                  onChange={(e) =>
-                                    updateBoqItem(
-                                      item.id!,
-                                      "quantity",
-                                      Number(e.target.value) || 0
-                                    )
-                                  }
-                                  placeholder="1"
-                                  min="0"
-                                />
-                              </div>
-
-                              <div className="mt-2 md:mt-0">
-                                <Label className="mb-2">Unit Price</Label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={item.unit_price}
-                                  onChange={(e) =>
-                                    updateBoqItem(
-                                      item.id!,
-                                      "unit_price",
-                                      Number(e.target.value) || 0
-                                    )
-                                  }
-                                  placeholder="0.00"
-                                  min="0"
-                                  disabled={!!item.product_id}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                              <p className="text-sm font-medium">
-                                Total: {formatCurrency(item.total)}
-                              </p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                  {/* Payment Status */}
+                  <div>
+                    <Label htmlFor="payment_status">Payment Status</Label>
+                    <Select
+                      value={formData.payment_status}
+                      onValueChange={(value) =>
+                        handleInputChange("payment_status", value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_STATUS_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                {/* Financial Information */}
+                {/* Note */}
                 <div>
-                  <Label className="flex items-center gap-2 mb-4">
-                    <Calculator className="h-4 w-4" />
-                    Financial Summary
-                  </Label>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div className="mt-2 md:mt-0">
-                      <Label htmlFor="discount" className="mb-2">
-                        Discount (%)
-                      </Label>
-                      <Input
-                        id="discount"
-                        name="discount"
-                        type="number"
-                        step="0.01"
-                        value={formData.discount}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "discount",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        placeholder="0.00"
-                        className={formErrors.discount ? "border-red-500" : ""}
-                      />
-                    </div>
-                    <div className="mt-2 md:mt-0">
-                      <Label htmlFor="tax" className="mb-2">
-                        Tax (11%)
-                      </Label>
-                      <Input
-                        id="tax"
-                        name="tax"
-                        type="number"
-                        value={formData.tax}
-                        disabled
-                        className="bg-gray-100"
-                        placeholder="Auto"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-2 p-6 rounded-lg dark:bg-gray-800 border dark:border-gray-700">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
-                      <div>
-                        <Label className="text-sm text-gray-600">
-                          Subtotal
-                        </Label>
-                        <p className="text-lg font-semibold">
-                          {formatCurrency(formData.total)}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm text-gray-600">
-                          Discount
-                        </Label>
-                        <p className="text-lg font-semibold">
-                          {formData.discount > 0
-                            ? `-${formatCurrency(
-                                (formData.total * formData.discount) / 100
-                              )}`
-                            : "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm text-gray-600">
-                          Tax (11%)
-                        </Label>
-                        <p className="text-lg font-semibold">
-                          {formatCurrency(formData.tax)}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm text-gray-600">
-                          Grand Total
-                        </Label>
-                        <p className="text-2xl font-bold text-green-600">
-                          {formatCurrency(formData.grand_total)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <Label htmlFor="note">Note</Label>
+                  <Textarea
+                    id="note"
+                    value={formData.note}
+                    onChange={(e) => handleInputChange("note", e.target.value)}
+                    placeholder="Additional notes..."
+                    rows={3}
+                  />
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Right Column: Customer & Additional Information */}
-          <div className="space-y-6">
-            {/* Customer Information Card */}
-            <Card className="dark:bg-gray-800 border dark:border-gray-700">
-              <CardHeader className="pb-4 border-b dark:border-gray-700">
-                <CardTitle className="text-lg font-medium flex items-center gap-3 dark:text-white">
-                  <Users className="w-5 h-5" />
-                  Customer Information
-                </CardTitle>
+            {/* Customer & Quotation Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Customer & Source</CardTitle>
               </CardHeader>
-              <CardContent className="pt-6">
-                <div className="space-y-5">
-                  {/* Customer Selection - INDEPENDENT */}
-                  <div className="space-y-3">
-                    <Label
-                      htmlFor="customer_id"
-                      className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5 mb-1"
-                    >
-                      Customer <span className="text-red-500">*</span>
-                    </Label>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Customer Selection */}
+                  <div>
+                    <Label htmlFor="customer">Customer *</Label>
                     <Select
                       value={formData.customer_id}
                       onValueChange={handleCustomerSelect}
                     >
-                      <SelectTrigger className="h-11 dark:border-gray-600 dark:bg-gray-900 w-full mt-1">
+                      <SelectTrigger>
                         <SelectValue placeholder="Select customer" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">
-                          -- Select Customer --
-                        </SelectItem>
+                        <SelectItem value="none">No customer</SelectItem>
                         {customerOptions.map((customer) => (
                           <SelectItem
                             key={customer.id}
                             value={customer.id.toString()}
                           >
-                            <div className="flex flex-row gap-2">
-                              <span className="font-medium">
-                                {customer.customer_name}
-                              </span>
-                              {customer.company?.company_name && (
-                                <span className="text-sm">
-                                  {customer.company.company_name}
-                                </span>
-                              )}
-                            </div>
+                            {customer.customer_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Required: Select the customer for this sales order
-                    </p>
                   </div>
 
-                  {/* Customer Details Panel */}
-                  {selectedCustomer && (
-                    <div className="grid grid-cols-1 gap-4 mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                      <div className="gap-2">
-                        <Label className="text-xs mb-1 block">Company</Label>
-                        <Input
-                          value={selectedCustomer.company?.company_name || "—"}
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40"
-                        />
+                  {/* Quotation Selection - Optional */}
+                  <div>
+                    <Label htmlFor="quotation">From Quotation (Optional)</Label>
+                    <Select
+                      value={formData.quotation_id}
+                      onValueChange={handleQuotationSelect}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select quotation or manual" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Manual Entry</SelectItem>
+                        {quotationOptions.map((quotation) => (
+                          <SelectItem
+                            key={quotation.id}
+                            value={quotation.id.toString()}
+                          >
+                            {quotation.quotation_no}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Selected Customer Display */}
+                {selectedCustomer && (
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-2">
+                      Selected Customer
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="font-medium">Name:</span>{" "}
+                        {selectedCustomer.customer_name}
                       </div>
                       <div>
-                        <Label className="text-xs mb-1 block">Type</Label>
-                        <Input
-                          value={selectedCustomer.type || "—"}
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40"
-                        />
+                        <span className="font-medium">Email:</span>{" "}
+                        {selectedCustomer.email || "N/A"}
                       </div>
                       <div>
-                        <Label className="text-xs mb-1 block">Email</Label>
-                        <Input
-                          value={selectedCustomer.email || "—"}
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40"
-                        />
+                        <span className="font-medium">Phone:</span>{" "}
+                        {selectedCustomer.phone || "N/A"}
                       </div>
                       <div>
-                        <Label className="text-xs mb-1 block">Phone</Label>
-                        <Input
-                          value={selectedCustomer.phone || "—"}
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40"
-                        />
+                        <span className="font-medium">Type:</span>{" "}
+                        <Badge variant="outline">{selectedCustomer.type}</Badge>
                       </div>
-                      {selectedCustomer.address && (
-                        <div>
-                          <Label className="text-xs mb-1 block">Address</Label>
-                          <Textarea
-                            value={selectedCustomer.address}
-                            disabled
-                            className="bg-gray-100 dark:bg-gray-800/40 min-h-[60px]"
-                          />
-                        </div>
-                      )}
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                )}
 
-            {/* Quotation Reference Card */}
-            <Card className="dark:bg-gray-800 border dark:border-gray-700">
-              <CardHeader className="pb-4 border-b dark:border-gray-700">
-                <CardTitle className="text-lg font-medium flex items-center gap-3 dark:text-white">
-                  <FileText className="w-5 h-5" />
-                  Reference Quotation
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="space-y-3">
-                  <Label className="font-medium text-gray-900 dark:text-gray-100">
-                    Quotation (Optional)
-                  </Label>
-                  <Select
-                    value={formData.quotation_id}
-                    onValueChange={handleQuotationSelect}
-                  >
-                    <SelectTrigger className="h-11 dark:border-gray-600 dark:bg-gray-900 w-full">
-                      <SelectValue placeholder="Select quotation (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">-- No Quotation --</SelectItem>
-                      {quotationOptions.map((quotation) => (
-                        <SelectItem
-                          key={quotation.id}
-                          value={quotation.id.toString()}
-                        >
-                          {quotation.quotation_no} -{" "}
-                          {quotation.customer?.customer_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Optional: If this sales order is based on an existing
-                    quotation, select it here. This will auto-fill customer and
-                    product details.
-                  </p>
-                </div>
-
-                {/* Selected Quotation Info */}
+                {/* Selected Quotation Display */}
                 {selectedQuotation && (
-                  <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                    <h4 className="font-medium mb-3">Quotation Details</h4>
-                    <div className="grid grid-cols-1 gap-3">
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-green-900 mb-2">
+                      Source Quotation
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
                       <div>
-                        <Label className="text-xs mb-1 block">
-                          Quotation No
-                        </Label>
-                        <Input
-                          value={selectedQuotation.quotation_no}
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40"
-                        />
+                        <span className="font-medium">Number:</span>{" "}
+                        {selectedQuotation.quotation_no}
                       </div>
                       <div>
-                        <Label className="text-xs mb-1 block">Total</Label>
-                        <Input
-                          value={formatCurrency(selectedQuotation.total || 0)}
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40"
-                        />
+                        <span className="font-medium">Total:</span>{" "}
+                        {formatCurrency(selectedQuotation.grand_total || 0)}
                       </div>
                       <div>
-                        <Label className="text-xs mb-1 block">Status</Label>
-                        <Input
-                          value={selectedQuotation.status}
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40 capitalize"
-                        />
+                        <span className="font-medium">Status:</span>{" "}
+                        <Badge variant="outline">
+                          {selectedQuotation.status}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -1054,147 +868,289 @@ export default function SalesOrderForm({
               </CardContent>
             </Card>
 
-            {/* Additional Information Card */}
-            <Card className="dark:bg-gray-800 border dark:border-gray-700">
-              <CardHeader className="pb-4 border-b dark:border-gray-700">
-                <CardTitle className="text-lg font-medium flex items-center gap-3 dark:text-white">
-                  <FileText className="w-5 h-5" />
-                  Additional Information
+            {/* BOQ Items Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Bill of Quantities (BOQ)</CardTitle>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addBoqItem}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Item
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {boqItems.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No items added yet. Click "Add Item" to start.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {boqItems.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className="border border-gray-200 rounded-lg p-4 space-y-3"
+                      >
+                        <div className="flex justify-between items-start">
+                          <span className="text-sm font-medium text-gray-700">
+                            Item {index + 1}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeBoqItem(item.id!)}
+                            className="text-red-500 hover:text-red-700 h-8 w-8 p-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                          {/* Product Selection */}
+                          <div className="lg:col-span-2">
+                            <Label>Product</Label>
+                            <Select
+                              value={item.product_id?.toString() || "manual"}
+                              onValueChange={(value) =>
+                                updateBoqItem(
+                                  item.id!,
+                                  "product_id",
+                                  value === "manual" ? null : Number(value)
+                                )
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="manual">
+                                  Manual Entry
+                                </SelectItem>
+                                {productOptions.map((product) => (
+                                  <SelectItem
+                                    key={product.id}
+                                    value={product.id.toString()}
+                                  >
+                                    {product.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Product Name (Manual) */}
+                          <div className="lg:col-span-2">
+                            <Label>Product Name *</Label>
+                            <Input
+                              value={item.product_name}
+                              onChange={(e) =>
+                                updateBoqItem(
+                                  item.id!,
+                                  "product_name",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Enter product name"
+                            />
+                          </div>
+
+                          {/* Quantity */}
+                          <div>
+                            <Label>Quantity *</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) =>
+                                updateBoqItem(
+                                  item.id!,
+                                  "quantity",
+                                  Number(e.target.value)
+                                )
+                              }
+                            />
+                          </div>
+
+                          {/* Unit Price */}
+                          <div>
+                            <Label>Unit Price *</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.unit_price}
+                              disabled
+                              onChange={(e) =>
+                                updateBoqItem(
+                                  item.id!,
+                                  "unit_price",
+                                  Number(e.target.value)
+                                )
+                              }
+                            />
+                          </div>
+
+                          {/* Total (Read-only) */}
+                          <div className="lg:col-span-3">
+                            <Label>Total</Label>
+                            <Input
+                              value={formatCurrency(item.total)}
+                              disabled
+                              className="bg-gray-50"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column: Summary & Actions */}
+          <div className="space-y-6">
+            {/* Financial Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Financial Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Subtotal */}
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span className="font-mono">
+                    {formatCurrency(formData.total)}
+                  </span>
+                </div>
+
+                {/* Discount */}
+                <div className="space-y-2">
+                  <Label htmlFor="discount">Discount (%)</Label>
+                  <Input
+                    id="discount"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={formData.discount}
+                    onChange={(e) =>
+                      handleInputChange("discount", Number(e.target.value))
+                    }
+                  />
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Discount Amount:</span>
+                    <span>
+                      -
+                      {formatCurrency(
+                        (formData.total * formData.discount) / 100
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* After Discount */}
+                <div className="flex justify-between">
+                  <span>After Discount:</span>
+                  <span className="font-mono">
+                    {formatCurrency(
+                      formData.total -
+                        (formData.total * formData.discount) / 100
+                    )}
+                  </span>
+                </div>
+
+                {/* Tax */}
+                <div className="flex justify-between">
+                  <span>Tax (11%):</span>
+                  <span className="font-mono">
+                    {formatCurrency(formData.tax)}
+                  </span>
+                </div>
+
+                {/* Shipping (Always 0) */}
+                <div className="flex justify-between text-gray-500">
+                  <span>Shipping:</span>
+                  <span className="font-mono">{formatCurrency(0)}</span>
+                </div>
+
+                <Separator />
+
+                {/* Grand Total */}
+                <div className="flex justify-between text-lg font-semibold">
+                  <span>Grand Total:</span>
+                  <span className="font-mono">
+                    {formatCurrency(formData.grand_total)}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* File Upload */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  Customer PO File
                 </CardTitle>
               </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <Input
+                    type="file"
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  />
+                  {formData.file_po_customer && (
+                    <div className="text-sm text-green-600">
+                      File: {formData.file_po_customer}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Action Buttons */}
+            <Card>
               <CardContent className="pt-6">
-                <div className="space-y-5">
-                  {/* Sales & Payment Status */}
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <Label className="mb-2" htmlFor="sale_status">
-                        Sale Status
-                      </Label>
-                      <Select
-                        value={formData.sale_status}
-                        onValueChange={(value) =>
-                          handleInputChange("sale_status", value)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select sale status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SALE_STATUS_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label
-                        htmlFor="payment_status"
-                        className="flex items-center gap-2 mb-2"
-                      >
-                        <CreditCard className="h-4 w-4" />
-                        Payment Status
-                      </Label>
-                      <Select
-                        value={formData.payment_status}
-                        onValueChange={(value) =>
-                          handleInputChange("payment_status", value)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select payment status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PAYMENT_STATUS_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  <div>
-                    <Label className="mb-2" htmlFor="note">
-                      Notes
-                    </Label>
-                    <Textarea
-                      id="note"
-                      name="note"
-                      value={formData.note}
-                      onChange={(e) =>
-                        handleInputChange("note", e.target.value)
-                      }
-                      placeholder="Additional notes..."
-                      rows={3}
-                      className={formErrors.note ? "border-red-500" : ""}
-                    />
-                  </div>
-
-                  {/* Customer PO File Upload */}
-                  <div>
-                    <Label
-                      htmlFor="file_po_customer"
-                      className="flex items-center gap-2 mb-2"
-                    >
-                      <Upload className="h-4 w-4" />
-                      Customer PO File
-                    </Label>
-                    <Input
-                      id="file_po_customer"
-                      name="file_po_customer"
-                      type="file"
-                      onChange={handleFileChange}
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      className="cursor-pointer"
-                    />
-                    {formData.file_po_customer && (
-                      <p className="text-sm text-gray-600 mt-2">
-                        Selected: {formData.file_po_customer}
-                      </p>
+                <div className="space-y-3">
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={loading}
+                    size="lg"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                        {mode === "add" ? "Creating..." : "Updating..."}
+                      </>
+                    ) : (
+                      `${mode === "add" ? "Create" : "Update"} Sales Order`
                     )}
-                    <p className="text-sm text-gray-500 mt-1">
-                      Upload customer purchase order file (PDF, DOC, Image
-                      formats)
-                    </p>
-                  </div>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={onClose}
+                    disabled={loading}
+                  >
+                    Cancel
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
-
-        {/* Action Buttons */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex gap-4">
-              <Button
-                type="submit"
-                disabled={loading || generatingNumber}
-                className="flex-1"
-              >
-                {loading
-                  ? "Saving..."
-                  : mode === "add"
-                  ? "Create Sales Order"
-                  : "Update Sales Order"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose || (() => router.back())}
-                disabled={loading}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </form>
     </div>
   );

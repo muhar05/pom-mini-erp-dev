@@ -6,6 +6,7 @@ export interface SalesOrder {
   id: string;
   sale_no: string;
   quotation_id?: string | null;
+  customer_id?: number | null; // Add customer_id support
   total?: number | null;
   discount?: number | null;
   shipping?: number | null;
@@ -17,7 +18,7 @@ export interface SalesOrder {
   payment_status?: string | null;
   file_po_customer?: string | null;
   created_at?: Date | null;
-  // Add relations
+  // Quotation relation (for quotation-based sales orders)
   quotation?: {
     id: number;
     quotation_no: string;
@@ -29,6 +30,15 @@ export interface SalesOrder {
       address?: string | null;
       type?: string | null;
     } | null;
+  } | null;
+  // Direct customer relation (for direct sales orders)
+  customers?: {
+    id: number;
+    customer_name: string;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    type?: string | null;
   } | null;
   sale_order_detail?: {
     id: string;

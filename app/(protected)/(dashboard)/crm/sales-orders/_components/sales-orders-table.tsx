@@ -9,10 +9,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import SalesOrderActions from "./sales-order-actions";
-import SalesOrderDetailDrawer from "./sales-order-detail-drawer";
+import { Button } from "@/components/ui/button";
+import { Eye, Edit, Trash2, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import SalesOrderDeleteDialog from "./sales-order-delete-dialog";
 import { formatDate } from "@/utils/formatDate";
-import { useState } from "react";
+import { formatCurrency } from "@/utils/formatCurrency";
+import Link from "next/link";
+import { useSession } from "@/contexts/session-context";
+import { getSalesOrderPermissions } from "@/utils/salesOrderPermissions";
 
 type SalesOrder = {
   id: string;
@@ -33,7 +44,6 @@ type SalesOrder = {
   payment_status?: string;
   created_at: string;
   updated_at: string;
-  // Add detailed item information
   items_details?: Array<{
     id: string;
     product_name: string;
@@ -45,7 +55,7 @@ type SalesOrder = {
 
 interface SalesOrdersTableProps {
   salesOrders: SalesOrder[];
-  onUpdate?: () => void; // Add callback for updates
+  onUpdate?: () => void;
 }
 
 // Enhanced status badge styling
@@ -87,84 +97,73 @@ export default function SalesOrdersTable({
   salesOrders,
   onUpdate,
 }: SalesOrdersTableProps) {
-  const [selectedSalesOrder, setSelectedSalesOrder] =
-    useState<SalesOrder | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { user } = useSession();
 
-  const handleRowClick = (salesOrder: SalesOrder) => {
-    setSelectedSalesOrder(salesOrder);
-    setIsDrawerOpen(true);
-  };
-
-  const handleCloseDrawer = () => {
-    setIsDrawerOpen(false);
-    setSelectedSalesOrder(null);
+  const handleDeleteSuccess = () => {
+    onUpdate?.(); // Refresh table data
   };
 
   return (
-    <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>No</TableHead>
-            <TableHead>SO No</TableHead>
-            <TableHead>From Quotation</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Items</TableHead>
-            <TableHead>Total Amount</TableHead>
-            <TableHead>Sale Status</TableHead>
-            <TableHead>Payment Status</TableHead>
-            <TableHead>Created At</TableHead>
-            <TableHead>Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {salesOrders.map((salesOrder, idx) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>No</TableHead>
+          <TableHead>SO No</TableHead>
+          <TableHead>From Quotation</TableHead>
+          <TableHead>Customer</TableHead>
+          <TableHead>Items</TableHead>
+          <TableHead>Total Amount</TableHead>
+          <TableHead>Sale Status</TableHead>
+          <TableHead>Payment Status</TableHead>
+          <TableHead>Created At</TableHead>
+          <TableHead className="w-[150px]">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {salesOrders.map((salesOrder, idx) => {
+          return (
             <TableRow
               key={salesOrder.id}
-              onClick={() => handleRowClick(salesOrder)}
-              className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              className="hover:bg-gray-50 dark:hover:bg-gray-800/50"
             >
               <TableCell>{idx + 1}</TableCell>
               <TableCell className="font-medium">{salesOrder.so_no}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">
-                    {salesOrder.quotation_no === "Direct Order" ? (
-                      <span className="text-orange-600">Direct Order</span>
-                    ) : (
-                      salesOrder.quotation_no || salesOrder.quotation_id || "-"
-                    )}
+                    {salesOrder.quotation_no}
                   </Badge>
                 </div>
               </TableCell>
               <TableCell>
                 <div>
-                  <div className="font-medium">
-                    {salesOrder.customer_name || "Unknown Customer"}
+                  <div className="font-medium text-sm">
+                    {salesOrder.customer_name}
                   </div>
-                  <div className="text-sm text-gray-500">
-                    {salesOrder.customer_email ||
-                      salesOrder.customer_phone ||
-                      "No contact info"}
-                  </div>
+                  {salesOrder.customer_email && (
+                    <div className="text-xs text-gray-500">
+                      {salesOrder.customer_email}
+                    </div>
+                  )}
                 </div>
               </TableCell>
               <TableCell>
                 <div className="flex flex-col">
-                  <span className="font-medium">
-                    {salesOrder.items_count} items
+                  <span className="font-medium text-sm">
+                    {salesOrder.items_count} item(s)
                   </span>
                   {salesOrder.items_details &&
                     salesOrder.items_details.length > 0 && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        {salesOrder.items_details.slice(0, 2).map((item, i) => (
-                          <div key={i} className="truncate max-w-[120px]">
-                            {item.product_name} ({item.qty}x)
-                          </div>
-                        ))}
+                      <div className="text-xs text-gray-500 max-w-[200px]">
+                        {salesOrder.items_details
+                          .slice(0, 2)
+                          .map((item, idx) => (
+                            <div key={idx} className="truncate">
+                              {item.product_name} (x{item.qty})
+                            </div>
+                          ))}
                         {salesOrder.items_details.length > 2 && (
-                          <div className="text-xs text-blue-600">
+                          <div className="text-xs text-gray-400">
                             +{salesOrder.items_details.length - 2} more...
                           </div>
                         )}
@@ -174,81 +173,115 @@ export default function SalesOrdersTable({
               </TableCell>
               <TableCell>
                 <div className="font-medium">
-                  {salesOrder.total_amount.toLocaleString("id-ID", {
-                    style: "currency",
-                    currency: "IDR",
-                  })}
+                  {formatCurrency(salesOrder.total_amount)}
                 </div>
               </TableCell>
               <TableCell>
                 <Badge
-                  className={`text-xs ${getStatusBadgeClass(
+                  variant="outline"
+                  className={getStatusBadgeClass(
                     salesOrder.sale_status || salesOrder.status
-                  )}`}
+                  )}
                 >
                   {salesOrder.sale_status || salesOrder.status}
                 </Badge>
               </TableCell>
               <TableCell>
                 <Badge
-                  className={`text-xs ${getPaymentBadgeClass(
-                    salesOrder.payment_status || "UNPAID"
-                  )}`}
+                  variant="outline"
+                  className={getPaymentBadgeClass(
+                    salesOrder.payment_status || "unpaid"
+                  )}
                 >
-                  {salesOrder.payment_status || "UNPAID"}
+                  {salesOrder.payment_status || "Unpaid"}
                 </Badge>
               </TableCell>
               <TableCell>{formatDate(salesOrder.created_at)}</TableCell>
-              <TableCell onClick={(e) => e.stopPropagation()}>
-                <SalesOrderActions
-                  salesOrder={salesOrder}
-                  onEdit={() => {}}
-                  onDelete={() => {}}
-                  onUpdate={onUpdate}
-                />
-              </TableCell>
-            </TableRow>
-          ))}
-          {salesOrders.length === 0 && (
-            <TableRow>
-              <TableCell
-                colSpan={10}
-                className="text-center py-8 text-gray-500"
-              >
-                <div className="flex flex-col items-center gap-2">
-                  <p>No sales orders found.</p>
-                  <p className="text-sm">
-                    Sales Orders can be created from{" "}
-                    <a
-                      href="/crm/quotations"
-                      className="text-blue-600 hover:underline font-medium"
-                    >
-                      approved quotations
-                    </a>{" "}
-                    or{" "}
-                    <a
-                      href="/crm/sales-orders/add"
-                      className="text-blue-600 hover:underline font-medium"
-                    >
-                      created directly
-                    </a>
-                    .
-                  </p>
+              <TableCell>
+                {/* Actions Buttons */}
+                <div className="flex gap-1 items-center">
+                  {/* More Actions Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                        title="More Actions"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href={`/crm/sales-orders/${salesOrder.id}`}
+                          className="flex items-center"
+                        >
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Full Details
+                        </Link>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href={`/crm/sales-orders/${salesOrder.id}/edit`}
+                          className="flex items-center"
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit Sales Order
+                        </Link>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+                      <SalesOrderDeleteDialog
+                        salesOrder={salesOrder}
+                        trigger={
+                          <DropdownMenuItem
+                            onSelect={(e) => e.preventDefault()}
+                            className="text-red-600 focus:text-red-600 flex items-center cursor-pointer"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Sales Order
+                          </DropdownMenuItem>
+                        }
+                        onDelete={handleDeleteSuccess}
+                      />
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </TableCell>
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
-
-      {/* Sales Order Detail Drawer */}
-      <SalesOrderDetailDrawer
-        salesOrder={selectedSalesOrder}
-        isOpen={isDrawerOpen}
-        onClose={handleCloseDrawer}
-        onEdit={() => {}}
-        onDelete={() => {}}
-      />
-    </>
+          );
+        })}
+        {salesOrders.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+              <div className="flex flex-col items-center gap-2">
+                <p>No sales orders found.</p>
+                <p className="text-sm">
+                  Sales Orders can be created from{" "}
+                  <a
+                    href="/crm/quotations"
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    approved quotations
+                  </a>{" "}
+                  or{" "}
+                  <a
+                    href="/crm/sales-orders/add"
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    created directly
+                  </a>
+                  .
+                </p>
+              </div>
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
   );
 }

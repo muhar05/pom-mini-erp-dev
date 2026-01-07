@@ -1,6 +1,6 @@
-import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { z } from "zod";
 
 // Base field schemas
 const saleNoSchema = z
@@ -144,6 +144,13 @@ export type UpdateSalesOrderInput = Prisma.sales_ordersUpdateInput;
 export async function createSalesOrderDb(input: CreateSalesOrderInput) {
   return prisma.sales_orders.create({
     data: input,
+    include: {
+      quotation: {
+        include: { customer: true },
+      },
+      customers: true, // Include direct customer relation
+      sale_order_detail: true,
+    },
   });
 }
 
@@ -155,6 +162,13 @@ export async function updateSalesOrderDb(
   return prisma.sales_orders.update({
     where: { id: BigInt(id) },
     data,
+    include: {
+      quotation: {
+        include: { customer: true },
+      },
+      customers: true, // Include direct customer relation
+      sale_order_detail: true,
+    },
   });
 }
 
@@ -173,13 +187,11 @@ export async function getSalesOrderByIdDb(id: string) {
       quotation: {
         include: { customer: true },
       },
+      customers: true, // Include direct customer relation
+      sale_order_detail: true,
     },
   });
   if (!salesOrder) throw new Error("Sales order not found");
-
-  const saleOrderDetails = await prisma.sale_order_detail.findMany({
-    where: { sale_id: salesOrder.id },
-  });
 
   // Convert Decimal and BigInt fields to safe types for client
   const safeSalesOrder = {
@@ -188,6 +200,7 @@ export async function getSalesOrderByIdDb(id: string) {
     quotation_id: salesOrder.quotation_id
       ? Number(salesOrder.quotation_id)
       : null,
+    customer_id: salesOrder.customer_id ? Number(salesOrder.customer_id) : null,
     total: salesOrder.total ? Number(salesOrder.total) : 0,
     discount: salesOrder.discount ? Number(salesOrder.discount) : 0,
     shipping: salesOrder.shipping ? Number(salesOrder.shipping) : 0,
@@ -234,15 +247,19 @@ export async function getSalesOrderByIdDb(id: string) {
       }
     : null;
 
-  // Convert sale order details
-  const safeSaleOrderDetails = saleOrderDetails.map((detail) => ({
-    ...detail,
-    id: detail.id.toString(),
-    sale_id: detail.sale_id.toString(),
-    product_id: detail.product_id ? detail.product_id.toString() : null,
-    price: Number(detail.price),
-    total: detail.total ? Number(detail.total) : null,
-  }));
+  // Convert sale order details - ENSURE ALL DECIMAL FIELDS ARE CONVERTED
+  const safeSaleOrderDetails = salesOrder.sale_order_detail
+    ? salesOrder.sale_order_detail.map((detail) => ({
+        id: detail.id.toString(),
+        sale_id: detail.sale_id.toString(),
+        product_id: detail.product_id ? detail.product_id.toString() : null,
+        product_name: detail.product_name,
+        price: Number(detail.price), // Convert Decimal to number
+        qty: Number(detail.qty), // Ensure qty is number
+        total: detail.total ? Number(detail.total) : 0, // Convert Decimal to number, default to 0
+        status: detail.status,
+      }))
+    : [];
 
   return {
     ...safeSalesOrder,
@@ -253,21 +270,54 @@ export async function getSalesOrderByIdDb(id: string) {
 
 // GET ALL
 export async function getAllSalesOrdersDb() {
-  return prisma.sales_orders.findMany({
+  const salesOrders = await prisma.sales_orders.findMany({
+    orderBy: { created_at: "desc" },
     include: {
       quotation: {
         include: { customer: true },
       },
+      customers: true, // Include direct customer relation
       sale_order_detail: true,
     },
-    orderBy: { created_at: "desc" },
   });
+
+  return salesOrders.map((so) => ({
+    ...so,
+    id: so.id.toString(),
+    quotation_id: so.quotation_id ? so.quotation_id.toString() : null,
+    customer_id: so.customer_id ? so.customer_id.toString() : null,
+    total: so.total ? Number(so.total) : 0,
+    discount: so.discount ? Number(so.discount) : 0,
+    shipping: so.shipping ? Number(so.shipping) : 0,
+    tax: so.tax ? Number(so.tax) : 0,
+    grand_total: so.grand_total ? Number(so.grand_total) : 0,
+    // Include full relations
+    quotation: so.quotation
+      ? {
+          ...so.quotation,
+          customer: so.quotation.customer,
+        }
+      : null,
+    customers: so.customers,
+    sale_order_detail: so.sale_order_detail
+      ? so.sale_order_detail.map((detail) => ({
+          id: detail.id.toString(),
+          sale_id: detail.sale_id.toString(),
+          product_id: detail.product_id ? detail.product_id.toString() : null,
+          product_name: detail.product_name,
+          price: Number(detail.price), // Convert Decimal to number
+          qty: Number(detail.qty), // Ensure qty is number
+          total: detail.total ? Number(detail.total) : 0, // Convert Decimal to number
+          status: detail.status,
+        }))
+      : [],
+  }));
 }
 
 // ADD new function for checking conversion
 export async function checkQuotationConversionDb(quotationId: number) {
-  const existingSalesOrder = await prisma.sales_orders.findFirst({
+  const existingSO = await prisma.sales_orders.findFirst({
     where: { quotation_id: quotationId },
   });
-  return !!existingSalesOrder;
+  return !!existingSO;
 }

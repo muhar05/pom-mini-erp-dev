@@ -3,7 +3,9 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
 export type SOItem = {
+  product_id?: number | null;
   product_name: string;
+  product_code?: string;
   price: number;
   qty: number;
   total: number;
@@ -57,7 +59,7 @@ const SalesOrderExport = forwardRef<SOExportHandle, Props>(
       notes,
       project,
       signatureName,
-      fileName = "sales-order.pdf",
+      fileName = "invoice.pdf",
       status,
       saleStatus,
       paymentStatus,
@@ -148,6 +150,7 @@ const SalesOrderExport = forwardRef<SOExportHandle, Props>(
             )}
           </div>
         </div>
+
         {/* Garis tebal */}
         <div
           style={{
@@ -185,7 +188,7 @@ const SalesOrderExport = forwardRef<SOExportHandle, Props>(
             <table style={{ fontSize: 11, float: "right" }}>
               <tbody>
                 <tr>
-                  <td style={{ fontWeight: 700, width: 90 }}>SO No</td>
+                  <td style={{ fontWeight: 700, width: 90 }}>Invoice No</td>
                   <td>: {soNumber}</td>
                 </tr>
                 <tr>
@@ -205,66 +208,6 @@ const SalesOrderExport = forwardRef<SOExportHandle, Props>(
           </div>
         </div>
 
-        {/* Status Badges */}
-        {(status || saleStatus || paymentStatus) && (
-          <div style={{ marginBottom: 12 }}>
-            <table style={{ fontSize: 10 }}>
-              <tbody>
-                <tr>
-                  {status && (
-                    <td style={{ paddingRight: 10 }}>
-                      <span
-                        style={{
-                          backgroundColor: getStatusColor(status),
-                          color: "#fff",
-                          padding: "4px 8px",
-                          borderRadius: 4,
-                          fontSize: 9,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Status: {status}
-                      </span>
-                    </td>
-                  )}
-                  {saleStatus && (
-                    <td style={{ paddingRight: 10 }}>
-                      <span
-                        style={{
-                          backgroundColor: getStatusColor(saleStatus),
-                          color: "#fff",
-                          padding: "4px 8px",
-                          borderRadius: 4,
-                          fontSize: 9,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Sale: {saleStatus}
-                      </span>
-                    </td>
-                  )}
-                  {paymentStatus && (
-                    <td>
-                      <span
-                        style={{
-                          backgroundColor: getStatusColor(paymentStatus),
-                          color: "#fff",
-                          padding: "4px 8px",
-                          borderRadius: 4,
-                          fontSize: 9,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Payment: {paymentStatus}
-                      </span>
-                    </td>
-                  )}
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
-
         {/* Judul */}
         <div
           style={{
@@ -276,7 +219,7 @@ const SalesOrderExport = forwardRef<SOExportHandle, Props>(
             color: "#222",
           }}
         >
-          SALES ORDER
+          INVOICE
         </div>
 
         {/* Table of Items */}
@@ -291,22 +234,24 @@ const SalesOrderExport = forwardRef<SOExportHandle, Props>(
           <thead>
             <tr>
               <th style={thCell}>No</th>
-              <th style={thCell}>Product Name</th>
+              <th style={thCell}>Part No</th>
+              <th style={thCell}>Description</th>
               <th style={thCell}>Qty</th>
+              <th style={thCell}>Unit</th>
               <th style={thCell}>Unit Price</th>
               <th style={thCell}>Total Price</th>
-              <th style={thCell}>Status</th>
             </tr>
           </thead>
           <tbody>
             {items.map((it, i) => (
               <tr key={i}>
                 <td style={tdCellCenter}>{i + 1}</td>
+                <td style={tdCellCenter}>{it.product_code || "-"}</td>
                 <td style={tdCellLeft}>{it.product_name}</td>
                 <td style={tdCellRight}>{it.qty}</td>
+                <td style={tdCellCenter}>pcs</td>
                 <td style={tdCellRight}>{fmt(it.price)}</td>
                 <td style={tdCellRight}>{fmt(it.total)}</td>
-                <td style={tdCellCenter}>{it.status || "ACTIVE"}</td>
               </tr>
             ))}
           </tbody>
@@ -356,7 +301,7 @@ const SalesOrderExport = forwardRef<SOExportHandle, Props>(
         <div style={{ marginTop: 48, textAlign: "right" }}>
           <div>Best Regards,</div>
           <div style={{ marginTop: 48, fontWeight: 700, fontSize: 13 }}>
-            {signatureName}
+            {signatureName || "Sales Manager"}
           </div>
         </div>
 
@@ -378,28 +323,6 @@ const SalesOrderExport = forwardRef<SOExportHandle, Props>(
     );
   }
 );
-
-// Helper function to get status colors
-function getStatusColor(status: string): string {
-  switch (status?.toLowerCase()) {
-    case "draft":
-      return "#6b7280"; // gray
-    case "open":
-      return "#3b82f6"; // blue
-    case "confirmed":
-      return "#10b981"; // green
-    case "completed":
-      return "#8b5cf6"; // purple
-    case "cancelled":
-      return "#ef4444"; // red
-    case "paid":
-      return "#10b981"; // green
-    case "unpaid":
-      return "#f59e0b"; // yellow
-    default:
-      return "#6b7280"; // gray
-  }
-}
 
 // Table cell styles
 const thCell = {

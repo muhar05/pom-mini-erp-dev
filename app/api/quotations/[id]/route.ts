@@ -13,8 +13,11 @@ import {
 } from "@/utils/quotationPermissions";
 
 // GET: Ambil quotation by ID
-export async function GET(req: Request, context: { params: { id: string } }) {
-  const { params } = context;
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ id: string }> | { id: string } }
+) {
+  const params = await Promise.resolve(context.params);
   const session = await auth();
   const user = session?.user;
   if (!user) {
@@ -22,7 +25,16 @@ export async function GET(req: Request, context: { params: { id: string } }) {
   }
 
   try {
-    const quotation = await getQuotationByIdDb(Number(params.id));
+    const quotationId = Number(params.id);
+    if (isNaN(quotationId)) {
+      return NextResponse.json(
+        { error: "Invalid quotation ID" },
+        { status: 400 }
+      );
+    }
+
+    const quotation = await getQuotationByIdDb(quotationId);
+
     // Konversi Decimal ke number
     const safeQuotation = {
       ...quotation,
@@ -34,6 +46,16 @@ export async function GET(req: Request, context: { params: { id: string } }) {
     };
     return NextResponse.json(safeQuotation);
   } catch (error) {
+    console.error("Error fetching quotation:", error);
+
+    // Handle specific error cases
+    if (error instanceof Error && error.message === "Quotation not found") {
+      return NextResponse.json(
+        { error: "Quotation not found" },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Failed to fetch quotation" },
       { status: 500 }
@@ -42,8 +64,11 @@ export async function GET(req: Request, context: { params: { id: string } }) {
 }
 
 // PUT: Update quotation
-export async function PUT(req: Request, context: { params: { id: string } }) {
-  const { params } = context;
+export async function PUT(
+  req: Request,
+  context: { params: Promise<{ id: string }> | { id: string } }
+) {
+  const params = await Promise.resolve(context.params);
   const session = await auth();
   const user = session?.user as unknown as users;
   if (!user) {
@@ -53,6 +78,13 @@ export async function PUT(req: Request, context: { params: { id: string } }) {
   try {
     const data = await req.json();
     const id = Number(params.id);
+
+    if (isNaN(id)) {
+      return NextResponse.json(
+        { error: "Invalid quotation ID" },
+        { status: 400 }
+      );
+    }
 
     // Get current quotation
     const currentQuotation = await getQuotationByIdDb(id);
@@ -112,9 +144,9 @@ export async function PUT(req: Request, context: { params: { id: string } }) {
 // DELETE: Hapus quotation
 export async function DELETE(
   req: Request,
-  context: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
-  const params = await context.params;
+  const params = await Promise.resolve(context.params);
   const session = await auth();
   const user = session?.user;
   if (!user || !isSuperuser(user)) {
@@ -123,6 +155,13 @@ export async function DELETE(
 
   try {
     const quotationId = Number(params.id);
+
+    if (isNaN(quotationId)) {
+      return NextResponse.json(
+        { error: "Invalid quotation ID" },
+        { status: 400 }
+      );
+    }
 
     // Directly try to delete - Prisma will throw P2025 if not found
     await deleteQuotationDb(quotationId);

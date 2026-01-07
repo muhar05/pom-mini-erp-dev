@@ -32,7 +32,7 @@ import LoadingSkeleton from "@/components/loading-skeleton";
 import SalesOrderExport, {
   SOExportHandle,
 } from "@/components/sales-orders/salesOrderExport";
-import { SalesOrdersPrintButton } from "@/components/sales-orders/salesOrderPrintButton";
+import { SalesOrderPrintButton } from "@/components/sales-orders/PrintButton";
 
 export default function SalesOrderDetailPage() {
   const params = useParams();
@@ -126,10 +126,15 @@ export default function SalesOrderDetailPage() {
     }
   };
 
-  // Prepare data for export
+  // Determine which customer to display (direct customer or quotation customer)
+  const customer = salesOrder.customers || salesOrder.quotation?.customer;
+
+  // Prepare data for export - format items to match the expected structure
   const exportItems =
     salesOrder.sale_order_detail?.map((item: any) => ({
+      product_id: item.product_id ? Number(item.product_id) : null,
       product_name: item.product_name || "",
+      product_code: item.product_code || "", // Add product_code if available
       price: Number(item.price) || 0,
       qty: Number(item.qty) || 0,
       total: Number(item.total) || 0,
@@ -142,32 +147,6 @@ export default function SalesOrderDetailPage() {
         title={`Sales Order ${salesOrder.sale_no}`}
         text="View sales order details and items"
       />
-
-      {/* Hidden export component */}
-      {salesOrder && (
-        <div style={{ position: "absolute", left: "-9999px", top: "-9999px" }}>
-          <SalesOrderExport
-            ref={exportRef}
-            soNumber={salesOrder.sale_no || ""}
-            date={formatDate(salesOrder.created_at)}
-            paymentTerm="Cash" // You might want to get this from the order
-            currency="IDR"
-            customerName={salesOrder.quotation?.customer?.customer_name || ""}
-            customerAddress={salesOrder.quotation?.customer?.address || ""}
-            customerEmail={salesOrder.quotation?.customer?.email || ""}
-            companyName="PT. POM MINI ERP"
-            companyAddress="Jl. Company Address"
-            companyPhone="+62 21 1234567"
-            items={exportItems}
-            notes={salesOrder.note || ""}
-            signatureName="Sales Manager"
-            fileName={`SO_${salesOrder.sale_no}.pdf`}
-            status={salesOrder.status}
-            saleStatus={salesOrder.sale_status}
-            paymentStatus={salesOrder.payment_status}
-          />
-        </div>
-      )}
 
       {/* Back Button and Actions */}
       <div className="mb-6 flex items-center justify-between">
@@ -190,11 +169,7 @@ export default function SalesOrderDetailPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>
-                <SalesOrdersPrintButton printRef={printRef} />
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDownloadPDF}>
-                <Download className="w-4 h-4 mr-2" />
-                Download PDF
+                <SalesOrderPrintButton printRef={printRef} />
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -248,14 +223,32 @@ export default function SalesOrderDetailPage() {
                     </label>
                     <p>{formatDate(salesOrder.created_at)}</p>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">
+                      Customer Type
+                    </label>
+                    <p>
+                      {salesOrder.quotation_id
+                        ? "From Quotation"
+                        : salesOrder.customer_id
+                        ? "Direct Customer"
+                        : "No Customer"}
+                    </p>
+                  </div>
                   {salesOrder.quotation && (
                     <div>
                       <label className="text-sm font-medium text-gray-500">
-                        Reference Quotation
+                        Quotation No
                       </label>
-                      <p className="font-semibold">
-                        {salesOrder.quotation.quotation_no}
-                      </p>
+                      <p>{salesOrder.quotation.quotation_no}</p>
+                    </div>
+                  )}
+                  {salesOrder.customer_id && !salesOrder.quotation_id && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">
+                        Customer ID
+                      </label>
+                      <p>{salesOrder.customer_id}</p>
                     </div>
                   )}
                 </div>
@@ -267,20 +260,30 @@ export default function SalesOrderDetailPage() {
                       <label className="text-sm font-medium text-gray-500">
                         Notes
                       </label>
-                      <p className="mt-1">{salesOrder.note}</p>
+                      <p>{salesOrder.note}</p>
                     </div>
                   </>
                 )}
               </CardContent>
             </Card>
 
-            {/* Customer Info */}
-            {salesOrder.quotation?.customer && (
+            {/* Customer Info - Show for both quotation and direct customers */}
+            {customer && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
                     Customer Information
+                    {salesOrder.quotation_id && (
+                      <Badge variant="outline" className="ml-2">
+                        From Quotation
+                      </Badge>
+                    )}
+                    {salesOrder.customer_id && !salesOrder.quotation_id && (
+                      <Badge variant="outline" className="ml-2">
+                        Direct Customer
+                      </Badge>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -289,42 +292,74 @@ export default function SalesOrderDetailPage() {
                       <label className="text-sm font-medium text-gray-500">
                         Customer Name
                       </label>
-                      <p className="font-semibold">
-                        {salesOrder.quotation.customer.customer_name}
-                      </p>
+                      <p>{customer.customer_name}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">
                         Email
                       </label>
-                      <p>{salesOrder.quotation.customer.email || "-"}</p>
+                      <p>{customer.email || "-"}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">
                         Phone
                       </label>
-                      <p>{salesOrder.quotation.customer.phone || "-"}</p>
+                      <p>{customer.phone || "-"}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">
                         Type
                       </label>
-                      <p>{salesOrder.quotation.customer.type || "-"}</p>
+                      <p>{customer.type || "-"}</p>
                     </div>
+                    {customer.company_id && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">
+                          Company ID
+                        </label>
+                        <p>{customer.company_id}</p>
+                      </div>
+                    )}
                   </div>
-                  {salesOrder.quotation.customer.address && (
+                  {customer.address && (
                     <>
                       <Separator className="my-4" />
                       <div>
                         <label className="text-sm font-medium text-gray-500">
                           Address
                         </label>
-                        <p className="mt-1">
-                          {salesOrder.quotation.customer.address}
-                        </p>
+                        <p>{customer.address}</p>
                       </div>
                     </>
                   )}
+                  {customer.note && (
+                    <>
+                      <Separator className="my-4" />
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">
+                          Customer Note
+                        </label>
+                        <p>{customer.note}</p>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Show message if no customer information is available */}
+            {!customer && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Customer Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-500 text-center py-4">
+                    No customer information available
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -342,35 +377,14 @@ export default function SalesOrderDetailPage() {
                   {salesOrder.sale_order_detail?.map(
                     (item: any, index: number) => (
                       <div key={item.id} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h4 className="font-semibold">
-                              {item.product_name}
-                            </h4>
-                            <div className="grid grid-cols-3 gap-4 mt-2">
-                              <div>
-                                <span className="text-sm text-gray-500">
-                                  Quantity:
-                                </span>
-                                <p className="font-medium">{item.qty}</p>
-                              </div>
-                              <div>
-                                <span className="text-sm text-gray-500">
-                                  Unit Price:
-                                </span>
-                                <p className="font-medium">
-                                  {formatCurrency(Number(item.price))}
-                                </p>
-                              </div>
-                              <div>
-                                <span className="text-sm text-gray-500">
-                                  Total:
-                                </span>
-                                <p className="font-medium">
-                                  {formatCurrency(Number(item.total))}
-                                </p>
-                              </div>
-                            </div>
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h4 className="font-medium">{item.product_name}</h4>
+                            {item.product_id && (
+                              <p className="text-sm text-gray-500">
+                                Product ID: {item.product_id}
+                              </p>
+                            )}
                           </div>
                           <Badge
                             className={
@@ -381,6 +395,24 @@ export default function SalesOrderDetailPage() {
                           >
                             {item.status}
                           </Badge>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">Quantity:</span>
+                            <p className="font-medium">{item.qty}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Unit Price:</span>
+                            <p className="font-medium">
+                              {formatCurrency(Number(item.price))}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Total:</span>
+                            <p className="font-medium text-green-600">
+                              {formatCurrency(Number(item.total))}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     )
@@ -451,6 +483,32 @@ export default function SalesOrderDetailPage() {
               </Card>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Komponen yang akan di-print - Hidden export component */}
+      <div style={{ display: "none" }}>
+        <div ref={printRef}>
+          <SalesOrderExport
+            ref={exportRef}
+            soNumber={salesOrder.sale_no || ""}
+            date={formatDate(salesOrder.created_at)}
+            paymentTerm="Cash" // You might want to get this from the order
+            currency="IDR"
+            customerName={customer?.customer_name || ""}
+            customerAddress={customer?.address || ""}
+            customerEmail={customer?.email || ""}
+            companyName="PT. POM MINI ERP"
+            companyAddress="Jl. Company Address"
+            companyPhone="+62 21 1234567"
+            items={exportItems}
+            notes={salesOrder.note || ""}
+            signatureName="Sales Manager"
+            fileName={`Invoice_${salesOrder.sale_no}.pdf`}
+            status={salesOrder.status}
+            saleStatus={salesOrder.sale_status}
+            paymentStatus={salesOrder.payment_status}
+          />
         </div>
       </div>
 
