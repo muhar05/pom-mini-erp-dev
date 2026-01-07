@@ -351,7 +351,9 @@ LeadFormProps) {
             required
           >
             <SelectTrigger
-              className={formErrors.location ? "border-red-500" : ""}
+              className={`w-full ${
+                formErrors.location ? "border-red-500" : ""
+              }`}
             >
               <SelectValue placeholder="Pilih lokasi" />
             </SelectTrigger>
@@ -376,6 +378,7 @@ LeadFormProps) {
                 placeholder="Contoh: Singapore"
                 disabled={loading}
                 required
+                className="w-full"
               />
             </div>
           )}
@@ -416,7 +419,9 @@ LeadFormProps) {
             return (
               <Select name="type" defaultValue={defaultVal} disabled={loading}>
                 <SelectTrigger
-                  className={formErrors.type ? "border-red-500" : ""}
+                  className={`w-full ${
+                    formErrors.type ? "border-red-500" : ""
+                  }`}
                 >
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
@@ -479,7 +484,9 @@ LeadFormProps) {
                 disabled={loading}
               >
                 <SelectTrigger
-                  className={formErrors.source ? "border-red-500" : ""}
+                  className={`w-full ${
+                    formErrors.source ? "border-red-500" : ""
+                  }`}
                 >
                   <SelectValue placeholder="Select source" />
                 </SelectTrigger>
@@ -542,7 +549,9 @@ LeadFormProps) {
                 disabled={loading}
               >
                 <SelectTrigger
-                  className={formErrors.status ? "border-red-500" : ""}
+                  className={`w-full ${
+                    formErrors.status ? "border-red-500" : ""
+                  }`}
                 >
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
@@ -571,19 +580,32 @@ LeadFormProps) {
 
         <div className="md:col-span-2 space-y-2">
           <Label htmlFor="product_interest">Product Interest</Label>
-          <WindowedSelect
-            windowThreshold={100}
-            isMulti
-            name="product_interest"
-            options={productOptions}
-            value={productInterest}
-            onChange={(newValue) =>
-              setProductInterest(Array.isArray(newValue) ? newValue : [])
-            }
-            placeholder="Select products"
-            classNamePrefix="react-select"
-            styles={selectStyles}
-          />
+          <div className="w-full">
+            <WindowedSelect
+              windowThreshold={100}
+              isMulti
+              name="product_interest"
+              options={productOptions}
+              value={productInterest}
+              onChange={(newValue) =>
+                setProductInterest(Array.isArray(newValue) ? newValue : [])
+              }
+              placeholder="Select products"
+              classNamePrefix="react-select"
+              styles={{
+                ...selectStyles,
+                container: (provided) => ({
+                  ...provided,
+                  width: "100%",
+                }),
+                control: (provided) => ({
+                  ...provided,
+                  width: "100%",
+                  minWidth: "100%",
+                }),
+              }}
+            />
+          </div>
           {formErrors.product_interest && (
             <p className="text-sm text-red-500">
               {formErrors.product_interest}
