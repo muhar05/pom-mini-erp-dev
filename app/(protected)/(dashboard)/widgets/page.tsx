@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import React from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import DefaultCardComponent from "@/app/(protected)/(dashboard)/components/default-card-component";
-import StatCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/stat-card";
-import StatsCard from "@/app/(protected)/(dashboard)/(homes)/crm/components/stats-card";
-import SalesStaticCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/sales-static-card";
-import TopCountriesCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/top-countries-card";
-import ClientPaymentStatusCard from "@/app/(protected)/(dashboard)/(homes)/crm/components/client-payment-status-card";
-import EarningStatisticsCard from "@/app/(protected)/(dashboard)/(homes)/crm/components/earning-statistics-card";
-import UserOverviewCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/user-overview-card";
+import StatCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/stat-card";
+import StatsCard from "@/app/(protected)/(dashboard)/(homes)/sales/components/stats-card";
+import SalesStaticCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/sales-static-card";
+import TopCountriesCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/top-countries-card";
+import ClientPaymentStatusCard from "@/app/(protected)/(dashboard)/(homes)/sales/components/client-payment-status-card";
+import EarningStatisticsCard from "@/app/(protected)/(dashboard)/(homes)/sales/components/earning-statistics-card";
+import UserOverviewCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/user-overview-card";
 
 const metadata: Metadata = {
   title: "Widgets & Dashboard Components | WowDash Admin Dashboard",

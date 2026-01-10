@@ -1,11 +1,17 @@
-import CrmStatCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/crm-stat-card";
-import QuotationStatusChart from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/quotation-status-chart";
-import SalesOrderStatusChart from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/sales-order-status-chart";
-import LeadStatusOverview from "@/app/(protected)/(dashboard)/(homes)/dashboard/components/lead-status-overview";
+import CrmStatCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/crm-stat-card";
+import QuotationStatusChart from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/quotation-status-chart";
+import SalesOrderStatusChart from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/sales-order-status-chart";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import LoadingSkeleton from "@/components/loading-skeleton";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { auth } from "@/auth";
+import DashboardSuperuser from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/(dashboard)/dashboard-superuser";
+import DashboardSales from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/(dashboard)/dashboard-sales";
+import DashboardWarehouse from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/(dashboard)/dashboard-warehouse";
+import DashboardFinance from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/(dashboard)/dashboard-finance";
+import DashboardPurchasing from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/(dashboard)/dashboard-purchasing";
+import DashboardManagerSales from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/(dashboard)/dashboard-manager-sales";
 
 export const metadata: Metadata = {
   title: "CRM Dashboard | POM MINI ERP",
@@ -14,6 +20,26 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
+  const session = await auth();
+  const role = session?.user?.role_name;
+
+  switch (role) {
+    case "Superuser":
+      return <DashboardSuperuser />;
+    case "Sales":
+      return <DashboardSales />;
+    case "Warehouse":
+      return <DashboardWarehouse />;
+    case "Finance":
+      return <DashboardFinance />;
+    case "Purchasing":
+      return <DashboardPurchasing />;
+    case "Manager Sales":
+      return <DashboardManagerSales />;
+    default:
+      return <div>Role tidak dikenali atau tidak ada akses.</div>;
+  }
+
   return (
     <>
       <DashboardBreadcrumb title="CRM Dashboard" text="Dashboard" />
