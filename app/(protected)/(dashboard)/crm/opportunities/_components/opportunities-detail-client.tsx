@@ -22,6 +22,7 @@ import {
   Tag,
   Info,
   Clock,
+  Repeat,
 } from "lucide-react";
 import { Opportunity } from "@/types/models";
 import {
@@ -34,6 +35,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { useUpdateOpportunityStatus } from "@/hooks/opportunities/useUpdateOpportunitiesStatus";
 
 interface OpportunityDetailClientProps {
   opportunity: Opportunity;
@@ -56,34 +58,33 @@ export default function OpportunityDetailClient({
   opportunity,
 }: OpportunityDetailClientProps) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
+  // Pakai custom hook
+  const { updateStatus, isLoading } = useUpdateOpportunityStatus(
+    opportunity.id
+  );
+
   const handleConfirm = async () => {
     if (!pendingStatus) return;
-    setIsLoading(true);
-    try {
-      await fetch(`/api/opportunities/${opportunity.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: pendingStatus }),
-      });
+    const success = await updateStatus(pendingStatus);
+    if (success) {
       setDialogOpen(false);
       setPendingStatus(null);
-      router.refresh();
-    } catch (error) {
-      console.error("Error updating status:", error);
-      alert("Failed to update status. Please try again.");
-    } finally {
-      setIsLoading(false);
     }
+  };
+
+  // Handler untuk Convert SQ
+  const handleConvertSQ = () => {
+    setPendingStatus("opp_sq");
+    setDialogOpen(true);
   };
 
   return (
     <div className="w-full mx-auto py-4 space-y-6">
       {/* Header dengan Back Button dan Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -92,6 +93,17 @@ export default function OpportunityDetailClient({
         >
           <ArrowLeft className="w-4 h-4" />
           Back
+        </Button>
+        {/* Button Convert SQ */}
+        <Button
+          variant="default"
+          size="sm"
+          className="flex items-center gap-2"
+          onClick={handleConvertSQ}
+          disabled={isLoading || opportunity.status === "opp_sq"}
+        >
+          <Repeat className="w-4 h-4" />
+          Convert SQ
         </Button>
       </div>
 
@@ -375,18 +387,18 @@ export default function OpportunityDetailClient({
         <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">
-              {pendingStatus === "Lost"
+              {pendingStatus === "opp_sq"
+                ? "Convert to SQ"
+                : pendingStatus === "Lost"
                 ? "Confirm Mark as Lost"
                 : "Confirm Status Change"}
             </DialogTitle>
             <DialogDescription className="dark:text-gray-400">
-              {pendingStatus === "Lost"
+              {pendingStatus === "opp_sq"
+                ? "Are you sure you want to convert this opportunity to SQ?"
+                : pendingStatus === "Lost"
                 ? "Are you sure you want to mark this opportunity as Lost? This action cannot be undone."
-                : `Are you sure you want to change status to ${
-                    pendingStatus === "Qualified"
-                      ? "OpportunityQualified"
-                      : pendingStatus
-                  }?`}
+                : `Are you sure you want to change status to ${pendingStatus}?`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

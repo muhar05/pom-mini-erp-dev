@@ -2,7 +2,6 @@
 
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -11,7 +10,9 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useDeleteOpportunity } from "@/hooks/opportunities/useDeleteOpportunity";
 import { useState } from "react";
+import { toast } from "react-hot-toast";
 
 type Opportunity = {
   id: string;
@@ -30,37 +31,42 @@ type Opportunity = {
 
 interface OpportunityDeleteDialogProps {
   opportunity: Opportunity;
-  trigger: React.ReactNode;
   onDelete?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export default function OpportunityDeleteDialog({
   opportunity,
-  trigger,
   onDelete,
+  open: controlledOpen,
+  onOpenChange,
 }: OpportunityDeleteDialogProps) {
-  const [loading, setLoading] = useState(false);
+  const { deleteOpportunity, isLoading } = useDeleteOpportunity();
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+
+  // Controlled or uncontrolled open state
+  const open = controlledOpen !== undefined ? controlledOpen : uncontrolledOpen;
+  const setOpen = onOpenChange || setUncontrolledOpen;
 
   const handleDelete = async () => {
-    setLoading(true);
-    try {
-      // TODO: Implement actual delete API call
-      console.log("Deleting opportunity:", opportunity.id);
+    const loadingToast = toast.loading("Deleting opportunity...");
+    const success = await deleteOpportunity(opportunity.id);
+    toast.dismiss(loadingToast);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+    if (success) {
+      toast.success(
+        `Opportunity "${opportunity.opportunity_no}" deleted successfully!`
+      );
+      setOpen(false);
       onDelete?.();
-    } catch (error) {
-      console.error("Error deleting opportunity:", error);
-    } finally {
-      setLoading(false);
+    } else {
+      toast.error("Failed to delete opportunity");
     }
   };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete Opportunity</DialogTitle>
@@ -73,17 +79,17 @@ export default function OpportunityDeleteDialog({
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline" disabled={loading}>
+            <Button type="button" variant="outline" disabled={isLoading}>
               Cancel
             </Button>
           </DialogClose>
           <Button
             type="button"
             onClick={handleDelete}
-            disabled={loading}
+            disabled={isLoading}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
-            {loading ? "Deleting..." : "Delete Opportunity"}
+            {isLoading ? "Deleting..." : "Delete Opportunity"}
           </Button>
         </DialogFooter>
       </DialogContent>

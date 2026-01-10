@@ -9,7 +9,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { formatStatusDisplay } from "@/utils/statusHelpers";
-import { MoreHorizontal, Eye, Edit } from "lucide-react";
+import { MoreHorizontal, Eye, Edit, Trash } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,18 +19,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { getStatusVariant } from "@/utils/opportunityTableHelpers";
 import { Opportunity } from "@/types/models";
+import { useUpdateOpportunityStatus } from "@/hooks/opportunities/useUpdateOpportunitiesStatus";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, Clock, Repeat } from "lucide-react";
+import OpportunityDeleteDialog from "@/app/(protected)/(dashboard)/crm/opportunities/_components/opportunity-delete-dialog";
 
 type OpportunitiesTableProps = {
   isSuperadmin?: boolean;
   data?: Opportunity[];
   onRowClick?: (item: Opportunity) => void;
   onEdit?: (item: Opportunity) => void;
-  onDelete?: (item: Opportunity) => void;
+  onDelete?: () => void; // callback untuk refresh data
 };
+
+type TableOpportunity = Opportunity & { stage: string };
 
 export default function OpportunitiesTable({
   isSuperadmin,
@@ -47,80 +62,178 @@ export default function OpportunitiesTable({
       item.status === "opp_sq"
   );
 
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedOpportunity, setSelectedOpportunity] =
+    useState<TableOpportunity | null>(null);
+
+  const { updateStatus, isLoading } = useUpdateOpportunityStatus(
+    selectedId || ""
+  );
+
+  const handleConvertSQ = (id: string) => {
+    setSelectedId(id);
+    setPendingStatus("opp_sq");
+    setDialogOpen(true);
+  };
+
+  const handleConfirm = async () => {
+    if (!pendingStatus || !selectedId) return;
+    const success = await updateStatus(pendingStatus);
+    if (success) {
+      setDialogOpen(false);
+      setPendingStatus(null);
+      setSelectedId(null);
+    }
+  };
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>No Opportunity</TableHead>
-          <TableHead>Tanggal Input</TableHead>
-          <TableHead>Nama Customer</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Perusahaan</TableHead>
-          <TableHead>Total Harga</TableHead>
-          <TableHead>Status</TableHead>
-          {/* <TableHead>Last Update</TableHead> */}
-          <TableHead>Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {filteredData.length > 0 ? (
-          filteredData.map((item, idx) => (
-            <React.Fragment key={item.id}>
-              <TableRow
-                onClick={() => onRowClick?.(item)}
-                className="cursor-pointer"
-              >
-                <TableCell>{item.opportunity_no}</TableCell>
-                <TableCell>{item.created_at}</TableCell>
-                <TableCell>{item.customer_name}</TableCell>
-                <TableCell>{item.customer_email}</TableCell>
-                <TableCell>{item.type}</TableCell>
-                <TableCell>{item.company}</TableCell>
-                <TableCell>{item.potential_value.toLocaleString()}</TableCell>
-                <TableCell>
-                  <Badge variant={getStatusVariant(item.status)}>
-                    {item.status === "opp_sq"
-                      ? "SQ"
-                      : formatStatusDisplay(item.status)}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="h-8 w-8 flex items-center justify-center rounded hover:bg-gray-100">
-                        <MoreHorizontal className="w-5 h-5" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href={`/crm/opportunities/${item.id}`}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Detail
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/crm/opportunities/${item.id}/edit`}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            </React.Fragment>
-          ))
-        ) : (
+    <>
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell colSpan={11} className="text-center py-8 text-gray-500">
-              No opportunities found.
-            </TableCell>
+            <TableHead>No Opportunity</TableHead>
+            <TableHead>Tanggal Input</TableHead>
+            <TableHead>Nama Customer</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Perusahaan</TableHead>
+            <TableHead>Potensi Nilai</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Action</TableHead>
           </TableRow>
-        )}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {filteredData.length > 0 ? (
+            filteredData.map((item, idx) => (
+              <React.Fragment key={item.id}>
+                <TableRow
+                  onClick={() => onRowClick?.(item)}
+                  className="cursor-pointer"
+                >
+                  <TableCell>{item.opportunity_no}</TableCell>
+                  <TableCell>{item.created_at}</TableCell>
+                  <TableCell>{item.customer_name}</TableCell>
+                  <TableCell>{item.customer_email}</TableCell>
+                  <TableCell>{item.type}</TableCell>
+                  <TableCell>{item.company}</TableCell>
+                  <TableCell>{item.potential_value.toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusVariant(item.status)}>
+                      {item.status === "opp_sq"
+                        ? "SQ"
+                        : formatStatusDisplay(item.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="h-8 w-8 flex items-center justify-center rounded hover:bg-gray-100">
+                          <MoreHorizontal className="w-5 h-5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href={`/crm/opportunities/${item.id}`}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Detail
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/crm/opportunities/${item.id}/edit`}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleConvertSQ(item.id)}
+                          disabled={item.status === "opp_sq"}
+                          className="cursor-pointer"
+                        >
+                          <Repeat className="mr-2 h-4 w-4" />
+                          Convert SQ
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedOpportunity({
+                              ...item,
+                              stage: (item as any).stage ?? "",
+                            });
+                            setDeleteDialogOpen(true);
+                          }}
+                          className="text-red-600 cursor-pointer"
+                        >
+                          <Trash className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              </React.Fragment>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell
+                colSpan={11}
+                className="text-center py-8 text-gray-500"
+              >
+                No opportunities found.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convert to SQ</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to convert this opportunity to SQ?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={handleConfirm}
+              disabled={isLoading}
+              className="gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <Clock className="w-4 h-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Yes, Convert
+                </>
+              )}
+            </Button>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={isLoading}>
+                Cancel
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {selectedOpportunity && (
+        <OpportunityDeleteDialog
+          opportunity={selectedOpportunity}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onDelete={() => {
+            setDeleteDialogOpen(false);
+            setSelectedOpportunity(null);
+            onDelete?.();
+          }}
+        />
+      )}
+    </>
   );
 }

@@ -115,9 +115,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
     {
       title: "Finance",
       icon: Wallet,
-      items: [
-        { title: "FAR", url: "/finance/far", icon: BadgeDollarSign },
-      ],
+      items: [{ title: "FAR", url: "/finance/far", icon: BadgeDollarSign }],
     },
 
     {
@@ -128,8 +126,6 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
         { title: "Company", url: "/settings/company", icon: Building2 },
       ],
     },
-
-    { title: "System Logs", url: "/system/logs", icon: FileText },
   ],
 
   // SALES — hanya CRM

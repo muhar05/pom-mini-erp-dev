@@ -46,9 +46,16 @@ export async function deleteOpportunityAction(id: number) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
 
-  const deleted = await deleteOpportunityDb(id);
-
-  return deleted;
+  try {
+    const deleted = await deleteOpportunityDb(id);
+    return deleted;
+  } catch (error: any) {
+    if (error.code === "P2025") {
+      // Not found
+      return null;
+    }
+    throw error;
+  }
 }
 
 // GET BY ID

@@ -24,6 +24,7 @@ export default async function OpportunityDetailPage({
         title={`Opportunity - ${opportunity.opportunity_no}`}
         text="View opportunity details"
       />
+
       <OpportunityDetailClient opportunity={opportunity} />
     </>
   );

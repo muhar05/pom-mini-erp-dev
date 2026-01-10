@@ -21,13 +21,7 @@ const DashboardBreadcrumb = ({ title, text }: BreadcrumbData) => {
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
-      <h6 className="text-2xl font-semibold">
-        {title}
-        {/* Tampilkan string Halo nama user dari session */}
-        <span className="ml-2 text-base font-normal text-neutral-500">
-          {session?.user?.name && ` | Halo ${session.user.name}`}
-        </span>
-      </h6>
+      <h6 className="text-2xl font-semibold">{title}</h6>
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>

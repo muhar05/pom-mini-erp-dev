@@ -4,11 +4,17 @@ import React, { useState } from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import OpportunitiesTable from "./_components/opportunities-table";
 import OpportunitiesFilter from "./_components/opportunity-filter";
-import { useOpportunities } from "@/hooks/useOpportunities";
+import { useOpportunities } from "@/hooks/opportunities/useOpportunities";
 
 export default function OpportunitiesPage() {
   const { opportunities, loading, setOpportunities } = useOpportunities();
   const [filters, setFilters] = useState({});
+
+  const handleRefreshData = async () => {
+    const response = await fetch("/api/opportunities");
+    const data = await response.json();
+    setOpportunities(data);
+  };
 
   return (
     <>
@@ -30,7 +36,10 @@ export default function OpportunitiesPage() {
               </div>
             </div>
           ) : (
-            <OpportunitiesTable data={opportunities} />
+            <OpportunitiesTable
+              data={opportunities}
+              onDelete={handleRefreshData}
+            />
           )}
         </div>
       </div>
