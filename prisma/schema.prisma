@@ -49,7 +49,9 @@ model products {
 model quotations {
   id               Int            @id @default(autoincrement())
   quotation_no     String         @db.VarChar(50)
-  customer_id      Int
+  customer_id      Int?
+  user_id          Int?           // <--- Tambahkan ini
+  lead_id          Int?    
   quotation_detail Json
   total            Decimal?       @default(0) @db.Decimal(18, 2)
   shipping         Decimal?       @default(0) @db.Decimal(18, 2)
@@ -63,7 +65,8 @@ model quotations {
   top              String?        @db.VarChar(50)
   created_at       DateTime?      @default(now()) @db.Timestamp(6)
   updated_at       DateTime?      @default(now()) @db.Timestamp(6)
-  customer         customers      @relation(fields: [customer_id], references: [id])
+  customer         customers?      @relation(fields: [customer_id], references: [id])
+  user             users?         @relation(fields: [user_id], references: [id]) // <--- Relasi ke users
   sales_orders     sales_orders[] @relation("QuotationToSalesOrder")
 }
 
@@ -94,6 +97,7 @@ model users {
   user_logs                      user_logs[]
   user_otp                       user_otp[]
   roles                          roles?      @relation(fields: [role_id], references: [id])
+  quotations                     quotations[] // <--- Tambahkan ini
 }
 
 model company {
@@ -210,7 +214,7 @@ model sale_order_detail {
   product_name String       @db.VarChar(255)
   price        Decimal      @db.Decimal(15, 2)
   qty          Int
-  total        Decimal?     @default(dbgenerated("(price * (qty)::numeric)")) @db.Decimal(15, 2)
+  total        Decimal?     @db.Decimal(15, 2)
   status       String?      @default("ACTIVE") @db.VarChar(30)
   sales_order  sales_orders @relation(fields: [sale_id], references: [id], onDelete: Cascade)
 }

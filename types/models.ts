@@ -62,7 +62,9 @@ export interface products {
 export interface quotations {
   id: number;
   quotation_no: string;
-  customer_id: number;
+  customer_id?: number | null;
+  user_id?: number | null; // <-- Tambahkan ini
+  lead_id?: number | null; // <-- Tambahkan ini
   quotation_detail: unknown;
   total?: number | null;
   shipping?: number | null;
@@ -76,7 +78,9 @@ export interface quotations {
   top?: string | null;
   created_at?: Date | null;
   updated_at?: Date | null;
-  customer?: customers;
+  customer?: customers | null;
+  user?: users | null; // <-- Tambahkan relasi ke users
+  lead?: leads | null; // <-- Tambahkan relasi ke leads (jika dibutuhkan)
 }
 
 // roles

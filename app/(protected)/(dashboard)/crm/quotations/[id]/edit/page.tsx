@@ -88,7 +88,6 @@ export default function QuotationEditPage() {
 
         <div className="w-full py-4">
           <QuotationForm
-            mode="edit"
             quotation={safeQuotation}
             onClose={handleClose}
             onSuccess={handleSuccess}

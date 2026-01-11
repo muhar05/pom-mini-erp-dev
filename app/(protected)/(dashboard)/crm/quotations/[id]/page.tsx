@@ -32,6 +32,15 @@ import {
   MoreVertical,
   Printer,
   Share2,
+  Phone,
+  MapPin,
+  UserCheck,
+  Star,
+  Hash,
+  Target,
+  Activity,
+  Workflow,
+  LinkIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -55,6 +64,7 @@ import { id as localeId } from "date-fns/locale";
 import { useQuotationDetail } from "@/hooks/quotations/useQuotationDetail";
 import { useProductById } from "@/hooks/products/useProductById";
 import QuotationExport from "@/components/quotations/quotationExport";
+import { formatStatusDisplay } from "@/utils/statusHelpers";
 
 function getStatusBadgeClass(status: string): string {
   switch (status?.toLowerCase()) {
@@ -309,11 +319,12 @@ export default function QuotationDetailPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2 dark:text-gray-100">
                   <User className="w-5 h-5" />
-                  Customer Information
+                  Customer & Sales Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Customer Information */}
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <User className="w-4 h-4" />
@@ -336,6 +347,26 @@ export default function QuotationDetailPage() {
 
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <Phone className="w-4 h-4" />
+                      <span>Phone</span>
+                    </div>
+                    <p className="font-medium dark:text-gray-200">
+                      {quotation.customer?.phone || "-"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <MapPin className="w-4 h-4" />
+                      <span>Address</span>
+                    </div>
+                    <p className="font-medium dark:text-gray-200">
+                      {quotation.customer?.address || "-"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <Building2 className="w-4 h-4" />
                       <span>Company</span>
                     </div>
@@ -343,6 +374,68 @@ export default function QuotationDetailPage() {
                       {quotation.customer?.company?.company_name || "-"}
                     </p>
                   </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <Tag className="w-4 h-4" />
+                      <span>Customer Type</span>
+                    </div>
+                    <p className="font-medium dark:text-gray-200">
+                      {quotation.customer?.type || "-"}
+                    </p>
+                  </div>
+
+                  {/* Sales Information */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <UserCheck className="w-4 h-4" />
+                      <span>Sales Person</span>
+                    </div>
+                    <p className="font-medium dark:text-gray-200">
+                      {quotation.user?.name || "-"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <Mail className="w-4 h-4" />
+                      <span>Sales Email</span>
+                    </div>
+                    <p className="font-medium dark:text-gray-200">
+                      {quotation.user?.email || "-"}
+                    </p>
+                  </div>
+
+                  {/* Company Level Information (jika ada) */}
+                  {quotation.customer?.company?.company_level && (
+                    <>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                          <Star className="w-4 h-4" />
+                          <span>Company Level</span>
+                        </div>
+                        <p className="font-medium dark:text-gray-200">
+                          {quotation.customer?.company?.company_level
+                            ?.level_name || "-"}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                          <Percent className="w-4 h-4" />
+                          <span>Discount Level</span>
+                        </div>
+                        <p className="font-medium dark:text-gray-200">
+                          {quotation.customer?.company?.company_level?.disc1 ||
+                            0}
+                          % /{" "}
+                          {quotation.customer?.company?.company_level?.disc2 ||
+                            0}
+                          %
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -437,91 +530,26 @@ export default function QuotationDetailPage() {
 
           {/* Right Column: Summary & Actions */}
           <div className="space-y-6">
-            {/* Summary Card */}
+            {/* Quotation Details Card */}
             <Card className="dark:bg-gray-800">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2 dark:text-gray-100">
-                  <DollarSign className="w-5 h-5" />
-                  Financial Summary
+                  <FileText className="w-5 h-5" />
+                  Quotation Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Subtotal
-                    </span>
-                    <span className="font-medium dark:text-gray-200">
-                      {formatCurrency(quotation.total || 0)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <Truck className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Shipping
-                      </span>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <Hash className="w-4 h-4" />
+                      <span>Quotation Number</span>
                     </div>
-                    <span className="font-medium dark:text-gray-200">
-                      {formatCurrency(quotation.shipping || 0)}
-                    </span>
+                    <p className="font-medium text-lg dark:text-gray-100">
+                      {quotation.quotation_no}
+                    </p>
                   </div>
 
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <Percent className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Discount{" "}
-                        {quotation.discount ? `(${quotation.discount}%)` : ""}
-                      </span>
-                    </div>
-                    <span className="font-medium text-red-600 dark:text-red-400">
-                      -{formatCurrency(calculateDiscountAmount())}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <Receipt className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Tax
-                      </span>
-                    </div>
-                    <span className="font-medium dark:text-gray-200">
-                      {formatCurrency(quotation.tax || 0)}
-                    </span>
-                  </div>
-
-                  <Separator className="dark:bg-gray-700" />
-
-                  <div className="flex justify-between items-center pt-2">
-                    <span className="font-semibold dark:text-gray-100">
-                      Grand Total
-                    </span>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-primary dark:text-blue-400">
-                        {formatCurrency(quotation.grand_total || 0)}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Including all charges
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Timeline & Terms Card */}
-            <Card className="dark:bg-gray-800">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2 dark:text-gray-100">
-                  <Calendar className="w-5 h-5" />
-                  Timeline & Terms
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <Calendar className="w-4 h-4" />
@@ -542,29 +570,133 @@ export default function QuotationDetailPage() {
                     </p>
                   </div>
 
+                  {quotation.target_date && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Target className="w-4 h-4" />
+                        <span>Target Date</span>
+                      </div>
+                      <p className="font-medium dark:text-gray-200">
+                        {formatDate(quotation.target_date)}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Calendar className="w-4 h-4" />
-                      <span>Target Date</span>
+                      <CreditCard className="w-4 h-4" />
+                      <span>Terms of Payment</span>
                     </div>
                     <p className="font-medium dark:text-gray-200">
-                      {quotation.target_date
-                        ? formatDate(quotation.target_date)
-                        : "-"}
+                      {quotation.top || "Cash"}
                     </p>
                   </div>
 
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <CreditCard className="w-4 h-4" />
-                      <span>Payment Terms</span>
+                      <Activity className="w-4 h-4" />
+                      <span>Status</span>
                     </div>
                     <Badge
-                      variant="outline"
-                      className="dark:border-gray-600 dark:text-gray-300"
+                      className={`${getStatusBadgeClass(
+                        quotation.status
+                      )} px-3 py-1.5 text-base font-medium`}
                     >
-                      {quotation.top || "Not specified"}
+                      {formatStatusDisplay(quotation.status)}
                     </Badge>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <Workflow className="w-4 h-4" />
+                      <span>Stage</span>
+                    </div>
+                    <Badge
+                      className={`${getStageBadgeClass(
+                        quotation.stage
+                      )} px-3 py-1.5 text-base font-medium`}
+                    >
+                      {quotation.stage || "Draft"}
+                    </Badge>
+                  </div>
+
+                  {/* Lead ID jika ada */}
+                  {quotation.lead_id && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <LinkIcon className="w-4 h-4" />
+                        <span>Lead ID</span>
+                      </div>
+                      <p className="font-medium dark:text-gray-200">
+                        #{quotation.lead_id}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Financial Summary Card */}
+            <Card className="dark:bg-gray-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2 dark:text-gray-100">
+                  <DollarSign className="w-5 h-5" />
+                  Financial Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Subtotal
+                    </span>
+                    <span className="font-medium dark:text-gray-200">
+                      {formatCurrency(quotation.total)}
+                    </span>
+                  </div>
+
+                  {quotation.shipping > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Shipping
+                      </span>
+                      <span className="font-medium dark:text-gray-200">
+                        {formatCurrency(quotation.shipping)}
+                      </span>
+                    </div>
+                  )}
+
+                  {quotation.discount > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Discount ({quotation.discount}%)
+                      </span>
+                      <span className="font-medium text-red-600 dark:text-red-400">
+                        -{formatCurrency(calculateDiscountAmount())}
+                      </span>
+                    </div>
+                  )}
+
+                  {quotation.tax > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 dark:text-gray-400">
+                        Tax
+                      </span>
+                      <span className="font-medium dark:text-gray-200">
+                        {formatCurrency(quotation.tax)}
+                      </span>
+                    </div>
+                  )}
+
+                  <Separator className="dark:bg-gray-700" />
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold dark:text-gray-100">
+                      Grand Total
+                    </span>
+                    <span className="text-xl font-bold text-primary dark:text-blue-400">
+                      {formatCurrency(quotation.grand_total)}
+                    </span>
                   </div>
                 </div>
               </CardContent>

@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import {
   createQuotationAction,
   generateQuotationNumberAction,
+  updateQuotationAction,
 } from "@/app/actions/quotations";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -89,14 +90,12 @@ type Quotation = {
 };
 
 interface QuotationFormProps {
-  mode: "add" | "edit";
-  quotation?: Quotation;
+  quotation: Quotation;
   onClose?: () => void;
   onSuccess?: () => void;
 }
 
 export default function QuotationForm({
-  mode,
   quotation,
   onClose,
   onSuccess,
@@ -128,7 +127,7 @@ export default function QuotationForm({
     discount: Number(quotation?.discount) || 0,
     tax: Number(quotation?.tax) || 0,
     grand_total: Number(quotation?.grand_total) || 0,
-    status: quotation?.status || "sq_draft", // ✅ Sudah benar
+    status: quotation?.status || "sq_draft",
     stage: quotation?.stage || "draft",
     note: quotation?.note || "",
     target_date: quotation?.target_date || "",
@@ -154,7 +153,7 @@ export default function QuotationForm({
 
   // Generate quotation number when form loads for new quotations
   useEffect(() => {
-    if (mode === "add" && !quotation?.quotation_no) {
+    if (!quotation?.quotation_no) {
       const generateNumber = async () => {
         try {
           setGeneratingQuotationNo(true);
@@ -169,7 +168,7 @@ export default function QuotationForm({
 
       generateNumber();
     }
-  }, [mode, quotation]);
+  }, [quotation]);
 
   useEffect(() => {
     // Extract lead data from query params
@@ -258,6 +257,7 @@ export default function QuotationForm({
           ...item,
           product_id: Number(item.product_id),
           total: item.unit_price * item.quantity,
+          discount: 0, // <-- default 0, agar sesuai schema backend
         })),
         total: formData.total,
         shipping: 0, // <-- Tetap kirim shipping: 0
@@ -271,37 +271,17 @@ export default function QuotationForm({
         top: formData.top,
       };
 
-      const result = await createQuotationAction(dataToSend);
+      // Panggil updateQuotationAction, bukan createQuotationAction
+      const result = await updateQuotationAction(
+        Number(quotation.id),
+        dataToSend
+      );
 
       if (result?.success) {
-        toast.success(
-          mode === "add"
-            ? "Quotation created successfully"
-            : "Quotation updated successfully"
-        );
-        // Reset form
-        setFormData({
-          quotation_no: "",
-          customer_id: "",
-          quotation_detail: [],
-          total: 0,
-          shipping: 0,
-          discount: 0,
-          tax: 0,
-          grand_total: 0,
-          status: "sq_draft", // ✅ Change from "draft" to "sq_draft"
-          stage: "draft",
-          note: "",
-          target_date: "",
-          top: "cash",
-        });
-        setBoqItems([]);
-        setSelectedCustomer(null);
-
-        // Redirect ke halaman utama quotations
-        router.push("/crm/quotations");
+        toast.success("Quotation updated successfully");
+        if (onSuccess) onSuccess();
       } else {
-        toast.error(result?.message || "Failed to save quotation");
+        toast.error(result?.message || "Failed to update quotation");
       }
     } catch (error) {
       toast.error("Error: " + (error as Error).message);
@@ -339,7 +319,6 @@ export default function QuotationForm({
 
   useEffect(() => {
     if (
-      mode === "edit" &&
       formData.customer_id &&
       customerOptions.length > 0 &&
       !selectedCustomer
@@ -349,7 +328,7 @@ export default function QuotationForm({
       );
       if (found) setSelectedCustomer(found);
     }
-  }, [mode, formData.customer_id, customerOptions, selectedCustomer]);
+  }, [formData.customer_id, customerOptions, selectedCustomer]);
 
   // Filter status options based on permissions
   const getAvailableStatusOptions = () => {
@@ -418,13 +397,9 @@ export default function QuotationForm({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {mode === "add" ? "Create New Quotation" : "Edit Quotation"}
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight">Edit Quotation</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {mode === "add"
-              ? "Fill in the details to create a new quotation"
-              : "Update the quotation details"}
+            Update the quotation details
           </p>
         </div>
         {formData.quotation_no && (
@@ -798,7 +773,7 @@ export default function QuotationForm({
 
                   <div className="space-y-2">
                     <Label htmlFor="discount" className="text-sm">
-                      Discount (%)
+                      Additional Discount (%)
                     </Label>
                     <Input
                       id="discount"
@@ -896,10 +871,8 @@ export default function QuotationForm({
             {loading ? (
               <span className="flex items-center gap-2">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                {mode === "add" ? "Creating..." : "Updating..."}
+                Updating...
               </span>
-            ) : mode === "add" ? (
-              "Create Quotation"
             ) : (
               "Update Quotation"
             )}

@@ -9,7 +9,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { formatStatusDisplay } from "@/utils/statusHelpers";
-import { MoreHorizontal, Eye, Edit, Trash } from "lucide-react";
+import { MoreHorizontal, Eye, Edit, Trash, Repeat } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,8 +34,10 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock, Repeat } from "lucide-react";
+import { CheckCircle, Clock } from "lucide-react";
 import OpportunityDeleteDialog from "@/app/(protected)/(dashboard)/crm/opportunities/_components/opportunity-delete-dialog";
+import { useConvertOpportunityToSQ } from "@/hooks/opportunities/useConvertOpportunityToSQ";
+import { toast } from "react-hot-toast";
 
 type OpportunitiesTableProps = {
   isSuperadmin?: boolean;
@@ -68,15 +70,30 @@ export default function OpportunitiesTable({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] =
     useState<TableOpportunity | null>(null);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [convertId, setConvertId] = useState<string | null>(null);
 
   const { updateStatus, isLoading } = useUpdateOpportunityStatus(
     selectedId || ""
   );
+  const { convert, loading, error, result } = useConvertOpportunityToSQ();
 
   const handleConvertSQ = (id: string) => {
-    setSelectedId(id);
-    setPendingStatus("opp_sq");
-    setDialogOpen(true);
+    setConvertId(id);
+    setConvertDialogOpen(true);
+  };
+
+  const handleConfirmConvert = async () => {
+    if (!convertId) return;
+    const success = await convert(convertId, null);
+    if (success) {
+      toast.success("Berhasil convert ke SQ!");
+      setConvertDialogOpen(false);
+      setConvertId(null);
+      onDelete?.();
+    } else {
+      toast.error(error || "Gagal convert ke SQ");
+    }
   };
 
   const handleConfirm = async () => {
@@ -188,6 +205,44 @@ export default function OpportunitiesTable({
           )}
         </TableBody>
       </Table>
+
+      {/* Dialog Konfirmasi Convert SQ */}
+      <Dialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convert to SQ</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin mengubah opportunity ini menjadi
+              SQ/Quotation?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={handleConfirmConvert}
+              disabled={loading}
+              className="gap-2"
+            >
+              {loading ? (
+                <>
+                  <Clock className="w-4 h-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Ya, Convert
+                </>
+              )}
+            </Button>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={loading}>
+                Batal
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>

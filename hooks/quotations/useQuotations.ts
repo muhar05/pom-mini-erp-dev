@@ -16,6 +16,8 @@ export type QuotationTable = {
   status: string;
   last_update: string;
   opportunity_no: string;
+  user_id?: number | null; // <-- Tambahkan
+  lead_id?: number | null; // <-- Tambahkan
 };
 
 export function useQuotations() {
@@ -44,7 +46,7 @@ export function useQuotations() {
             : "",
           customer_name: q.customer?.customer_name || "-",
           customer_email: q.customer?.email || "-",
-          sales_pic: "-", // isi jika ada relasi sales PIC
+          sales_pic: q.user?.name || "-", // <-- Ambil dari relasi user
           type: q.customer?.type || "-",
           company: q.customer?.company?.company_name || "-",
           total_amount: Number(q.grand_total ?? q.total ?? 0),
@@ -53,12 +55,14 @@ export function useQuotations() {
             ? new Date(q.updated_at).toISOString().split("T")[0]
             : "",
           opportunity_no: "-", // isi jika ada relasi opportunity
+          user_id: q.user_id, // <-- Tambahkan
+          lead_id: q.lead_id, // <-- Tambahkan
         }));
         setQuotationsData(mapped);
       })
       .catch((error) => {
         console.error("Error fetching quotations:", error);
-        setQuotationsData([]); // Set empty array on error
+        setQuotationsData([]);
       })
       .finally(() => setLoading(false));
   }, []);

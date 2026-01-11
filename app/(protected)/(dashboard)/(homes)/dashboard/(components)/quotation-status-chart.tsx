@@ -36,6 +36,8 @@ const QuotationStatusChart = () => {
     stats.quotationsByStatus.converted,
   ];
 
+  const total = series.reduce((a, b) => a + b, 0);
+
   const options: any = {
     chart: {
       type: "donut",
@@ -77,7 +79,18 @@ const QuotationStatusChart = () => {
         </div>
 
         <div className="mt-4">
-          <Chart options={options} series={series} type="donut" height={350} />
+          {total === 0 ? (
+            <div className="h-64 flex items-center justify-center text-muted-foreground">
+              Tidak ada data
+            </div>
+          ) : (
+            <Chart
+              options={options}
+              series={series}
+              type="donut"
+              height={350}
+            />
+          )}
         </div>
       </CardContent>
     </Card>

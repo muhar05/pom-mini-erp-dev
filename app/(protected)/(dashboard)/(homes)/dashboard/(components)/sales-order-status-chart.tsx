@@ -4,6 +4,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDashboardStats } from "@/hooks/dashboard/useDashboardStats";
 import { Progress } from "@/components/ui/progress";
+import dynamic from "next/dynamic";
 
 // 1. Definisikan union type untuk key status
 type StatusKey = "draft" | "open" | "processing" | "completed" | "cancelled";
@@ -17,6 +18,8 @@ const STATUS: { key: StatusKey; label: string; color: string }[] = [
   { key: "cancelled", label: "Cancelled", color: "bg-red-500" },
 ];
 
+const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
+
 const SalesOrderStatusChart = () => {
   const { data: stats, loading } = useDashboardStats();
 
@@ -27,6 +30,29 @@ const SalesOrderStatusChart = () => {
       (sum, val) => sum + (typeof val === "number" ? val : 0),
       0
     );
+
+  const options = {
+    labels: STATUS.map((s) => s.label),
+    colors: STATUS.map((s) => s.color),
+    responsive: [
+      {
+        breakpoint: 480,
+        options: {
+          chart: {
+            width: 200,
+          },
+          legend: {
+            position: "bottom",
+          },
+        },
+      },
+    ],
+  };
+
+  const series = STATUS.map((s) => {
+    const value = stats?.salesOrdersByStatus[s.key] || 0;
+    return total ? (value / total) * 100 : 0;
+  });
 
   return (
     <Card className="card">
@@ -48,29 +74,17 @@ const SalesOrderStatusChart = () => {
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="space-y-4">
-              {STATUS.map((s) => {
-                // 3. Pastikan akses dengan key bertipe StatusKey
-                const value = stats.salesOrdersByStatus[s.key];
-                const percent = total ? (value / total) * 100 : 0;
-                return (
-                  <div key={s.key}>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-xs font-medium">{s.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {value} ({percent.toFixed(0)}%)
-                      </span>
-                    </div>
-                    <Progress
-                      value={percent}
-                      className={`h-3 rounded-full ${s.color}`}
-                      style={{ backgroundColor: "#e5e7eb" }}
-                    />
-                  </div>
-                );
-              })}
+          ) : total === 0 ? (
+            <div className="h-64 flex items-center justify-center text-muted-foreground">
+              Tidak ada data
             </div>
+          ) : (
+            <Chart
+              options={options}
+              series={series}
+              type="donut"
+              height={350}
+            />
           )}
         </div>
       </CardContent>

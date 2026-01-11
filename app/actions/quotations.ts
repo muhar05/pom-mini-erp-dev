@@ -169,13 +169,42 @@ export async function updateQuotationAction(
       }
     }
 
+    // Handle target_date conversion and filtering
+    if (data.target_date !== undefined) {
+      if (!data.target_date || data.target_date.trim() === "") {
+        // Jika kosong, hapus dari data (jangan kirim ke Prisma)
+        delete data.target_date;
+      } else if (typeof data.target_date === "string") {
+        // Jika ada nilai, konversi ke ISO DateTime
+        if (data.target_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          data.target_date = `${data.target_date}T00:00:00.000Z`;
+        }
+      }
+    }
+
     const updatedQuotation = await updateQuotationDb(id, data);
+
+    // Convert Decimal fields to numbers for client compatibility
+    const safeQuotation = {
+      ...updatedQuotation,
+      total: updatedQuotation.total ? Number(updatedQuotation.total) : 0,
+      shipping: updatedQuotation.shipping
+        ? Number(updatedQuotation.shipping)
+        : 0,
+      discount: updatedQuotation.discount
+        ? Number(updatedQuotation.discount)
+        : 0,
+      tax: updatedQuotation.tax ? Number(updatedQuotation.tax) : 0,
+      grand_total: updatedQuotation.grand_total
+        ? Number(updatedQuotation.grand_total)
+        : 0,
+    };
 
     revalidatePath("/crm/quotations");
     return {
       success: true,
       message: "Quotation updated successfully",
-      data: updatedQuotation,
+      data: safeQuotation,
     };
   } catch (error) {
     console.error("Error updating quotation:", error);

@@ -37,9 +37,15 @@ export async function getQuotationByIdDb(id: number) {
     include: {
       customer: {
         include: {
-          company: true,
+          company: {
+            include: {
+              company_level: true, // Include company level
+            },
+          },
         },
       },
+      user: true, // <-- Include user/sales
+      // lead: true, // <-- Include lead jika ada relasi di schema
     },
   });
   if (!quotation) throw new Error("Quotation not found");
@@ -53,9 +59,15 @@ export async function getAllQuotationsDb() {
     include: {
       customer: {
         include: {
-          company: true,
+          company: {
+            include: {
+              company_level: true, // Include company level
+            },
+          },
         },
       },
+      user: true, // <-- Include user/sales
+      // lead: true, // <-- Include lead jika ada relasi di schema
     },
   });
 }

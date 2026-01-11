@@ -180,7 +180,7 @@ export default function CustomerForm({
                   }
                   disabled
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -205,7 +205,7 @@ export default function CustomerForm({
                   }
                   disabled={loadingCompanies}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select company" />
                   </SelectTrigger>
                   <SelectContent>
@@ -273,7 +273,7 @@ export default function CustomerForm({
                 value={formData.status}
                 onValueChange={(value) => handleInputChange("status", value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

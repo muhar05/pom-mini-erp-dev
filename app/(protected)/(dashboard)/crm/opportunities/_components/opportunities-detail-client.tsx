@@ -36,6 +36,8 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useUpdateOpportunityStatus } from "@/hooks/opportunities/useUpdateOpportunitiesStatus";
+import { useConvertOpportunityToSQ } from "@/hooks/opportunities/useConvertOpportunityToSQ";
+import { toast } from "react-hot-toast";
 
 interface OpportunityDetailClientProps {
   opportunity: Opportunity;
@@ -59,26 +61,25 @@ export default function OpportunityDetailClient({
 }: OpportunityDetailClientProps) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
   // Pakai custom hook
-  const { updateStatus, isLoading } = useUpdateOpportunityStatus(
-    opportunity.id
-  );
+  const { convert, loading, error } = useConvertOpportunityToSQ();
 
-  const handleConfirm = async () => {
-    if (!pendingStatus) return;
-    const success = await updateStatus(pendingStatus);
-    if (success) {
-      setDialogOpen(false);
-      setPendingStatus(null);
-    }
+  // Handler untuk buka dialog konfirmasi convert SQ
+  const handleOpenConvertSQDialog = () => {
+    setDialogOpen(true);
   };
 
-  // Handler untuk Convert SQ
-  const handleConvertSQ = () => {
-    setPendingStatus("opp_sq");
-    setDialogOpen(true);
+  // Handler untuk konfirmasi convert SQ
+  const handleConfirmConvertSQ = async () => {
+    const success = await convert(opportunity.id, null);
+    if (success) {
+      toast.success("Berhasil convert ke SQ!");
+      setDialogOpen(false);
+      router.refresh();
+    } else {
+      toast.error(error || "Gagal convert ke SQ");
+    }
   };
 
   return (
@@ -99,8 +100,8 @@ export default function OpportunityDetailClient({
           variant="default"
           size="sm"
           className="flex items-center gap-2"
-          onClick={handleConvertSQ}
-          disabled={isLoading || opportunity.status === "opp_sq"}
+          onClick={handleOpenConvertSQDialog}
+          disabled={loading || opportunity.status === "opp_sq"}
         >
           <Repeat className="w-4 h-4" />
           Convert SQ
@@ -382,33 +383,25 @@ export default function OpportunityDetailClient({
         </div>
       </div>
 
-      {/* Dialog for confirmation */}
+      {/* Dialog konfirmasi convert SQ */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">
-              {pendingStatus === "opp_sq"
-                ? "Convert to SQ"
-                : pendingStatus === "Lost"
-                ? "Confirm Mark as Lost"
-                : "Confirm Status Change"}
+              Convert to SQ
             </DialogTitle>
             <DialogDescription className="dark:text-gray-400">
-              {pendingStatus === "opp_sq"
-                ? "Are you sure you want to convert this opportunity to SQ?"
-                : pendingStatus === "Lost"
-                ? "Are you sure you want to mark this opportunity as Lost? This action cannot be undone."
-                : `Are you sure you want to change status to ${pendingStatus}?`}
+              Apakah Anda yakin ingin mengubah opportunity ini menjadi
+              SQ/Quotation?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
-              onClick={handleConfirm}
-              disabled={isLoading}
-              variant={pendingStatus === "Lost" ? "destructive" : "default"}
-              className="gap-2 dark:bg-blue-600 dark:hover:bg-blue-700"
+              onClick={handleConfirmConvertSQ}
+              disabled={loading}
+              className="gap-2"
             >
-              {isLoading ? (
+              {loading ? (
                 <>
                   <Clock className="w-4 h-4 animate-spin" />
                   Processing...
@@ -416,17 +409,17 @@ export default function OpportunityDetailClient({
               ) : (
                 <>
                   <CheckCircle className="w-4 h-4" />
-                  Yes, Confirm
+                  Ya, Convert
                 </>
               )}
             </Button>
             <DialogClose asChild>
               <Button
                 variant="outline"
-                disabled={isLoading}
+                disabled={loading}
                 className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
               >
-                Cancel
+                Batal
               </Button>
             </DialogClose>
           </DialogFooter>

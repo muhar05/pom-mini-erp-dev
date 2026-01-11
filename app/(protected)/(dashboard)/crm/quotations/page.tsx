@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import QuotationsTable from "./_components/quotations-table";
 import QuotationFilters from "./_components/quotation-filters";
-import AddQuotationButton from "./_components/add-quotation-button";
 import { useQuotations } from "@/hooks/quotations/useQuotations";
 
 export default function QuotationsPage() {
@@ -33,7 +32,6 @@ export default function QuotationsPage() {
       />
       <QuotationFilters search={search} setSearch={setSearch} />
       <div className="grid grid-cols-1 gap-6 mt-6">
-        <AddQuotationButton />
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">List Quotations</h2>
           {loading ? (

@@ -18,7 +18,7 @@ import { createLeadSchema, updateLeadSchema } from "@/lib/schemas";
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import { formatStatusDisplay } from "@/utils/formatStatus";
-import WindowedSelect from "react-windowed-select";
+import dynamic from "next/dynamic";
 import { LEAD_STATUS_OPTIONS } from "@/utils/statusHelpers";
 import {
   TYPE_OPTIONS,
@@ -44,6 +44,10 @@ interface FormErrors {
 
 // Ganti konstanta STATUS_OPTIONS:
 const STATUS_OPTIONS = LEAD_STATUS_OPTIONS;
+
+const WindowedSelect = dynamic(() => import("react-windowed-select"), {
+  ssr: false,
+});
 
 export default function LeadForm({
   mode,
@@ -273,6 +277,7 @@ LeadFormProps) {
             disabled={loading}
             maxLength={150}
             className={formErrors.lead_name ? "border-red-500" : ""}
+            placeholder="Masukkan nama lead"
           />
           {formErrors.lead_name && (
             <p className="text-sm text-red-500">{formErrors.lead_name}</p>
@@ -288,6 +293,7 @@ LeadFormProps) {
             disabled={loading}
             maxLength={150}
             className={formErrors.contact ? "border-red-500" : ""}
+            placeholder="Masukkan nama kontak"
           />
           {formErrors.contact && (
             <p className="text-sm text-red-500">{formErrors.contact}</p>
@@ -304,6 +310,7 @@ LeadFormProps) {
             disabled={loading}
             maxLength={150}
             className={formErrors.email ? "border-red-500" : ""}
+            placeholder="Masukkan email"
           />
           {formErrors.email && (
             <p className="text-sm text-red-500">{formErrors.email}</p>
@@ -335,6 +342,7 @@ LeadFormProps) {
             disabled={loading}
             maxLength={150}
             className={formErrors.company ? "border-red-500" : ""}
+            placeholder="Masukkan nama perusahaan"
           />
           {formErrors.company && (
             <p className="text-sm text-red-500">{formErrors.company}</p>
@@ -624,6 +632,7 @@ LeadFormProps) {
           disabled={loading}
           maxLength={1000}
           className={formErrors.note ? "border-red-500" : ""}
+          placeholder="Catatan tambahan (opsional)"
         />
         {formErrors.note && (
           <p className="text-sm text-red-500">{formErrors.note}</p>
