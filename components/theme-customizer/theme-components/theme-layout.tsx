@@ -19,7 +19,7 @@ const layouts = [
 ];
 
 const ThemeLayout = () => {
-    const [layout, setLayout] = useState("helium");
+    const [layout, setLayout] = useState("boron");
 
     // Load saved layout from localStorage on mount
     useEffect(() => {

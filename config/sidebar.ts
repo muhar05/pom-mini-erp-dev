@@ -52,17 +52,6 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
     { title: "Sales Order (SO)", url: "/crm/sales-orders", icon: ShoppingCart },
 
     {
-      title: "Master",
-      icon: Settings,
-      items: [
-        { title: "Customer List", url: "/customers", icon: UserRound },
-        { title: "Company List", url: "/companies", icon: Building2 },
-        { title: "Product List", url: "/products", icon: Package },
-        { title: "Vendor List", url: "/purchasing/vendors", icon: Building2 },
-      ],
-    },
-
-    {
       title: "Purchasing",
       icon: FileBox,
       url: "/purchasing/purchase-orders",
@@ -124,6 +113,17 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       items: [
         { title: "Users", url: "/settings/users", icon: Users },
         { title: "Company", url: "/settings/company", icon: Building2 },
+      ],
+    },
+
+    {
+      title: "Master",
+      icon: Settings,
+      items: [
+        { title: "Customer List", url: "/customers", icon: UserRound },
+        { title: "Company List", url: "/companies", icon: Building2 },
+        { title: "Product List", url: "/products", icon: Package },
+        { title: "Vendor List", url: "/purchasing/vendors", icon: Building2 },
       ],
     },
   ],

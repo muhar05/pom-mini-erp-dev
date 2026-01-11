@@ -5,7 +5,7 @@ import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import LeadsTable from "./_components/leads-table";
 import AddLeadButton from "./_components/add-lead-button";
 import LeadsFilter from "./_components/leads-filter";
-import { useLeads } from "@/hooks/useLeads";
+import { useLeads } from "@/hooks/leads/useLeads";
 
 export default function LeadPage() {
   const { leads, loading } = useLeads();

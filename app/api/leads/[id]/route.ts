@@ -97,3 +97,23 @@ export async function DELETE(
     );
   }
 }
+
+// GET: Ambil data lead by id
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const id = Number(params.id);
+    const lead = await getLeadByIdDb(id);
+    if (!lead) {
+      return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+    }
+    return NextResponse.json(lead);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to fetch lead" },
+      { status: 400 }
+    );
+  }
+}

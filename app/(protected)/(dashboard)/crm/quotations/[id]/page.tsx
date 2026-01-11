@@ -62,9 +62,9 @@ import {
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useQuotationDetail } from "@/hooks/quotations/useQuotationDetail";
-import { useProductById } from "@/hooks/products/useProductById";
 import QuotationExport from "@/components/quotations/quotationExport";
 import { formatStatusDisplay } from "@/utils/statusHelpers";
+import { useLeadById } from "@/hooks/leads/useLeadsById";
 
 function getStatusBadgeClass(status: string): string {
   switch (status?.toLowerCase()) {
@@ -106,16 +106,14 @@ export default function QuotationDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [copied, setCopied] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const leadId = quotation?.lead_id;
+  const { lead, loading: loadingLead } = useLeadById(leadId);
   const handleDelete = () => {
     if (!idParam) return;
     fetch(`/api/quotations/${idParam}`, { method: "DELETE" }).then(() => {
       setShowDeleteDialog(false);
       router.push("/crm/quotations");
     });
-  };
-
-  const handleExportPDF = () => {
-    window.print();
   };
 
   const handleCopyQuotationNo = () => {
@@ -623,13 +621,70 @@ export default function QuotationDetailPage() {
                   {/* Lead ID jika ada */}
                   {quotation.lead_id && (
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                         <LinkIcon className="w-4 h-4" />
-                        <span>Lead ID</span>
+                        <span className="font-semibold">Lead Info</span>
                       </div>
-                      <p className="font-medium dark:text-gray-200">
-                        #{quotation.lead_id}
-                      </p>
+                      <div className="bg-gray-50 dark:bg-gray-900/40 rounded-md p-3 border dark:border-gray-700">
+                        {loadingLead ? (
+                          <div className="text-xs text-gray-400">
+                            Loading lead...
+                          </div>
+                        ) : lead ? (
+                          <div className="grid grid-cols-1 gap-y-1 text-xs text-gray-700 dark:text-gray-200">
+                            <div>
+                              <span className="font-semibold">ID:</span> #
+                              {lead.id}
+                            </div>
+                            <div>
+                              <span className="font-semibold">Name:</span>{" "}
+                              {lead.lead_name}
+                            </div>
+                            {lead.contact && (
+                              <div>
+                                <span className="font-semibold">Contact:</span>{" "}
+                                {lead.contact}
+                              </div>
+                            )}
+                            {lead.email && (
+                              <div>
+                                <span className="font-semibold">Email:</span>{" "}
+                                {lead.email}
+                              </div>
+                            )}
+                            {lead.phone && (
+                              <div>
+                                <span className="font-semibold">Phone:</span>{" "}
+                                {lead.phone}
+                              </div>
+                            )}
+                            {lead.company && (
+                              <div>
+                                <span className="font-semibold">Company:</span>{" "}
+                                {lead.company}
+                              </div>
+                            )}
+                            {lead.status && (
+                              <div>
+                                <span className="font-semibold">Status:</span>{" "}
+                                {lead.status}
+                              </div>
+                            )}
+                            {lead.product_interest && (
+                              <div>
+                                <span className="font-semibold">
+                                  Product Interest:
+                                </span>{" "}
+                                {lead.product_interest}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-red-400">
+                            Lead not found
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
