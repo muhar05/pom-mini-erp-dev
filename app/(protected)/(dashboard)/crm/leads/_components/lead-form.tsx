@@ -525,9 +525,24 @@ LeadFormProps) {
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
           {(() => {
+            // Filter opsi "qualified" (value/label) jika mode create
+            const filteredStatusOptions =
+              mode === "create"
+                ? STATUS_OPTIONS.filter(
+                    (opt) =>
+                      ![
+                        "qualified",
+                        "lead_qualified",
+                        "opp_qualified",
+                        "Qualified",
+                      ].includes(opt.value.toLowerCase()) &&
+                      opt.label.toLowerCase() !== "qualified"
+                  )
+                : STATUS_OPTIONS;
+
             let defaultVal = findOptionValue(
               lead?.status ?? (mode === "create" ? "new" : ""),
-              STATUS_OPTIONS,
+              filteredStatusOptions,
               mode === "create" ? "new" : ""
             );
             const raw = lead?.status;
@@ -537,7 +552,7 @@ LeadFormProps) {
 
             const hasMatch =
               !!raw &&
-              STATUS_OPTIONS.some(
+              filteredStatusOptions.some(
                 (o) =>
                   o.value.toLowerCase() === String(raw).toLowerCase() ||
                   o.label.toLowerCase() === String(raw).toLowerCase()
@@ -572,7 +587,7 @@ LeadFormProps) {
                       {extraOption.label}
                     </SelectItem>
                   )}
-                  {STATUS_OPTIONS.map((option) => (
+                  {filteredStatusOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>

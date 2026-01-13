@@ -36,6 +36,7 @@ import { useSession } from "@/contexts/session-context";
 import { users } from "@/types/models";
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
+import POFileUpload from "./po-file-upload";
 
 // Add BOQ Item interface similar to quotation
 interface BoqItem {
@@ -1095,28 +1096,10 @@ export default function SalesOrderForm({
             </Card>
 
             {/* File Upload */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="w-4 h-4" />
-                  Customer PO File
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <Input
-                    type="file"
-                    onChange={handleFileChange}
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  />
-                  {formData.file_po_customer && (
-                    <div className="text-sm text-green-600">
-                      File: {formData.file_po_customer}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <POFileUpload
+              salesOrderId={salesOrder?.id || ""}
+              currentFile={formData.file_po_customer}
+            />
 
             {/* Action Buttons */}
             <Card>

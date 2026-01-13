@@ -65,6 +65,8 @@ import { useQuotationDetail } from "@/hooks/quotations/useQuotationDetail";
 import QuotationExport from "@/components/quotations/quotationExport";
 import { formatStatusDisplay } from "@/utils/statusHelpers";
 import { useLeadById } from "@/hooks/leads/useLeadsById";
+import toast from "react-hot-toast";
+import { convertQuotationToSalesOrderAction } from "@/app/actions/sales-orders";
 
 function getStatusBadgeClass(status: string): string {
   switch (status?.toLowerCase()) {
@@ -105,6 +107,7 @@ export default function QuotationDetailPage() {
   const { quotation, loading } = useQuotationDetail(idParam);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [converting, setConverting] = useState(false); // Tambahkan state untuk loading convert
   const printRef = useRef<HTMLDivElement>(null);
   const leadId = quotation?.lead_id;
   const { lead, loading: loadingLead } = useLeadById(leadId);
@@ -184,6 +187,50 @@ export default function QuotationDetailPage() {
     fetchUnits();
   }, [quotationDetail]); // dependency sudah stabil
 
+  const handleConvertToSO = async () => {
+    if (!quotation?.id) return;
+
+    setConverting(true);
+    try {
+      const result = await convertQuotationToSalesOrderAction(
+        Number(quotation.id)
+      );
+
+      if (result.success) {
+        toast.success(
+          result.message || "Quotation successfully converted to Sales Order!",
+          {
+            duration: 4000,
+            icon: "🎉",
+          }
+        );
+        // Redirect ke halaman detail SO yang baru dibuat
+        if (result.data?.id) {
+          router.push(`/crm/sales-orders/${result.data.id}`);
+        } else {
+          router.push("/crm/sales-orders");
+        }
+      } else {
+        toast.error(
+          result.message || "Failed to convert quotation to Sales Order",
+          {
+            duration: 5000,
+          }
+        );
+      }
+    } catch (error) {
+      console.error("Error converting quotation:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred while converting quotation",
+        { duration: 5000 }
+      );
+    } finally {
+      setConverting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center p-16 w-full h-full">
@@ -216,6 +263,14 @@ export default function QuotationDetailPage() {
       </div>
     );
   }
+
+  const canPrint =
+    quotation.status?.toLowerCase() === "approved" &&
+    quotation.stage?.toLowerCase() === "approved";
+
+  const canShowConvertToSO =
+    quotation.status?.toLowerCase() !== "draft" &&
+    quotation.stage?.toLowerCase() !== "draft";
 
   return (
     <>
@@ -284,9 +339,15 @@ export default function QuotationDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>
+                <DropdownMenuItem disabled={!canPrint}>
                   <PrintButton printRef={printRef} />
                 </DropdownMenuItem>
+                {!canPrint && (
+                  <div className="text-xs text-red-500 px-3 pb-2">
+                    Print hanya bisa dilakukan jika status dan stage sudah{" "}
+                    <b>approved</b>
+                  </div>
+                )}
                 <DropdownMenuItem>
                   <Share2 className="w-4 h-4 mr-2" />
                   Share
@@ -294,16 +355,25 @@ export default function QuotationDetailPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {canConvertToSO && (
-              <Link href={`/crm/sales-orders/new?quotation_id=${quotation.id}`}>
-                <Button
-                  size="sm"
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                >
-                  <ShoppingBag className="w-4 h-4" />
-                  Create SO
-                </Button>
-              </Link>
+            {canShowConvertToSO && (
+              <Button
+                size="sm"
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                onClick={handleConvertToSO}
+                disabled={converting}
+              >
+                {converting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Converting...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="w-4 h-4" />
+                    Create SO
+                  </>
+                )}
+              </Button>
             )}
           </div>
         </div>

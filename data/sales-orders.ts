@@ -185,13 +185,59 @@ export async function getSalesOrderByIdDb(id: string) {
     where: { id: BigInt(id) },
     include: {
       quotation: {
-        include: { customer: true },
+        include: {
+          customer: {
+            include: {
+              company: {
+                include: {
+                  company_level: true,
+                },
+              },
+            },
+          },
+        },
       },
-      customers: true, // Include direct customer relation
+      customers: {
+        include: {
+          company: {
+            include: {
+              company_level: true,
+            },
+          },
+        },
+      },
       sale_order_detail: true,
     },
   });
   if (!salesOrder) throw new Error("Sales order not found");
+
+  // Helper to convert company_level Decimal fields
+  const convertCompanyLevel = (companyLevel: any) => {
+    if (!companyLevel) return null;
+    return {
+      ...companyLevel,
+      disc1: companyLevel.disc1 ? Number(companyLevel.disc1) : 0,
+      disc2: companyLevel.disc2 ? Number(companyLevel.disc2) : 0,
+    };
+  };
+
+  // Helper to convert company with company_level
+  const convertCompany = (company: any) => {
+    if (!company) return null;
+    return {
+      ...company,
+      company_level: convertCompanyLevel(company.company_level),
+    };
+  };
+
+  // Helper to convert customer with company
+  const convertCustomer = (customer: any) => {
+    if (!customer) return null;
+    return {
+      ...customer,
+      company: convertCompany(customer.company),
+    };
+  };
 
   // Convert Decimal and BigInt fields to safe types for client
   const safeSalesOrder = {
@@ -230,7 +276,7 @@ export async function getSalesOrderByIdDb(id: string) {
           ? Number(salesOrder.quotation.grand_total)
           : 0,
         top: salesOrder.quotation.top ? Number(salesOrder.quotation.top) : 0,
-        customer: salesOrder.quotation.customer,
+        customer: convertCustomer(salesOrder.quotation.customer),
         quotation_detail: salesOrder.quotation.quotation_detail
           ? (salesOrder.quotation.quotation_detail as any[]).map(
               (item: any) => ({
@@ -247,16 +293,19 @@ export async function getSalesOrderByIdDb(id: string) {
       }
     : null;
 
-  // Convert sale order details - ENSURE ALL DECIMAL FIELDS ARE CONVERTED
+  // Convert direct customer relation
+  const safeCustomers = convertCustomer(salesOrder.customers);
+
+  // Convert sale order details
   const safeSaleOrderDetails = salesOrder.sale_order_detail
     ? salesOrder.sale_order_detail.map((detail) => ({
         id: detail.id.toString(),
         sale_id: detail.sale_id.toString(),
         product_id: detail.product_id ? detail.product_id.toString() : null,
         product_name: detail.product_name,
-        price: Number(detail.price), // Convert Decimal to number
-        qty: Number(detail.qty), // Ensure qty is number
-        total: detail.total ? Number(detail.total) : 0, // Convert Decimal to number, default to 0
+        price: Number(detail.price),
+        qty: Number(detail.qty),
+        total: detail.total ? Number(detail.total) : 0,
         status: detail.status,
       }))
     : [];
@@ -264,6 +313,7 @@ export async function getSalesOrderByIdDb(id: string) {
   return {
     ...safeSalesOrder,
     quotation: safeQuotation,
+    customers: convertCustomer(salesOrder.customers),
     sale_order_detail: safeSaleOrderDetails,
   };
 }

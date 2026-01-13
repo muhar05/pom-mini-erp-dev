@@ -110,6 +110,7 @@ export default function QuotationForm({
   const [leadData, setLeadData] = useState<any>(null);
   const [generatingQuotationNo, setGeneratingQuotationNo] = useState(false);
   const [showTargetCalendar, setShowTargetCalendar] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
   // 2. Inisialisasi state
   const [formData, setFormData] = useState<QuotationFormData>({
@@ -215,11 +216,18 @@ export default function QuotationForm({
     }
   }, [session]);
 
+  // Update handleInputChange dan setBoqItems agar setIsDirty(true)
   const handleInputChange = (
     field: keyof QuotationFormData,
     value: string | number | BoqItem[]
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setIsDirty(true);
+  };
+
+  const handleBoqChange = (items: BoqItem[]) => {
+    setBoqItems(items);
+    setIsDirty(true);
   };
 
   const calculateTotals = () => {
@@ -240,8 +248,12 @@ export default function QuotationForm({
     }));
   };
 
+  // Kalkulasi hanya jika isDirty true
   useEffect(() => {
-    calculateTotals();
+    if (isDirty) {
+      calculateTotals();
+    }
+    // eslint-disable-next-line
   }, [boqItems, formData.shipping, formData.discount, formData.tax]);
 
   // Ganti handleSubmit agar pakai server action
@@ -257,13 +269,13 @@ export default function QuotationForm({
           ...item,
           product_id: Number(item.product_id),
           total: item.unit_price * item.quantity,
-          discount: 0, // <-- default 0, agar sesuai schema backend
+          discount: 0,
         })),
-        total: formData.total,
-        shipping: 0, // <-- Tetap kirim shipping: 0
-        discount: formData.discount,
-        tax: formData.tax,
-        grand_total: formData.grand_total,
+        total: subtotal,
+        shipping: 0,
+        discount: companyDiscountPercent + additionalDiscountPercent,
+        tax: tax,
+        grand_total: grandTotal, // <--- grand total hasil semua kalkulasi
         status: formData.status,
         stage: formData.stage,
         note: formData.note,
@@ -271,7 +283,6 @@ export default function QuotationForm({
         top: formData.top,
       };
 
-      // Panggil updateQuotationAction, bukan createQuotationAction
       const result = await updateQuotationAction(
         Number(quotation.id),
         dataToSend
@@ -391,6 +402,26 @@ export default function QuotationForm({
 
     handleInputChange("stage", newStage);
   };
+
+  // Di dalam komponen, sebelum return:
+  const subtotal = boqItems.reduce(
+    (sum, item) => sum + item.unit_price * item.quantity,
+    0
+  );
+  const companyDiscountPercent = companyLevelDiscount || 0;
+  const companyDiscountAmount = (subtotal * companyDiscountPercent) / 100;
+  const afterCompanyDiscount = subtotal - companyDiscountAmount;
+
+  const additionalDiscountPercent = isDirty ? formData.discount || 0 : 0;
+  const additionalDiscountAmount = isDirty
+    ? (afterCompanyDiscount * additionalDiscountPercent) / 100
+    : 0;
+  const afterAllDiscount = isDirty
+    ? afterCompanyDiscount - additionalDiscountAmount
+    : subtotal;
+
+  const tax = isDirty ? 0.11 * afterAllDiscount : formData.tax;
+  const grandTotal = isDirty ? afterAllDiscount + tax : formData.grand_total;
 
   return (
     <div className="w-full mx-auto py-4 space-y-6">
@@ -608,7 +639,7 @@ export default function QuotationForm({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <BoqTable items={boqItems} onChange={setBoqItems} />
+                <BoqTable items={boqItems} onChange={handleBoqChange} />
               </CardContent>
             </Card>
 
@@ -767,10 +798,35 @@ export default function QuotationForm({
                       Subtotal
                     </span>
                     <span className="font-medium">
-                      {formatCurrency(formData.total)}
+                      {formatCurrency(subtotal)}
                     </span>
                   </div>
 
+                  {/* Diskon perusahaan */}
+                  {companyLevelDiscount > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-blue-700">
+                        Diskon Perusahaan ({companyLevelDiscount}%)
+                      </span>
+                      <span className="font-medium text-blue-700">
+                        -{formatCurrency(companyDiscountAmount)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Harga setelah diskon perusahaan */}
+                  {companyLevelDiscount > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Setelah Diskon Perusahaan
+                      </span>
+                      <span className="font-medium">
+                        {formatCurrency(afterCompanyDiscount)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Diskon tambahan */}
                   <div className="space-y-2">
                     <Label htmlFor="discount" className="text-sm">
                       Additional Discount (%)
@@ -789,11 +845,9 @@ export default function QuotationForm({
                       min="0"
                       max="100"
                     />
-                    {/* Selalu tampilkan level name jika ada */}
                     {companyLevelName && (
                       <div className="text-xs text-blue-700 mt-1">
                         Level perusahaan: <b>{companyLevelName}</b>
-                        {/* Diskon hanya tampil jika > 0 */}
                         {companyLevelDiscount > 0 && (
                           <span>
                             {" "}
@@ -805,17 +859,28 @@ export default function QuotationForm({
                     )}
                   </div>
 
-                  {/* Display discount amount in rupiah */}
-                  {formData.discount > 0 && (
+                  {/* Diskon tambahan dalam rupiah */}
+                  {additionalDiscountPercent > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Discount Amount
+                        Additional Discount Amount
                       </span>
                       <span className="font-medium text-red-600">
-                        -
-                        {formatCurrency(
-                          (formData.total * formData.discount) / 100
-                        )}
+                        -{formatCurrency(additionalDiscountAmount)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Harga setelah semua diskon */}
+                  {(companyLevelDiscount > 0 ||
+                    additionalDiscountPercent > 0) && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Setelah Semua Diskon{" "}
+                        <span className="italic">(belum termasuk pajak)</span>
+                      </span>
+                      <span className="font-medium">
+                        {formatCurrency(afterAllDiscount)}
                       </span>
                     </div>
                   )}
@@ -827,7 +892,7 @@ export default function QuotationForm({
                     <Input
                       id="tax"
                       type="text"
-                      value={formatCurrency(formData.tax)}
+                      value={formatCurrency(tax)}
                       disabled
                       className="bg-gray-100 dark:bg-gray-800/40"
                     />
@@ -839,10 +904,10 @@ export default function QuotationForm({
                     <span className="font-semibold">Grand Total</span>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-primary">
-                        {formatCurrency(formData.grand_total)}
+                        {formatCurrency(grandTotal)}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
-                        Subtotal: {formatCurrency(formData.total)}
+                        Subtotal: {formatCurrency(subtotal)}
                       </div>
                     </div>
                   </div>

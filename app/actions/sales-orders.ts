@@ -711,3 +711,225 @@ export async function updateSalesOrderPOFileAction(
     throw error;
   }
 }
+
+// CONVERT QUOTATION TO SALES ORDER - Complete version
+export async function convertQuotationToSalesOrderAction(quotationId: number) {
+  const session = await auth();
+  const user = session?.user as users | undefined;
+  if (!user) throw new Error("Unauthorized");
+
+  try {
+    // 1. Get quotation data with all relations
+    const quotation = await prisma.quotations.findUnique({
+      where: { id: quotationId },
+      include: {
+        customer: {
+          include: {
+            company: {
+              include: {
+                company_level: true,
+              },
+            },
+          },
+        },
+        user: true,
+      },
+    });
+
+    if (!quotation) {
+      return {
+        success: false,
+        message: "Quotation not found",
+      };
+    }
+
+    // 2. Check if quotation is eligible for conversion (not draft)
+    if (
+      quotation.status?.toLowerCase() === "draft" ||
+      quotation.stage?.toLowerCase() === "draft"
+    ) {
+      return {
+        success: false,
+        message:
+          "Cannot convert draft quotation to sales order. Please approve the quotation first.",
+      };
+    }
+
+    // 3. Check if quotation already converted
+    const existingSO = await prisma.sales_orders.findFirst({
+      where: { quotation_id: quotationId },
+    });
+
+    if (existingSO) {
+      return {
+        success: false,
+        message: `Quotation already converted to Sales Order: ${existingSO.sale_no}`,
+      };
+    }
+
+    // 4. Parse quotation detail (BOQ items)
+    let boqItems: any[] = [];
+    if (quotation.quotation_detail) {
+      try {
+        const quotationDetail = Array.isArray(quotation.quotation_detail)
+          ? quotation.quotation_detail
+          : JSON.parse(quotation.quotation_detail as string);
+
+        boqItems = quotationDetail.map((item: any) => ({
+          product_id: item.product_id ? BigInt(item.product_id) : null,
+          product_name: item.product_name || item.name || "Unknown Product",
+          product_code: item.product_code || "",
+          price: Number(item.unit_price || item.price || 0),
+          qty: Number(item.quantity || item.qty || 1),
+          total: Number(
+            item.total ||
+              (item.unit_price || item.price || 0) *
+                (item.quantity || item.qty || 1)
+          ),
+          status: "ACTIVE",
+        }));
+      } catch (error) {
+        console.warn("Failed to parse quotation detail:", error);
+        boqItems = [];
+      }
+    }
+
+    // 5. Generate new sale order number
+    const saleNo = await generateSaleOrderNo();
+
+    // 6. Create sales order with transaction to ensure data integrity
+    const result = await prisma.$transaction(async (tx) => {
+      // Create sales order
+      const salesOrder = await tx.sales_orders.create({
+        data: {
+          sale_no: saleNo,
+          quotation_id: quotationId,
+          customer_id: quotation.customer_id || null,
+          total: quotation.total || 0,
+          discount: quotation.discount || 0,
+          shipping: quotation.shipping || 0,
+          tax: quotation.tax || 0,
+          grand_total: quotation.grand_total || 0,
+          status: "DRAFT",
+          sale_status: "OPEN",
+          payment_status: "UNPAID",
+          note: quotation.note || "",
+          file_po_customer: null,
+        },
+      });
+
+      // Create sale order details from BOQ items
+      if (boqItems.length > 0) {
+        const saleOrderDetails = boqItems.map((item) => ({
+          sale_id: salesOrder.id,
+          product_id: item.product_id,
+          product_name: item.product_name,
+          price: item.price,
+          qty: item.qty,
+          total: item.total,
+          status: item.status,
+        }));
+
+        await tx.sale_order_detail.createMany({
+          data: saleOrderDetails,
+        });
+      }
+
+      // Update quotation status to converted
+      await tx.quotations.update({
+        where: { id: quotationId },
+        data: {
+          status: "sq_converted",
+          stage: "sent",
+        },
+      });
+
+      // Fetch complete sales order with relations
+      const completeSalesOrder = await tx.sales_orders.findUnique({
+        where: { id: salesOrder.id },
+        include: {
+          quotation: {
+            include: { customer: true },
+          },
+          customers: true,
+          sale_order_detail: true,
+        },
+      });
+
+      return completeSalesOrder;
+    });
+
+    if (!result) {
+      return {
+        success: false,
+        message: "Failed to create sales order",
+      };
+    }
+
+    // 7. Convert BigInt and Decimal to safe types for client
+    const safeSalesOrder = {
+      id: result.id.toString(),
+      sale_no: result.sale_no,
+      quotation_id: result.quotation_id?.toString() || null,
+      customer_id: result.customer_id?.toString() || null,
+      total: result.total ? Number(result.total) : 0,
+      shipping: result.shipping ? Number(result.shipping) : 0,
+      discount: result.discount ? Number(result.discount) : 0,
+      tax: result.tax ? Number(result.tax) : 0,
+      grand_total: result.grand_total ? Number(result.grand_total) : 0,
+      status: result.status,
+      sale_status: result.sale_status,
+      payment_status: result.payment_status,
+      note: result.note,
+      file_po_customer: result.file_po_customer,
+      created_at: result.created_at,
+      sale_order_detail:
+        result.sale_order_detail?.map((detail) => ({
+          id: detail.id.toString(),
+          sale_id: detail.sale_id.toString(),
+          product_id: detail.product_id?.toString() || null,
+          product_name: detail.product_name,
+          price: Number(detail.price),
+          qty: detail.qty,
+          total: detail.total ? Number(detail.total) : 0,
+          status: detail.status,
+        })) || [],
+      quotation: result.quotation
+        ? {
+            id: result.quotation.id,
+            quotation_no: result.quotation.quotation_no,
+            customer_id: result.quotation.customer_id,
+            total: Number(result.quotation.total || 0),
+            discount: Number(result.quotation.discount || 0),
+            shipping: Number(result.quotation.shipping || 0),
+            tax: Number(result.quotation.tax || 0),
+            grand_total: Number(result.quotation.grand_total || 0),
+          }
+        : null,
+      customers: result.customers,
+    };
+
+    revalidatePath("/crm/sales-orders");
+    revalidatePath("/crm/quotations");
+
+    return {
+      success: true,
+      message: `Successfully converted to Sales Order: ${saleNo}`,
+      data: safeSalesOrder,
+    };
+  } catch (error) {
+    console.error("Error converting quotation to sales order:", error);
+
+    if (error instanceof Error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+
+    return {
+      success: false,
+      message: "An unexpected error occurred while converting quotation",
+    };
+  }
+}
