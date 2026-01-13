@@ -159,6 +159,9 @@ export default function SalesOrderForm({
   // Add BOQ state
   const [boqItems, setBoqItems] = useState<BoqItem[]>([]);
 
+  // Add flag to prevent recalculation on initial load
+  const [isInitialLoad, setIsInitialLoad] = useState(mode === "edit");
+
   // Load existing BOQ items for edit mode
   useEffect(() => {
     const loadExistingData = async () => {
@@ -209,6 +212,9 @@ export default function SalesOrderForm({
               }));
             setBoqItems(existingItems);
           }
+
+          // Mark initial load complete after a short delay
+          setTimeout(() => setIsInitialLoad(false), 100);
 
           // Set selected customer - prioritize direct customer, fallback to quotation customer
           const customer =
@@ -501,8 +507,11 @@ export default function SalesOrderForm({
   };
 
   useEffect(() => {
+    // Skip recalculation on initial load in edit mode
+    if (isInitialLoad) return;
+
     calculateTotals();
-  }, [boqItems, formData.discount, formData.shipping]);
+  }, [boqItems, formData.discount, formData.shipping, isInitialLoad]);
 
   // Client-side validation
   const validateForm = (): boolean => {
