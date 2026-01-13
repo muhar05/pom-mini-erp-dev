@@ -243,9 +243,9 @@ export default function SalesOrderForm({
 
             // Jika quotation tidak ada di quotationOptions, tambahkan
             setQuotationOptions((prev) => {
-              const exists = prev.some(
-                (q) => q.id === fullSalesOrderData.quotation.id
-              );
+              const exists =
+                fullSalesOrderData.quotation &&
+                prev.some((q) => q.id === fullSalesOrderData.quotation!.id);
               if (!exists) {
                 return [...prev, fullSalesOrderData.quotation];
               }
