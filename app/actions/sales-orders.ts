@@ -97,6 +97,7 @@ export async function createSalesOrderAction(data: CreateSalesOrderData) {
       sale_no: validatedData.sale_no,
       quotation_id: quotation_id ? Number(quotation_id) : null,
       customer_id: customer_id ? Number(customer_id) : null,
+      user_id: typeof user.id === "string" ? parseInt(user.id) : user.id, // <--- Konversi ke Int
     } as any;
 
     // Create sales order first
@@ -798,13 +799,14 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
     const saleNo = await generateSaleOrderNo();
 
     // 6. Create sales order with transaction to ensure data integrity
-    const result = await prisma.$transaction(async (tx) => {
+    const salesOrderId = await prisma.$transaction(async (tx) => {
       // Create sales order
       const salesOrder = await tx.sales_orders.create({
         data: {
           sale_no: saleNo,
           quotation_id: quotationId,
           customer_id: quotation.customer_id || null,
+          user_id: typeof user.id === "string" ? parseInt(user.id) : user.id,
           total: quotation.total || 0,
           discount: quotation.discount || 0,
           shipping: quotation.shipping || 0,
@@ -844,19 +846,20 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
         },
       });
 
-      // Fetch complete sales order with relations
-      const completeSalesOrder = await tx.sales_orders.findUnique({
-        where: { id: salesOrder.id },
-        include: {
-          quotation: {
-            include: { customer: true },
-          },
-          customers: true,
-          sale_order_detail: true,
-        },
-      });
+      return salesOrder.id;
+    });
 
-      return completeSalesOrder;
+    // Fetch complete sales order with relations OUTSIDE the transaction
+    const result = await prisma.sales_orders.findUnique({
+      where: { id: salesOrderId },
+      include: {
+        quotation: {
+          include: { customer: true },
+        },
+        customers: true,
+        sale_order_detail: true,
+        user: true,
+      },
     });
 
     if (!result) {
@@ -872,6 +875,7 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
       sale_no: result.sale_no,
       quotation_id: result.quotation_id?.toString() || null,
       customer_id: result.customer_id?.toString() || null,
+      user_id: result.user_id || null, // <--- Tambahkan baris ini
       total: result.total ? Number(result.total) : 0,
       shipping: result.shipping ? Number(result.shipping) : 0,
       discount: result.discount ? Number(result.discount) : 0,

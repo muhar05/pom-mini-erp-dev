@@ -218,17 +218,6 @@ export default function SalesOrdersPage() {
         text="Monitor and manage your sales order pipeline"
       />
 
-      {/* Add New Sales Order Button */}
-      <div className="flex justify-between items-center mb-6">
-        <div></div>
-        <Link href="/crm/sales-orders/new">
-          <Button className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            New Sales Order
-          </Button>
-        </Link>
-      </div>
-
       <SalesOrderFilters
         onFilterChange={handleFilterChange}
         filters={filters}

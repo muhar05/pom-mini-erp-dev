@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 interface POFileUploadProps {
   salesOrderId: string;
   currentFile?: string | null;
-  onUploadSuccess?: (fileUrl: string) => void;
+  onUploadSuccess?: (fileName: string) => void;
   onDeleteSuccess?: () => void;
 }
 
@@ -21,7 +21,7 @@ export default function POFileUpload({
 }: POFileUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [fileUrl, setFileUrl] = useState<string | null>(currentFile || null);
+  const [fileName, setFileName] = useState<string | null>(currentFile || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,21 +45,21 @@ export default function POFileUpload({
     try {
       const formData = new FormData();
       formData.append("file", file);
+      // Kirim salesOrderId untuk identifikasi file
+      formData.append("salesOrderId", salesOrderId || "NEW");
 
-      const response = await fetch(
-        `/api/sales-orders/${salesOrderId}/upload-po`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch("/api/po-customer", {
+        method: "POST",
+        body: formData,
+      });
 
       const result = await response.json();
 
       if (result.success) {
         toast.success("File uploaded successfully");
-        setFileUrl(result.data.fileUrl);
-        onUploadSuccess?.(result.data.fileUrl);
+        setFileName(result.data.fileName);
+        // Callback dengan fileName saja (bukan full URL)
+        onUploadSuccess?.(result.data.fileName);
       } else {
         toast.error(result.error || "Failed to upload file");
       }
@@ -68,46 +68,22 @@ export default function POFileUpload({
       toast.error("Failed to upload file");
     } finally {
       setUploading(false);
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!confirm("Are you sure you want to remove this file?")) return;
-
-    setDeleting(true);
-
-    try {
-      const response = await fetch(
-        `/api/sales-orders/${salesOrderId}/upload-po`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success("File removed successfully");
-        setFileUrl(null);
-        onDeleteSuccess?.();
-      } else {
-        toast.error(result.error || "Failed to remove file");
-      }
-    } catch (error) {
-      console.error("Delete error:", error);
-      toast.error("Failed to remove file");
-    } finally {
-      setDeleting(false);
-    }
+    setFileName(null);
+    onDeleteSuccess?.();
+    toast.success("File removed");
   };
 
-  const handleDownload = () => {
-    if (fileUrl) {
-      window.open(fileUrl, "_blank");
+  const handlePreview = () => {
+    if (fileName) {
+      window.open(`/api/po-customer/${encodeURIComponent(fileName)}`, "_blank");
     }
   };
 
@@ -119,14 +95,14 @@ export default function POFileUpload({
             <h3 className="text-sm font-medium">Customer PO File</h3>
           </div>
 
-          {fileUrl ? (
+          {fileName ? (
             // File exists
             <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
               <div className="flex items-center gap-3">
                 <FileText className="h-8 w-8 text-red-500" />
                 <div>
                   <p className="text-sm font-medium truncate max-w-[200px]">
-                    {fileUrl.split("/").pop()}
+                    {fileName}
                   </p>
                   <p className="text-xs text-muted-foreground">PDF Document</p>
                 </div>
@@ -136,7 +112,7 @@ export default function POFileUpload({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={handleDownload}
+                  onClick={handlePreview}
                 >
                   <Download className="h-4 w-4" />
                 </Button>

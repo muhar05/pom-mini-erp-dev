@@ -97,7 +97,8 @@ model users {
   user_logs                      user_logs[]
   user_otp                       user_otp[]
   roles                          roles?      @relation(fields: [role_id], references: [id])
-  quotations                     quotations[] // <--- Tambahkan ini
+  quotations                     quotations[]
+  sales_orders                   sales_orders[] @relation("UserToSalesOrders") // <-- Tambahkan relasi balik ini
 }
 
 model company {
@@ -223,6 +224,7 @@ model sales_orders {
   id                BigInt              @id @default(autoincrement())
   sale_no           String              @unique @db.VarChar(50)
   quotation_id      Int?
+  user_id           Int?                // <-- Tambahkan field ini
   total             Decimal?            @default(0) @db.Decimal(15, 2)
   discount          Decimal?            @default(0) @db.Decimal(15, 2)
   shipping          Decimal?            @default(0) @db.Decimal(15, 2)
@@ -238,6 +240,7 @@ model sales_orders {
   sale_order_detail sale_order_detail[]
   customers         customers?          @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   quotation         quotations?         @relation("QuotationToSalesOrder", fields: [quotation_id], references: [id])
+  user              users?              @relation("UserToSalesOrders", fields: [user_id], references: [id]) // <-- Tambahkan relasi ini
 }
 
 model stock_reservations {

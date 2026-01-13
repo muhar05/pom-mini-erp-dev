@@ -111,6 +111,7 @@ export default function QuotationForm({
   const [generatingQuotationNo, setGeneratingQuotationNo] = useState(false);
   const [showTargetCalendar, setShowTargetCalendar] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [isPricingDirty, setIsPricingDirty] = useState(false); // <-- Tambahkan state baru
 
   // 2. Inisialisasi state
   const [formData, setFormData] = useState<QuotationFormData>({
@@ -216,18 +217,25 @@ export default function QuotationForm({
     }
   }, [session]);
 
-  // Update handleInputChange dan setBoqItems agar setIsDirty(true)
+  // Update handleInputChange - hanya set isPricingDirty jika field pricing yang berubah
   const handleInputChange = (
     field: keyof QuotationFormData,
     value: string | number | BoqItem[]
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setIsDirty(true);
+
+    // Hanya set isPricingDirty jika field yang berubah adalah field pricing
+    if (["discount", "shipping", "tax"].includes(field)) {
+      setIsPricingDirty(true);
+    }
   };
 
+  // Update handleBoqChange - set isPricingDirty jika BOQ berubah
   const handleBoqChange = (items: BoqItem[]) => {
     setBoqItems(items);
     setIsDirty(true);
+    setIsPricingDirty(true); // <-- BOQ berubah = pricing harus dihitung ulang
   };
 
   const calculateTotals = () => {
@@ -250,11 +258,11 @@ export default function QuotationForm({
 
   // Kalkulasi hanya jika isDirty true
   useEffect(() => {
-    if (isDirty) {
+    if (isPricingDirty) {
       calculateTotals();
     }
     // eslint-disable-next-line
-  }, [boqItems, formData.shipping, formData.discount, formData.tax]);
+  }, [boqItems, formData.shipping, formData.discount, isPricingDirty]);
 
   // Ganti handleSubmit agar pakai server action
   const handleSubmit = async (e: React.FormEvent) => {
@@ -412,16 +420,17 @@ export default function QuotationForm({
   const companyDiscountAmount = (subtotal * companyDiscountPercent) / 100;
   const afterCompanyDiscount = subtotal - companyDiscountAmount;
 
-  const additionalDiscountPercent = isDirty ? formData.discount || 0 : 0;
-  const additionalDiscountAmount = isDirty
+  const additionalDiscountPercent = isPricingDirty ? formData.discount || 0 : 0; // <-- Ganti isDirty dengan isPricingDirty
+  const additionalDiscountAmount = isPricingDirty
     ? (afterCompanyDiscount * additionalDiscountPercent) / 100
     : 0;
-  const afterAllDiscount = isDirty
+  const afterAllDiscount = isPricingDirty
     ? afterCompanyDiscount - additionalDiscountAmount
     : subtotal;
 
-  const tax = isDirty ? 0.11 * afterAllDiscount : formData.tax;
-  const grandTotal = isDirty ? afterAllDiscount + tax : formData.grand_total;
+  // Selalu hitung tax dan grandTotal dari afterAllDiscount
+  const tax = 0.11 * afterAllDiscount;
+  const grandTotal = afterAllDiscount + tax;
 
   return (
     <div className="w-full mx-auto py-4 space-y-6">

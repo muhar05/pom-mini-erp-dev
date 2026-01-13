@@ -236,6 +236,22 @@ export default function SalesOrderForm({
               setSelectedQuotation(matchedQuotation);
             }
           }
+
+          // Set selectedQuotation jika ada quotation
+          if (fullSalesOrderData.quotation) {
+            setSelectedQuotation(fullSalesOrderData.quotation);
+
+            // Jika quotation tidak ada di quotationOptions, tambahkan
+            setQuotationOptions((prev) => {
+              const exists = prev.some(
+                (q) => q.id === fullSalesOrderData.quotation.id
+              );
+              if (!exists) {
+                return [...prev, fullSalesOrderData.quotation];
+              }
+              return prev;
+            });
+          }
         } catch (error) {
           console.error("Error loading existing sales order data:", error);
           toast.error(
@@ -633,6 +649,25 @@ export default function SalesOrderForm({
       setLoading(false);
     }
   };
+
+  // Tambahkan handler untuk update file_po_customer
+  const handlePOUploadSuccess = (fileUrl: string) => {
+    // Ambil nama file dari url
+    const fileName = fileUrl.split("/").pop() || "";
+    setFormData((prev) => ({
+      ...prev,
+      file_po_customer: fileName,
+    }));
+  };
+
+  // Cek apakah sales order punya referensi quotation
+  const hasQuotationReference =
+    !!formData.quotation_id ||
+    (salesOrder && salesOrder.quotation_id) ||
+    (selectedQuotation && selectedQuotation.id);
+
+  // Atau jika data sales order dari backend sudah include objek quotation:
+  const hasQuotationObject = !!(salesOrder && (salesOrder as any).quotation);
 
   return (
     <div className="mx-auto p-6 w-full">
@@ -1099,6 +1134,7 @@ export default function SalesOrderForm({
             <POFileUpload
               salesOrderId={salesOrder?.id || ""}
               currentFile={formData.file_po_customer}
+              onUploadSuccess={handlePOUploadSuccess}
             />
 
             {/* Action Buttons */}

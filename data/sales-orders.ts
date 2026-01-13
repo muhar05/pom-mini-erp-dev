@@ -142,16 +142,72 @@ export type UpdateSalesOrderInput = Prisma.sales_ordersUpdateInput;
 
 // CREATE
 export async function createSalesOrderDb(input: CreateSalesOrderInput) {
-  return prisma.sales_orders.create({
+  const salesOrder = await prisma.sales_orders.create({
     data: input,
     include: {
       quotation: {
         include: { customer: true },
       },
-      customers: true, // Include direct customer relation
+      customers: true,
       sale_order_detail: true,
+      user: true,
     },
   });
+
+  // Helper to convert Decimal fields
+  const convertCompanyLevel = (companyLevel: any) => {
+    if (!companyLevel) return null;
+    // JANGAN gunakan ...companyLevel, definisikan eksplisit
+    return {
+      id_level: companyLevel.id_level,
+      level_name: companyLevel.level_name,
+      disc1: companyLevel.disc1 ? Number(companyLevel.disc1) : 0,
+      disc2: companyLevel.disc2 ? Number(companyLevel.disc2) : 0,
+    };
+  };
+
+  const convertCompany = (company: any) => {
+    if (!company) return null;
+    // JANGAN gunakan ...company, definisikan eksplisit
+    return {
+      id: company.id,
+      company_name: company.company_name,
+      address: company.address,
+      npwp: company.npwp,
+      id_level: company.id_level,
+      note: company.note,
+      created_at: company.created_at,
+      company_level: convertCompanyLevel(company.company_level),
+    };
+  };
+
+  const convertCustomer = (customer: any) => {
+    if (!customer) return null;
+    // JANGAN gunakan ...customer, definisikan eksplisit
+    return {
+      id: customer.id,
+      customer_name: customer.customer_name,
+      address: customer.address,
+      phone: customer.phone,
+      email: customer.email,
+      type: customer.type,
+      company_id: customer.company_id,
+      note: customer.note,
+      created_at: customer.created_at,
+      company: convertCompany(customer.company),
+    };
+  };
+
+  return {
+    ...salesOrder,
+    customers: convertCustomer(salesOrder.customers),
+    quotation: salesOrder.quotation
+      ? {
+          ...salesOrder.quotation,
+          customer: convertCustomer(salesOrder.quotation.customer),
+        }
+      : null,
+  };
 }
 
 // UPDATE
@@ -159,17 +215,73 @@ export async function updateSalesOrderDb(
   id: string,
   data: UpdateSalesOrderInput
 ) {
-  return prisma.sales_orders.update({
+  const salesOrder = await prisma.sales_orders.update({
     where: { id: BigInt(id) },
     data,
     include: {
       quotation: {
         include: { customer: true },
       },
-      customers: true, // Include direct customer relation
+      customers: true,
       sale_order_detail: true,
+      user: true,
     },
   });
+
+  // Helper to convert Decimal fields
+  const convertCompanyLevel = (companyLevel: any) => {
+    if (!companyLevel) return null;
+    // JANGAN gunakan ...companyLevel, definisikan eksplisit
+    return {
+      id_level: companyLevel.id_level,
+      level_name: companyLevel.level_name,
+      disc1: companyLevel.disc1 ? Number(companyLevel.disc1) : 0,
+      disc2: companyLevel.disc2 ? Number(companyLevel.disc2) : 0,
+    };
+  };
+
+  const convertCompany = (company: any) => {
+    if (!company) return null;
+    // JANGAN gunakan ...company, definisikan eksplisit
+    return {
+      id: company.id,
+      company_name: company.company_name,
+      address: company.address,
+      npwp: company.npwp,
+      id_level: company.id_level,
+      note: company.note,
+      created_at: company.created_at,
+      company_level: convertCompanyLevel(company.company_level),
+    };
+  };
+
+  const convertCustomer = (customer: any) => {
+    if (!customer) return null;
+    // JANGAN gunakan ...customer, definisikan eksplisit
+    return {
+      id: customer.id,
+      customer_name: customer.customer_name,
+      address: customer.address,
+      phone: customer.phone,
+      email: customer.email,
+      type: customer.type,
+      company_id: customer.company_id,
+      note: customer.note,
+      created_at: customer.created_at,
+      company: convertCompany(customer.company),
+    };
+  };
+
+  return {
+    ...salesOrder,
+    customers: convertCustomer(salesOrder.customers),
+    quotation: salesOrder.quotation
+      ? {
+          ...salesOrder.quotation,
+          customer: convertCustomer(salesOrder.quotation.customer),
+        }
+      : null,
+  };
 }
 
 // DELETE
@@ -207,6 +319,7 @@ export async function getSalesOrderByIdDb(id: string) {
         },
       },
       sale_order_detail: true,
+      user: true,
     },
   });
   if (!salesOrder) throw new Error("Sales order not found");
@@ -215,7 +328,8 @@ export async function getSalesOrderByIdDb(id: string) {
   const convertCompanyLevel = (companyLevel: any) => {
     if (!companyLevel) return null;
     return {
-      ...companyLevel,
+      id_level: companyLevel.id_level,
+      level_name: companyLevel.level_name,
       disc1: companyLevel.disc1 ? Number(companyLevel.disc1) : 0,
       disc2: companyLevel.disc2 ? Number(companyLevel.disc2) : 0,
     };
@@ -225,7 +339,13 @@ export async function getSalesOrderByIdDb(id: string) {
   const convertCompany = (company: any) => {
     if (!company) return null;
     return {
-      ...company,
+      id: company.id,
+      company_name: company.company_name,
+      address: company.address,
+      npwp: company.npwp,
+      id_level: company.id_level,
+      note: company.note,
+      created_at: company.created_at,
       company_level: convertCompanyLevel(company.company_level),
     };
   };
@@ -234,34 +354,29 @@ export async function getSalesOrderByIdDb(id: string) {
   const convertCustomer = (customer: any) => {
     if (!customer) return null;
     return {
-      ...customer,
+      id: customer.id,
+      customer_name: customer.customer_name,
+      address: customer.address,
+      phone: customer.phone,
+      email: customer.email,
+      type: customer.type,
+      company_id: customer.company_id,
+      note: customer.note,
+      created_at: customer.created_at,
       company: convertCompany(customer.company),
     };
   };
 
-  // Convert Decimal and BigInt fields to safe types for client
-  const safeSalesOrder = {
-    ...salesOrder,
-    id: salesOrder.id.toString(),
-    quotation_id: salesOrder.quotation_id
-      ? Number(salesOrder.quotation_id)
-      : null,
-    customer_id: salesOrder.customer_id ? Number(salesOrder.customer_id) : null,
-    total: salesOrder.total ? Number(salesOrder.total) : 0,
-    discount: salesOrder.discount ? Number(salesOrder.discount) : 0,
-    shipping: salesOrder.shipping ? Number(salesOrder.shipping) : 0,
-    tax: salesOrder.tax ? Number(salesOrder.tax) : 0,
-    grand_total: salesOrder.grand_total ? Number(salesOrder.grand_total) : 0,
-  };
-
-  // Convert quotation and customer data if exists
+  // Convert quotation - tanpa spread operator
   const safeQuotation = salesOrder.quotation
     ? {
-        ...salesOrder.quotation,
         id: salesOrder.quotation.id,
+        quotation_no: salesOrder.quotation.quotation_no,
         customer_id: salesOrder.quotation.customer_id
           ? Number(salesOrder.quotation.customer_id)
           : null,
+        user_id: salesOrder.quotation.user_id,
+        lead_id: salesOrder.quotation.lead_id,
         total: salesOrder.quotation.total
           ? Number(salesOrder.quotation.total)
           : 0,
@@ -275,7 +390,13 @@ export async function getSalesOrderByIdDb(id: string) {
         grand_total: salesOrder.quotation.grand_total
           ? Number(salesOrder.quotation.grand_total)
           : 0,
-        top: salesOrder.quotation.top ? Number(salesOrder.quotation.top) : 0,
+        status: salesOrder.quotation.status,
+        stage: salesOrder.quotation.stage,
+        note: salesOrder.quotation.note,
+        target_date: salesOrder.quotation.target_date,
+        top: salesOrder.quotation.top,
+        created_at: salesOrder.quotation.created_at,
+        updated_at: salesOrder.quotation.updated_at,
         customer: convertCustomer(salesOrder.quotation.customer),
         quotation_detail: salesOrder.quotation.quotation_detail
           ? (salesOrder.quotation.quotation_detail as any[]).map(
@@ -293,9 +414,6 @@ export async function getSalesOrderByIdDb(id: string) {
       }
     : null;
 
-  // Convert direct customer relation
-  const safeCustomers = convertCustomer(salesOrder.customers);
-
   // Convert sale order details
   const safeSaleOrderDetails = salesOrder.sale_order_detail
     ? salesOrder.sale_order_detail.map((detail) => ({
@@ -310,11 +428,41 @@ export async function getSalesOrderByIdDb(id: string) {
       }))
     : [];
 
+  // Convert user to safe format
+  const safeUser = salesOrder.user
+    ? {
+        id: salesOrder.user.id,
+        name: salesOrder.user.name,
+        email: salesOrder.user.email,
+        role_id: salesOrder.user.role_id,
+        created_at: salesOrder.user.created_at,
+      }
+    : null;
+
+  // Return clean object tanpa spread
   return {
-    ...safeSalesOrder,
+    id: salesOrder.id.toString(),
+    sale_no: salesOrder.sale_no,
+    quotation_id: salesOrder.quotation_id
+      ? Number(salesOrder.quotation_id)
+      : null,
+    customer_id: salesOrder.customer_id ? Number(salesOrder.customer_id) : null,
+    user_id: salesOrder.user_id,
+    total: salesOrder.total ? Number(salesOrder.total) : 0,
+    discount: salesOrder.discount ? Number(salesOrder.discount) : 0,
+    shipping: salesOrder.shipping ? Number(salesOrder.shipping) : 0,
+    tax: salesOrder.tax ? Number(salesOrder.tax) : 0,
+    grand_total: salesOrder.grand_total ? Number(salesOrder.grand_total) : 0,
+    status: salesOrder.status,
+    note: salesOrder.note,
+    sale_status: salesOrder.sale_status,
+    payment_status: salesOrder.payment_status,
+    file_po_customer: salesOrder.file_po_customer,
+    created_at: salesOrder.created_at,
     quotation: safeQuotation,
     customers: convertCustomer(salesOrder.customers),
     sale_order_detail: safeSaleOrderDetails,
+    user: safeUser,
   };
 }
 

@@ -281,6 +281,15 @@ export default function SalesOrderDetailPage() {
                     </div>
                   </>
                 )}
+
+                {salesOrder.user && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">
+                      Sales PIC
+                    </label>
+                    <p className="font-semibold">{salesOrder.user.name}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -360,6 +369,34 @@ export default function SalesOrderDetailPage() {
                       </div>
                     </>
                   )}
+                  {customer.company && (
+                    <>
+                      <Separator className="my-4" />
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">
+                          Company Name
+                        </label>
+                        <p>{customer.company.company_name}</p>
+                      </div>
+                      {customer.company.address && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            Company Address
+                          </label>
+                          <p>{customer.company.address}</p>
+                        </div>
+                      )}
+                      {customer.company.npwp && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            Company NPWP
+                          </label>
+                          <p>{customer.company.npwp}</p>
+                        </div>
+                      )}
+                      {/* Tambahkan field lain sesuai kebutuhan */}
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -427,7 +464,11 @@ export default function SalesOrderDetailPage() {
                           <div>
                             <span className="text-gray-500">Total:</span>
                             <p className="font-medium text-green-600">
-                              {formatCurrency(Number(item.total))}
+                              {formatCurrency(
+                                Number(item.total) > 0
+                                  ? Number(item.total)
+                                  : Number(item.qty) * Number(item.price)
+                              )}
                             </p>
                           </div>
                         </div>
@@ -499,6 +540,7 @@ export default function SalesOrderDetailPage() {
               </CardContent>
             </Card>
 
+            {/* Customer PO - dengan Preview PDF */}
             {salesOrder.file_po_customer && (
               <Card>
                 <CardHeader>
@@ -507,11 +549,55 @@ export default function SalesOrderDetailPage() {
                     Customer PO
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600">File:</p>
-                  <p className="font-medium break-all">
-                    {salesOrder.file_po_customer}
-                  </p>
+                <CardContent className="space-y-4">
+                  {/* File Info */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">File:</p>
+                      <p className="font-medium break-all">
+                        {salesOrder.file_po_customer}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        window.open(
+                          `/api/po-customer/${salesOrder.file_po_customer}`,
+                          "_blank"
+                        )
+                      }
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  </div>
+
+                  {/* PDF Preview */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <object
+                      data={`/api/po-customer/${salesOrder.file_po_customer}`}
+                      type="application/pdf"
+                      width="100%"
+                      height="500px"
+                      className="w-full"
+                    >
+                      <div className="p-4 text-center text-gray-500">
+                        <p>PDF tidak bisa ditampilkan di browser ini.</p>
+                        <Button
+                          variant="link"
+                          onClick={() =>
+                            window.open(
+                              `/api/po-customer/${salesOrder.file_po_customer}`,
+                              "_blank"
+                            )
+                          }
+                        >
+                          Klik untuk membuka PDF
+                        </Button>
+                      </div>
+                    </object>
+                  </div>
                 </CardContent>
               </Card>
             )}
