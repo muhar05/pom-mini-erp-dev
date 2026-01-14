@@ -112,6 +112,7 @@ export default function QuotationForm({
   const [showTargetCalendar, setShowTargetCalendar] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [isPricingDirty, setIsPricingDirty] = useState(false); // <-- Tambahkan state baru
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // Tambahkan state isInitialLoad
 
   // 2. Inisialisasi state
   const [formData, setFormData] = useState<QuotationFormData>({
@@ -258,11 +259,19 @@ export default function QuotationForm({
 
   // Kalkulasi hanya jika isDirty true
   useEffect(() => {
+    // Skip kalkulasi saat initial load
+    if (isInitialLoad) return;
     if (isPricingDirty) {
       calculateTotals();
     }
     // eslint-disable-next-line
-  }, [boqItems, formData.shipping, formData.discount, isPricingDirty]);
+  }, [
+    boqItems,
+    formData.shipping,
+    formData.discount,
+    isPricingDirty,
+    isInitialLoad,
+  ]);
 
   // Ganti handleSubmit agar pakai server action
   const handleSubmit = async (e: React.FormEvent) => {
@@ -420,13 +429,11 @@ export default function QuotationForm({
   const companyDiscountAmount = (subtotal * companyDiscountPercent) / 100;
   const afterCompanyDiscount = subtotal - companyDiscountAmount;
 
-  const additionalDiscountPercent = isPricingDirty ? formData.discount || 0 : 0; // <-- Ganti isDirty dengan isPricingDirty
-  const additionalDiscountAmount = isPricingDirty
-    ? (afterCompanyDiscount * additionalDiscountPercent) / 100
-    : 0;
-  const afterAllDiscount = isPricingDirty
-    ? afterCompanyDiscount - additionalDiscountAmount
-    : subtotal;
+  // Additional discount selalu dihitung, tidak perlu cek isPricingDirty
+  const additionalDiscountPercent = formData.discount || 0;
+  const additionalDiscountAmount =
+    (afterCompanyDiscount * additionalDiscountPercent) / 100;
+  const afterAllDiscount = afterCompanyDiscount - additionalDiscountAmount;
 
   // Selalu hitung tax dan grandTotal dari afterAllDiscount
   const tax = 0.11 * afterAllDiscount;
