@@ -11,13 +11,13 @@ const Footer = () => {
           &copy; {currentYear} PT PRIMA OTOMASI MANDIRI. All Rights Reserved.
         </p>
         <p className="mb-0 dark:text-white">
-          Made by
+          Development by
           <Link
             href="#"
             className="font-medium text-primary dark:text-primary hover:underline"
           >
             {" "}
-            PT PRIMA OTOMASI MANDIRI
+            Applikasi ID
           </Link>
         </p>
       </div>

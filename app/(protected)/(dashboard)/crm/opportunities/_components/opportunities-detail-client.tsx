@@ -63,7 +63,7 @@ export default function OpportunityDetailClient({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Pakai custom hook
-  const { convert, loading, error } = useConvertOpportunityToSQ();
+  const { convert, loading, error, result } = useConvertOpportunityToSQ();
 
   // Handler untuk buka dialog konfirmasi convert SQ
   const handleOpenConvertSQDialog = () => {
@@ -73,10 +73,10 @@ export default function OpportunityDetailClient({
   // Handler untuk konfirmasi convert SQ
   const handleConfirmConvertSQ = async () => {
     const success = await convert(opportunity.id, null);
-    if (success) {
+    if (success && result && result.id) {
       toast.success("Berhasil convert ke SQ!");
       setDialogOpen(false);
-      router.refresh();
+      router.push(`/crm/quotations/${result.id}/edit`);
     } else {
       toast.error(error || "Gagal convert ke SQ");
     }
