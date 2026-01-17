@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { createLeadSchema, updateLeadSchema } from "@/lib/schemas";
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
+import { formatCurrency } from "@/utils/formatCurrency";
 import { formatStatusDisplay } from "@/utils/formatStatus";
 import dynamic from "next/dynamic";
 import { LEAD_STATUS_OPTIONS } from "@/utils/statusHelpers";
@@ -33,7 +34,7 @@ interface LeadFormProps {
   mode: "create" | "edit";
   lead?: leads;
   onSubmit: (
-    formData: FormData
+    formData: FormData,
   ) => Promise<void> | Promise<{ success: boolean; message: string }>;
   products: Array<{ id: number; name: string }>;
 }
@@ -60,6 +61,9 @@ LeadFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [potentialValue, setPotentialValue] = useState<string>(
+    lead?.potential_value ? formatCurrency(Number(lead.potential_value)) : "",
+  );
   const [productInterest, setProductInterest] = useState<
     Array<{ label: string; value: string }>
   >(
@@ -67,10 +71,10 @@ LeadFormProps) {
       ? lead.product_interest
           .split(",")
           .map((name: string) => ({ label: name, value: name }))
-      : []
+      : [],
   );
   const [selectedLocation, setSelectedLocation] = useState<string>(
-    lead?.location || ""
+    lead?.location || "",
   );
   const [foreignCountry, setForeignCountry] = useState<string>("");
   const [selectedCustomers, setSelectedCustomers] = useState<
@@ -149,20 +153,21 @@ LeadFormProps) {
       // Set product_interest as comma separated string
       formData.set(
         "product_interest",
-        productInterest.map((p) => p.value).join(",")
+        productInterest.map((p) => p.value).join(","),
       );
 
       // Set customers as comma separated string
       formData.set(
         "customers",
-        selectedCustomers.map((c) => c.value).join(",")
+        selectedCustomers.map((c) => c.value).join(","),
       );
       formData.set("company_id", selectedCompany?.value ?? "");
 
       // Ensure status is not empty: set sensible default if missing
       const statusValue = (formData.get("status") as string) ?? "";
       if (statusValue.trim() === "") {
-        const defaultStatus = mode === "create" ? "new" : lead?.status ?? "new";
+        const defaultStatus =
+          mode === "create" ? "new" : (lead?.status ?? "new");
         formData.set("status", defaultStatus);
       }
 
@@ -185,7 +190,13 @@ LeadFormProps) {
 
       // Show loading toast
       const loadingToastId = toast.loading(
-        mode === "create" ? "Creating lead..." : "Updating lead..."
+        mode === "create" ? "Creating lead..." : "Updating lead...",
+      );
+
+      // Set potential_value ke BE dalam bentuk angka
+      formData.set(
+        "potential_value",
+        potentialValue ? potentialValue.replace(/[^0-9]/g, "") : "0",
       );
 
       await onSubmit(formData);
@@ -209,7 +220,7 @@ LeadFormProps) {
             primary: "#fff",
             secondary: "#10B981",
           },
-        }
+        },
       );
 
       // Short delay before redirect for better UX
@@ -402,7 +413,7 @@ LeadFormProps) {
             let defaultVal = findOptionValue(
               lead?.type ?? "",
               TYPE_OPTIONS,
-              ""
+              "",
             );
             const raw = lead?.type;
             if (!defaultVal && raw) {
@@ -414,7 +425,7 @@ LeadFormProps) {
               TYPE_OPTIONS.some(
                 (o) =>
                   o.value.toLowerCase() === String(raw).toLowerCase() ||
-                  o.label.toLowerCase() === String(raw).toLowerCase()
+                  o.label.toLowerCase() === String(raw).toLowerCase(),
               );
             const extraOption =
               !hasMatch && raw
@@ -463,7 +474,7 @@ LeadFormProps) {
             let defaultVal = findOptionValue(
               lead?.source ?? "",
               SOURCE_OPTIONS,
-              ""
+              "",
             );
             const raw = lead?.source;
             if (!defaultVal && raw) {
@@ -475,7 +486,7 @@ LeadFormProps) {
               SOURCE_OPTIONS.some(
                 (o) =>
                   o.value.toLowerCase() === String(raw).toLowerCase() ||
-                  o.label.toLowerCase() === String(raw).toLowerCase()
+                  o.label.toLowerCase() === String(raw).toLowerCase(),
               );
             const extraOption =
               !hasMatch && raw
@@ -536,14 +547,14 @@ LeadFormProps) {
                         "opp_qualified",
                         "Qualified",
                       ].includes(opt.value.toLowerCase()) &&
-                      opt.label.toLowerCase() !== "qualified"
+                      opt.label.toLowerCase() !== "qualified",
                   )
                 : STATUS_OPTIONS;
 
             let defaultVal = findOptionValue(
               lead?.status ?? (mode === "create" ? "new" : ""),
               filteredStatusOptions,
-              mode === "create" ? "new" : ""
+              mode === "create" ? "new" : "",
             );
             const raw = lead?.status;
             if (!defaultVal && raw) {
@@ -555,7 +566,7 @@ LeadFormProps) {
               filteredStatusOptions.some(
                 (o) =>
                   o.value.toLowerCase() === String(raw).toLowerCase() ||
-                  o.label.toLowerCase() === String(raw).toLowerCase()
+                  o.label.toLowerCase() === String(raw).toLowerCase(),
               );
             const extraOption =
               !hasMatch && raw
@@ -635,6 +646,27 @@ LeadFormProps) {
             </p>
           )}
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="potential_value">Potential Value</Label>
+          <Input
+            id="potential_value"
+            name="potential_value"
+            type="text"
+            inputMode="numeric"
+            value={potentialValue}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/[^0-9]/g, "");
+              setPotentialValue(formatCurrency(Number(raw)));
+            }}
+            disabled={loading}
+            className={formErrors.potential_value ? "border-red-500" : ""}
+            placeholder="Masukkan nilai potensial (contoh: 1.000.000)"
+          />
+          {formErrors.potential_value && (
+            <p className="text-sm text-red-500">{formErrors.potential_value}</p>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -659,8 +691,8 @@ LeadFormProps) {
           {loading
             ? "Saving..."
             : mode === "create"
-            ? "Create Lead"
-            : "Update Lead"}
+              ? "Create Lead"
+              : "Update Lead"}
         </Button>
         <Button
           type="button"

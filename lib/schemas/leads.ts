@@ -13,7 +13,7 @@ const phoneSchema = z
     },
     {
       message: "Please enter a valid phone number (8-20 digits)",
-    }
+    },
   );
 
 const emailSchema = z
@@ -27,7 +27,7 @@ const emailSchema = z
     },
     {
       message: "Please enter a valid email address",
-    }
+    },
   );
 
 const leadNameSchema = z
@@ -54,7 +54,7 @@ const contactSchema = z
     },
     {
       message: "Contact person must be between 2-150 characters",
-    }
+    },
   );
 
 const companySchema = z
@@ -67,7 +67,7 @@ const companySchema = z
     },
     {
       message: "Company name must be between 2-150 characters",
-    }
+    },
   );
 
 const locationSchema = z
@@ -80,7 +80,7 @@ const locationSchema = z
     },
     {
       message: "Location must be between 2-150 characters",
-    }
+    },
   );
 
 // Type: accept common strings, validate length (and letters/spaces/_-)
@@ -96,7 +96,7 @@ const typeSchema = z
     },
     {
       message: "Please enter a valid type (max 100 characters)",
-    }
+    },
   );
 
 // Source: accept freeform source names (Website, LinkedIn, Google Search...), validate length
@@ -111,7 +111,7 @@ const sourceSchema = z
     },
     {
       message: "Please enter a valid source (max 100 characters)",
-    }
+    },
   );
 
 // Status: accept both canonical options and freeform values from DB (e.g., "Open", "Follow Up")
@@ -127,7 +127,7 @@ const statusSchema = z
     },
     {
       message: "Please enter a valid status (max 50 characters)",
-    }
+    },
   );
 
 // Main lead schema for CREATE (lead_name is required)
@@ -152,7 +152,7 @@ export const createLeadSchema = z
         },
         {
           message: "Product interest must be less than 200 characters",
-        }
+        },
       ),
     source: sourceSchema,
     note: z
@@ -165,12 +165,19 @@ export const createLeadSchema = z
         },
         {
           message: "Note must be less than 1000 characters",
-        }
+        },
       ),
     id_user: z.number().optional(),
     assigned_to: z.number().optional(),
     status: statusSchema,
-    reference_no: z.string().optional(), // ← Tambahkan baris ini
+    reference_no: z.string().optional(),
+    potential_value: z.preprocess((val) => {
+      if (typeof val === "string") {
+        const num = Number(val.replace(/[^0-9.]/g, ""));
+        return isNaN(num) ? undefined : num;
+      }
+      return val;
+    }, z.number().min(0, "Potential value must be a positive number").optional()),
   })
   .refine((data) => !!data.email || !!data.phone, {
     message: "At least one of email or phone is required",
@@ -179,7 +186,7 @@ export const createLeadSchema = z
 
 // Schema untuk update (all fields optional including lead_name)
 export const updateLeadSchema = z.object({
-  lead_name: leadNameOptionalSchema, // Optional for update
+  lead_name: leadNameOptionalSchema,
   contact: contactSchema,
   email: emailSchema,
   phone: phoneSchema,
@@ -196,7 +203,7 @@ export const updateLeadSchema = z.object({
       },
       {
         message: "Product interest must be less than 200 characters",
-      }
+      },
     ),
   source: sourceSchema,
   note: z
@@ -209,12 +216,19 @@ export const updateLeadSchema = z.object({
       },
       {
         message: "Note must be less than 1000 characters",
-      }
+      },
     ),
   id_user: z.number().optional(),
   assigned_to: z.number().optional(),
   status: statusSchema,
-  reference_no: z.string().optional(), // ← Tambahkan baris ini juga
+  reference_no: z.string().optional(),
+  potential_value: z.preprocess((val) => {
+    if (typeof val === "string") {
+      const num = Number(val.replace(/[^0-9.]/g, ""));
+      return isNaN(num) ? undefined : num;
+    }
+    return val;
+  }, z.number().min(0, "Potential value must be a positive number").optional()),
 });
 
 // Export base schema for form validation (same as create for backward compatibility)
@@ -227,7 +241,7 @@ export type UpdateLeadData = z.infer<typeof updateLeadSchema>;
 // Helper function untuk validasi FormData
 export function validateLeadFormData(
   formData: FormData,
-  mode: "create" | "update"
+  mode: "create" | "update",
 ) {
   const data: Record<string, any> = {};
 

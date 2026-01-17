@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Edit, Trash2, MoreHorizontal } from "lucide-react";
+import { formatCurrency } from "@/utils/formatCurrency";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +44,6 @@ export default function LeadsTable({ leads, filters }: LeadsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [localLeads, setLocalLeads] = useState<leads[]>(leads);
-  const router = useRouter();
 
   // Sync localLeads with props.leads jika leads berubah dari parent
   useEffect(() => {
@@ -92,6 +92,7 @@ export default function LeadsTable({ leads, filters }: LeadsTableProps) {
               <TableHead>Company</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Potential Value</TableHead>
               <TableHead>Created Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -129,6 +130,11 @@ export default function LeadsTable({ leads, filters }: LeadsTableProps) {
                     >
                       {formatStatusDisplay(lead.status)}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {lead.potential_value != null
+                      ? formatCurrency(Number(lead.potential_value))
+                      : "-"}
                   </TableCell>
                   <TableCell>
                     {lead.created_at ? formatDate(lead.created_at) : "-"}

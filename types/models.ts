@@ -35,6 +35,7 @@ export interface leads {
   id_user?: number | null;
   created_at?: Date | null;
   assigned_to?: number | null;
+  potential_value?: number | null;
   status?: string | null;
   users_leads_assigned_toTousers?: users | null;
   users_leads_id_userTousers?: users | null;

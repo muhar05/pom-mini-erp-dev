@@ -17,6 +17,12 @@ export default async function EditLeadPage(props: Promise<EditLeadPageProps>) {
     price: p.price ? Number(p.price) : null,
   }));
 
+  // Konversi potential_value ke number jika ada
+  const leadForForm = {
+    ...lead,
+    potential_value: lead.potential_value ? Number(lead.potential_value) : null,
+  };
+
   return (
     <>
       <DashboardBreadcrumb
@@ -28,7 +34,7 @@ export default async function EditLeadPage(props: Promise<EditLeadPageProps>) {
           <h2 className="text-lg font-semibold mb-4">Edit Lead Information</h2>
           <LeadForm
             mode="edit"
-            lead={lead}
+            lead={leadForForm}
             onSubmit={updateLeadAction}
             products={products}
           />

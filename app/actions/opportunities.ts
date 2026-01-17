@@ -32,7 +32,7 @@ async function calculatePotentialValue(productInterest: string | null) {
 // UPDATE OPPORTUNITY
 export async function updateOpportunityAction(
   id: number,
-  data: Record<string, any>
+  data: Record<string, any>,
 ) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
@@ -72,10 +72,6 @@ export async function getOpportunityByIdAction(id: number) {
     ? await getUserByIdDb(opportunity.assigned_to)
     : null;
 
-  const potential_value = await calculatePotentialValue(
-    opportunity.product_interest ?? ""
-  );
-
   return {
     id: opportunity.id.toString(),
     opportunity_no: opportunity.reference_no ?? `OPP-${opportunity.id}`,
@@ -85,7 +81,9 @@ export async function getOpportunityByIdAction(id: number) {
     sales_pic: opportunity.users_leads_id_userTousers?.name ?? "",
     type: opportunity.type ?? "",
     company: opportunity.company ?? "",
-    potential_value,
+    potential_value: opportunity.potential_value
+      ? Number(opportunity.potential_value)
+      : 0,
     expected_close_date: "", // jika ada field di leads, isi sesuai
     notes: opportunity.note ?? "",
     status: opportunity.status ?? "",
@@ -105,7 +103,6 @@ export async function getOpportunityByIdAction(id: number) {
     id_user_name: idUser ? idUser.name : "",
     assigned_to: opportunity.assigned_to ?? null,
     assigned_to_name: assignedToUser ? assignedToUser.name : "",
-    // Tambahkan field lain dari leads jika ada
   };
 }
 
@@ -122,7 +119,7 @@ export async function getAllOpportunitiesAction() {
       type: opportunity.type ?? "",
       company: opportunity.company ?? "",
       potential_value: await calculatePotentialValue(
-        opportunity.product_interest ?? ""
+        opportunity.product_interest ?? "",
       ),
       expected_close_date: "",
       notes: opportunity.note ?? "",
@@ -142,7 +139,7 @@ export async function getAllOpportunitiesAction() {
       id_user: opportunity.id_user ?? null,
       assigned_to: opportunity.assigned_to ?? null,
       // Tambahkan field lain dari leads jika ada
-    }))
+    })),
   );
 
   return data;
@@ -161,7 +158,7 @@ export async function GET() {
       type: opportunity.type ?? "",
       company: opportunity.company ?? "",
       potential_value: await calculatePotentialValue(
-        opportunity.product_interest ?? ""
+        opportunity.product_interest ?? "",
       ),
       expected_close_date: "",
       notes: opportunity.note ?? "",
@@ -173,7 +170,7 @@ export async function GET() {
       updated_at: opportunity.created_at
         ? opportunity.created_at.toISOString().split("T")[0]
         : "",
-    }))
+    })),
   );
 
   return NextResponse.json(data);
@@ -182,7 +179,7 @@ export async function GET() {
 // Convert Opportunity to Sales Quotation
 export async function convertOpportunityToSQ(
   opportunityId: number,
-  customerId: number | null
+  customerId: number | null,
 ) {
   const session = await auth();
   if (!session?.user) throw new Error("Unauthorized");
@@ -220,7 +217,7 @@ export async function convertOpportunityToSQ(
   // Hitung total
   const total = quotation_detail.reduce(
     (sum, item) => sum + item.unit_price * item.quantity,
-    0
+    0,
   );
 
   // Siapkan data quotation - LANGSUNG KE PRISMA

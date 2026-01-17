@@ -38,6 +38,7 @@ import { CheckCircle, Clock } from "lucide-react";
 import OpportunityDeleteDialog from "@/app/(protected)/(dashboard)/crm/opportunities/_components/opportunity-delete-dialog";
 import { useConvertOpportunityToSQ } from "@/hooks/opportunities/useConvertOpportunityToSQ";
 import { toast } from "react-hot-toast";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 type OpportunitiesTableProps = {
   isSuperadmin?: boolean;
@@ -61,8 +62,8 @@ export default function OpportunitiesTable({
     (item) =>
       item.status === "prospecting" ||
       item.status === "opp_lost" ||
-      item.status === "opp_sq"
-  );
+      item.status === "opp_sq",
+  );    
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -74,7 +75,7 @@ export default function OpportunitiesTable({
   const [convertId, setConvertId] = useState<string | null>(null);
 
   const { updateStatus, isLoading } = useUpdateOpportunityStatus(
-    selectedId || ""
+    selectedId || "",
   );
   const { convert, loading, error, result } = useConvertOpportunityToSQ();
 
@@ -136,7 +137,7 @@ export default function OpportunitiesTable({
                   <TableCell>{item.customer_email}</TableCell>
                   <TableCell>{item.type}</TableCell>
                   <TableCell>{item.company}</TableCell>
-                  <TableCell>{item.potential_value.toLocaleString()}</TableCell>
+                  <TableCell>{formatCurrency(item.potential_value)}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(item.status)}>
                       {item.status === "opp_sq"

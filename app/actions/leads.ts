@@ -95,7 +95,7 @@ export async function createLeadAction(formData: FormData) {
       throw new Error(error.message);
     }
     throw new Error(
-      "Failed to create lead. Please check your input and try again."
+      "Failed to create lead. Please check your input and try again.",
     );
   }
 }
@@ -131,7 +131,7 @@ export async function updateLeadAction(formData: FormData) {
         Number(user.id),
         "update",
         oldLead,
-        updatedLead
+        updatedLead,
       );
 
       revalidatePath("/crm/opportunities");
@@ -154,7 +154,7 @@ export async function updateLeadAction(formData: FormData) {
     // Status change validation
     if (validatedData.status && validatedData.status !== oldLead.status) {
       const oldNormalizedStatus = normalizeStatusToNewFormat(
-        oldLead.status || LEAD_STATUSES.NEW
+        oldLead.status || LEAD_STATUSES.NEW,
       );
 
       if (isSales(user)) {
@@ -180,7 +180,7 @@ export async function updateLeadAction(formData: FormData) {
         Number(user.id),
         "status-change",
         oldLead.status,
-        validatedData.status
+        validatedData.status,
       );
     }
 
@@ -204,7 +204,7 @@ export async function updateLeadAction(formData: FormData) {
       throw new Error(error.message);
     }
     throw new Error(
-      "Failed to update lead. Please check your input and try again."
+      "Failed to update lead. Please check your input and try again.",
     );
   }
 }
@@ -304,9 +304,13 @@ export async function convertLeadAction(id: number) {
     Number(user.id),
     "status-change",
     lead,
-    updatedLead
+    updatedLead,
   );
 
   revalidatePath("/crm/leads");
-  return { success: true, message: "Lead converted to opportunity" };
+  return {
+    success: true,
+    message: "Lead converted to opportunity",
+    redirect: "/crm/opportunities", // or null/undefined if not redirecting
+  };
 }
