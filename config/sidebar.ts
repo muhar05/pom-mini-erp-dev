@@ -31,9 +31,19 @@ export type MenuItem = {
 };
 
 export const sidebarMenuByRole: Record<string, MenuItem[]> = {
-  // SUPERADMIN — full access
   superuser: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      items: [
+        { title: "CRM", url: "/dashboard/crm" },
+        { title: "Sales", url: "/dashboard/sales" },
+        { title: "Finance", url: "/dashboard/finance" },
+        { title: "Purchase", url: "/dashboard/purchase" },
+        { title: "Warehouse", url: "/dashboard/warehouse" },
+        { title: "Delivery", url: "/dashboard/delivery" },
+      ],
+    },
 
     {
       title: "CRM",
@@ -48,8 +58,18 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       ],
     },
 
-    { title: "Quotation (SQ)", url: "/crm/quotations", icon: FileCheck },
-    { title: "Sales Order (SO)", url: "/crm/sales-orders", icon: ShoppingCart },
+    {
+      title: "Sales",
+      icon: ShoppingCart,
+      items: [
+        { title: "Quotation (SQ)", url: "/crm/quotations", icon: FileCheck },
+        {
+          title: "Sales Order (SO)",
+          url: "/crm/sales-orders",
+          icon: ShoppingCart,
+        },
+      ],
+    },
 
     {
       title: "Purchasing",
@@ -73,6 +93,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
         },
       ],
     },
+
     {
       title: "Logistics",
       icon: Truck,
@@ -84,6 +105,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
         },
       ],
     },
+
     {
       title: "Inventory",
       icon: Boxes,
@@ -125,154 +147,6 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
         { title: "Product List", url: "/products", icon: Package },
         { title: "Vendor List", url: "/purchasing/vendors", icon: Building2 },
       ],
-    },
-  ],
-
-  // SALES — hanya CRM
-  sales: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Leads", url: "/crm/leads", icon: Users },
-    { title: "Opportunity", url: "/crm/opportunities", icon: ClipboardList },
-    { title: "Quotation (SQ)", url: "/crm/quotations", icon: FileCheck },
-    { title: "Sales Order (SO)", url: "/crm/sales-orders", icon: ShoppingCart },
-    { title: "Customer List", url: "/crm/customers", icon: UserRound },
-  ],
-
-  // PURCHASING — hanya PMS
-  purchasing: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    {
-      title: "Purchase Request (PR)",
-      url: "/purchasing/purchase-requests",
-      icon: ClipboardList,
-    },
-    {
-      title: "Purchase Order (PO)",
-      url: "/purchasing/purchase-orders",
-      icon: FileBox,
-    },
-    { title: "Vendor List", url: "/purchasing/vendors", icon: Building2 },
-  ],
-
-  // WAREHOUSE — hanya warehouse
-  warehouse: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    {
-      title: "Stock Reservation (SR)",
-      url: "/warehouse/reservations",
-      icon: ClipboardList,
-    },
-    { title: "Goods Receipt (GR)", url: "/warehouse/receiving", icon: Package },
-    {
-      title: "Delivery Request (DR)",
-      url: "/warehouse/delivery/requests",
-      icon: Truck,
-    },
-    { title: "Stock List", url: "/warehouse/inventory/stocks", icon: Boxes },
-    {
-      title: "Stock Movements",
-      url: "/warehouse/inventory/movements",
-      icon: FileText,
-    },
-  ],
-
-  // FINANCE — hanya finance
-  finance: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "FAR", url: "/finance/far", icon: BadgeDollarSign },
-    { title: "Invoice", url: "/finance/invoice", icon: Receipt },
-    {
-      title: "Payment Schedule",
-      url: "/finance/payment-schedule",
-      icon: Banknote,
-    },
-    {
-      title: "Customer Payment Status",
-      url: "/finance/customer-payment",
-      icon: HandCoins,
-    },
-  ],
-
-  manager_sales: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    {
-      title: "My Pending Task",
-      url: "/manager-sales/my-pending-task",
-      icon: ClipboardList,
-    },
-    {
-      title: "Pending Task",
-      url: "/manager-sales/pending-task",
-      icon: ClipboardList,
-    },
-    { title: "Leads", url: "/crm/leads", icon: Users },
-    { title: "Opportunity", url: "/crm/opportunities", icon: ClipboardList },
-    { title: "Quotation (SQ)", url: "/crm/quotations", icon: FileCheck },
-    { title: "Sales Order (SO)", url: "/crm/sales-orders", icon: ShoppingCart },
-    { title: "Customer List", url: "/crm/customers", icon: UserRound },
-  ],
-  manager_purchasing: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    {
-      title: "My Pending Task",
-      url: "/manager-purchasing/my-pending-task",
-      icon: ClipboardList,
-    },
-    {
-      title: "Purchase Request (PR)",
-      url: "/purchasing/purchase-requests",
-      icon: ClipboardList,
-    },
-    {
-      title: "Purchase Order (PO)",
-      url: "/purchasing/purchase-orders",
-      icon: FileBox,
-    },
-    { title: "Vendor List", url: "/purchasing/vendors", icon: Building2 },
-  ],
-  manager_warehouse: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    {
-      title: "My Pending Task",
-      url: "/manager-warehouse/my-pending-task",
-      icon: ClipboardList,
-    },
-    {
-      title: "Stock Reservation (SR)",
-      url: "/warehouse/reservations",
-      icon: ClipboardList,
-    },
-    { title: "Goods Receipt (GR)", url: "/warehouse/receiving", icon: Package },
-    {
-      title: "Delivery Request (DR)",
-      url: "/warehouse/delivery/requests",
-      icon: Truck,
-    },
-    { title: "Stock List", url: "/warehouse/inventory/stocks", icon: Boxes },
-    {
-      title: "Stock Movements",
-      url: "/warehouse/inventory/movements",
-      icon: FileText,
-    },
-  ],
-  manager_finance: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    {
-      title: "My Pending Task",
-      url: "/manager-finance/my-pending-task",
-      icon: ClipboardList,
-    },
-    { title: "FAR", url: "/finance/far", icon: BadgeDollarSign },
-    { title: "Invoice", url: "/finance/invoice", icon: Receipt },
-    {
-      title: "Payment Schedule",
-      url: "/finance/payment-schedule",
-      icon: Banknote,
-    },
-    {
-      title: "Customer Payment Status",
-      url: "/finance/customer-payment",
-      icon: HandCoins,
     },
   ],
 };

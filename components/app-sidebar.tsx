@@ -13,7 +13,6 @@ import { NavMain } from "@/components/nav-main";
 import { MenuItem } from "@/config/sidebar";
 import { SidebarItem } from "@/components/nav-main";
 
-// Fungsi konversi rekursif
 function convertMenuToSidebar(items: MenuItem[]): SidebarItem[] {
   return items.map((item) => {
     if (item.items && item.items.length > 0) {
@@ -23,18 +22,31 @@ function convertMenuToSidebar(items: MenuItem[]): SidebarItem[] {
         items: item.items.map((sub) => ({
           title: sub.title,
           url: sub.url ?? "#",
-          icon: sub.icon, // <-- tambahkan ini
-          circleColor: "bg-primary",
+          circleColor: getColorByTitle(sub.title),
         })),
       };
     }
+
     return {
       title: item.title,
       url: item.url,
       icon: item.icon,
-      circleColor: "bg-primary",
     };
   });
+}
+
+// mapping warna bullet
+function getColorByTitle(title: string) {
+  const map: Record<string, string> = {
+    CRM: "bg-emerald-500",
+    Sales: "bg-blue-500",
+    Finance: "bg-yellow-500",
+    Purchase: "bg-purple-500",
+    Warehouse: "bg-orange-500",
+    Delivery: "bg-red-500",
+  };
+
+  return map[title] ?? "bg-gray-400";
 }
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
