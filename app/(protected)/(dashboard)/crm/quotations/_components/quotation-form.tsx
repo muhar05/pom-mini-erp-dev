@@ -47,6 +47,7 @@ import {
   QuotationPermission,
   STATUS_STAGE_MAPPING,
 } from "@/utils/quotationPermissions";
+import { useCustomerById } from "@/hooks/customers/useCustomerById";
 
 // 1. Ubah type Quotation (atau buat type baru)
 type QuotationFormData = {
@@ -113,6 +114,7 @@ export default function QuotationForm({
   const [isDirty, setIsDirty] = useState(false);
   const [isPricingDirty, setIsPricingDirty] = useState(false); // <-- Tambahkan state baru
   const [isInitialLoad, setIsInitialLoad] = useState(true); // Tambahkan state isInitialLoad
+  const [isCustomerEditMode, setIsCustomerEditMode] = useState(false);
 
   // 2. Inisialisasi state
   const [formData, setFormData] = useState<QuotationFormData>({
@@ -125,11 +127,11 @@ export default function QuotationForm({
           quantity: Number(item.quantity) || 0,
         }))
       : [],
-    total: Number(quotation?.total_amount) || 0,
-    shipping: Number(quotation?.shipping) || 0,
-    discount: Number(quotation?.discount) || 0,
-    tax: Number(quotation?.tax) || 0,
-    grand_total: Number(quotation?.grand_total) || 0,
+    total: quotation?.total_amount ?? 0,
+    shipping: quotation?.shipping ?? 0,
+    discount: quotation?.discount ?? 0,
+    tax: quotation?.tax ?? 0,
+    grand_total: quotation?.grand_total ?? 0,
     status: quotation?.status || "sq_draft",
     stage: quotation?.stage || "draft",
     note: quotation?.note || "",
@@ -144,14 +146,14 @@ export default function QuotationForm({
           unit_price: Number(item.unit_price) || 0,
           quantity: Number(item.quantity) || 0,
         }))
-      : []
+      : [],
   );
 
   const [customerOptions, setCustomerOptions] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [user, setUser] = useState<users | null>(null);
   const [permissions, setPermissions] = useState<QuotationPermission | null>(
-    null
+    null,
   );
 
   // Generate quotation number when form loads for new quotations
@@ -221,7 +223,7 @@ export default function QuotationForm({
   // Update handleInputChange - hanya set isPricingDirty jika field pricing yang berubah
   const handleInputChange = (
     field: keyof QuotationFormData,
-    value: string | number | BoqItem[]
+    value: string | number | BoqItem[],
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setIsDirty(true);
@@ -242,7 +244,7 @@ export default function QuotationForm({
   const calculateTotals = () => {
     const subtotal = boqItems.reduce(
       (sum, item) => sum + item.unit_price * item.quantity,
-      0
+      0,
     );
     const discountPercent = formData.discount || 0;
     const discountAmount = (subtotal * discountPercent) / 100;
@@ -265,44 +267,48 @@ export default function QuotationForm({
       calculateTotals();
     }
     // eslint-disable-next-line
-  }, [
-    boqItems,
-    formData.shipping,
-    formData.discount,
-    isPricingDirty,
-    isInitialLoad,
-  ]);
+  }, [boqItems, formData.discount, isPricingDirty, isInitialLoad]);
 
-  // Ganti handleSubmit agar pakai server action
+  // Simpan data original saat inisialisasi
+  const [originalData] = useState(quotation);
+
+  // Fungsi untuk membandingkan dan mengambil field yang berubah
+  const getChangedFields = () => {
+    const changed: any = {};
+    Object.keys(formData).forEach((key) => {
+      // Bandingkan dengan originalData
+      if (
+        formData[key as keyof QuotationFormData] !==
+        originalData[key as keyof Quotation]
+      ) {
+        changed[key] = formData[key as keyof QuotationFormData];
+      }
+    });
+    // Khusus untuk BOQ, bandingkan dengan JSON.stringify
+    if (
+      JSON.stringify(boqItems) !== JSON.stringify(originalData.quotation_detail)
+    ) {
+      changed.quotation_detail = boqItems;
+    }
+    return changed;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const dataToSend = {
-        quotation_no: formData.quotation_no,
-        customer_id: Number(formData.customer_id),
-        quotation_detail: boqItems.map((item) => ({
-          ...item,
-          product_id: Number(item.product_id),
-          total: item.unit_price * item.quantity,
-          discount: 0,
-        })),
-        total: subtotal,
-        shipping: 0,
-        discount: companyDiscountPercent + additionalDiscountPercent,
-        tax: tax,
-        grand_total: grandTotal, // <--- grand total hasil semua kalkulasi
-        status: formData.status,
-        stage: formData.stage,
-        note: formData.note,
-        target_date: formData.target_date,
-        top: formData.top,
-      };
+      const changedFields = getChangedFields();
+
+      // Jika pricing berubah, pastikan tax & grand_total ikut dikirim
+      if (isPricingDirty) {
+        changedFields.tax = tax;
+        changedFields.grand_total = grandTotal;
+      }
 
       const result = await updateQuotationAction(
         Number(quotation.id),
-        dataToSend
+        changedFields,
       );
 
       if (result?.success) {
@@ -320,50 +326,72 @@ export default function QuotationForm({
 
   const handleCustomerChange = (customerId: string) => {
     const customer = customerOptions.find(
-      (c) => c.id.toString() === customerId
+      (c) => c.id.toString() === customerId,
     );
     setSelectedCustomer(customer);
     handleInputChange("customer_id", customerId);
   };
 
-  // Cek field wajib
+  // Cek field wajib (tanpa selectedCustomer)
   const isFormValid =
     !!formData.quotation_no &&
     !!formData.customer_id &&
-    !!selectedCustomer &&
     boqItems.length > 0 &&
     boqItems.every(
       (item) =>
         item.product_id &&
         item.product_name &&
         item.quantity > 0 &&
-        item.unit_price >= 0
+        item.unit_price >= 0,
     );
 
-  // Helper untuk ambil diskon dan level dari selectedCustomer
-  const companyLevel = selectedCustomer?.company?.company_level;
-  const companyLevelDiscount = companyLevel?.disc1 ?? 0;
+  // Ambil data customer detail setiap kali customer_id berubah
+  const { customer: customerDetail, loading: customerLoading } =
+    useCustomerById(formData.customer_id);
+
+  // Gunakan customerDetail untuk info customer dan diskon company
+  const companyLevel = customerDetail?.company?.company_level;
+  const companyLevelDiscount1 = companyLevel?.disc1 ?? 0;
+  const companyLevelDiscount2 = companyLevel?.disc2 ?? 0;
   const companyLevelName = companyLevel?.level_name ?? "";
 
-  useEffect(() => {
-    if (
-      formData.customer_id &&
-      customerOptions.length > 0 &&
-      !selectedCustomer
-    ) {
-      const found = customerOptions.find(
-        (c) => c.id.toString() === formData.customer_id.toString()
-      );
-      if (found) setSelectedCustomer(found);
-    }
-  }, [formData.customer_id, customerOptions, selectedCustomer]);
+  // Perhitungan diskon berlapis
+  const subtotal = boqItems.reduce(
+    (sum, item) => sum + item.unit_price * item.quantity,
+    0,
+  );
+
+  // Diskon 1
+  const discount1Amount = (subtotal * companyLevelDiscount1) / 100;
+  const afterDiscount1 = subtotal - discount1Amount;
+
+  // Diskon 2 (jika ada)
+  const discount2Amount =
+    companyLevelDiscount2 > 0
+      ? (afterDiscount1 * companyLevelDiscount2) / 100
+      : 0;
+  const afterDiscount2 = afterDiscount1 - discount2Amount;
+
+  // Additional Discount (setelah dua diskon company)
+  const additionalDiscountPercent = Number(formData.discount) || 0;
+  const additionalDiscountAmount =
+    additionalDiscountPercent > 0
+      ? (afterDiscount2 * additionalDiscountPercent) / 100
+      : 0;
+  const afterAllDiscount = afterDiscount2 - additionalDiscountAmount;
+
+  // Tax 11%
+  const tax = afterAllDiscount * 0.11;
+
+  // Grand Total
+  const grandTotal = afterAllDiscount + tax;
 
   // Filter status options based on permissions
   const getAvailableStatusOptions = () => {
     if (!permissions) return [];
 
     return SQ_STATUS_OPTIONS.filter((option) =>
-      permissions.allowedStatuses.includes(option.value)
+      permissions.allowedStatuses.includes(option.value),
     );
   };
 
@@ -379,7 +407,7 @@ export default function QuotationForm({
     ];
 
     return allStageOptions.filter((option) =>
-      permissions.allowedStages.includes(option.value)
+      permissions.allowedStages.includes(option.value),
     );
   };
 
@@ -410,7 +438,7 @@ export default function QuotationForm({
     const stageCheck = canChangeStage(
       user,
       formData.stage || "draft",
-      newStage
+      newStage,
     );
     if (!stageCheck.allowed) {
       toast.error(stageCheck.message || "Cannot change to this stage");
@@ -420,24 +448,21 @@ export default function QuotationForm({
     handleInputChange("stage", newStage);
   };
 
-  // Di dalam komponen, sebelum return:
-  const subtotal = boqItems.reduce(
-    (sum, item) => sum + item.unit_price * item.quantity,
-    0
-  );
-  const companyDiscountPercent = companyLevelDiscount || 0;
-  const companyDiscountAmount = (subtotal * companyDiscountPercent) / 100;
-  const afterCompanyDiscount = subtotal - companyDiscountAmount;
+  // Set isInitialLoad to false after first render
+  useEffect(() => {
+    setIsInitialLoad(false);
+  }, []);
 
-  // Additional discount selalu dihitung, tidak perlu cek isPricingDirty
-  const additionalDiscountPercent = formData.discount || 0;
-  const additionalDiscountAmount =
-    (afterCompanyDiscount * additionalDiscountPercent) / 100;
-  const afterAllDiscount = afterCompanyDiscount - additionalDiscountAmount;
+  // Only recalculate totals if user has changed pricing-related fields
+  useEffect(() => {
+    if (!isInitialLoad && isPricingDirty) {
+      calculateTotals();
+    }
+    // eslint-disable-next-line
+  }, [boqItems, formData.discount, isPricingDirty, isInitialLoad]);
 
-  // Selalu hitung tax dan grandTotal dari afterAllDiscount
-  const tax = 0.11 * afterAllDiscount;
-  const grandTotal = afterAllDiscount + tax;
+  const displayTax = isPricingDirty ? tax : formData.tax;
+  const displayGrandTotal = isPricingDirty ? grandTotal : formData.grand_total;
 
   return (
     <div className="w-full mx-auto py-4 space-y-6">
@@ -593,7 +618,7 @@ export default function QuotationForm({
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-left font-normal",
-                            !formData.target_date && "text-muted-foreground"
+                            !formData.target_date && "text-muted-foreground",
                           )}
                         >
                           <Calendar className="mr-2 h-4 w-4" />
@@ -615,7 +640,7 @@ export default function QuotationForm({
                           onSelect={(date) => {
                             handleInputChange(
                               "target_date",
-                              date ? format(date, "yyyy-MM-dd") : ""
+                              date ? format(date, "yyyy-MM-dd") : "",
                             );
                             setShowTargetCalendar(false);
                           }}
@@ -692,108 +717,133 @@ export default function QuotationForm({
 
               <CardContent className="pt-2">
                 <div className="space-y-5">
-                  {/* Customer Selection */}
-                  <div className="space-y-3">
-                    <Label
-                      htmlFor="customer_id"
-                      className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5"
-                    >
-                      Customer <span className="text-red-500">*</span>
-                    </Label>
-
-                    <Select
-                      value={formData.customer_id?.toString() || ""}
-                      onValueChange={handleCustomerChange}
-                      disabled={!!leadData}
-                    >
-                      <SelectTrigger className="h-11 dark:border-gray-600 dark:bg-gray-900 w-full">
-                        <SelectValue placeholder="Pilih customer" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customerOptions.map((c) => (
-                          <SelectItem
-                            key={c.id}
-                            value={c.id.toString()}
-                            className="py-2.5"
-                          >
-                            <div className="flex flex-row gap-2">
-                              <span className="font-medium">
-                                {c.customer_name}
-                              </span>
-                              {c.company?.company_name && (
-                                <span className="text-sm">
-                                  {c.company.company_name}
+                  {/* Jika mode edit, tampilkan dropdown */}
+                  {isCustomerEditMode ? (
+                    <div className="space-y-3">
+                      <Label
+                        htmlFor="customer_id"
+                        className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5"
+                      >
+                        Customer <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={formData.customer_id?.toString() || ""}
+                        onValueChange={(value) => {
+                          handleCustomerChange(value);
+                          setIsCustomerEditMode(false);
+                        }}
+                      >
+                        <SelectTrigger className="h-11 dark:border-gray-600 dark:bg-gray-900 w-full">
+                          <SelectValue placeholder="Pilih customer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customerOptions.map((c) => (
+                            <SelectItem
+                              key={c.id}
+                              value={c.id.toString()}
+                              className="py-2.5"
+                            >
+                              <div className="flex flex-row gap-2">
+                                <span className="font-medium">
+                                  {c.customer_name}
                                 </span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Customer Details Panel */}
-                  {selectedCustomer && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                      <div>
-                        <Label className="text-xs mb-1 block">Company</Label>
-                        <Input
-                          value={selectedCustomer.company?.company_name || "—"}
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40"
-                        />
-                      </div>
-                      {/* Tambahkan ini untuk level perusahaan */}
-                      <div>
-                        <Label className="text-xs mb-1 block">
-                          Company Level
-                        </Label>
-                        <Input
-                          value={
-                            selectedCustomer.company?.company_level?.level_name
-                              ? selectedCustomer.company.company_level
-                                  .level_name
-                              : "—"
-                          }
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs mb-1 block">Type</Label>
-                        <Input
-                          value={selectedCustomer.type || "—"}
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs mb-1 block">Email</Label>
-                        <Input
-                          value={selectedCustomer.email || "—"}
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs mb-1 block">Phone</Label>
-                        <Input
-                          value={selectedCustomer.phone || "—"}
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-xs mb-1 block">Address</Label>
-                        <Input
-                          value={
-                            selectedCustomer.address || "No address provided"
-                          }
-                          disabled
-                          className="bg-gray-100 dark:bg-gray-800/40"
-                        />
-                      </div>
+                                {c.company?.company_name && (
+                                  <span className="text-sm">
+                                    {c.company.company_name}
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
+                  ) : (
+                    // Customer Info Panel selalu tampil jika ada customer
+                    customerDetail && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        {/* Tambahkan ini untuk nama customer */}
+                        <div className="md:col-span-2">
+                          <Label className="text-xs mb-1 block">
+                            Customer Name
+                          </Label>
+                          <Input
+                            value={customerDetail.customer_name || "—"}
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs mb-1 block">Company</Label>
+                          <Input
+                            value={customerDetail.company?.company_name || "—"}
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs mb-1 block">
+                            Company Level
+                          </Label>
+                          <Input
+                            value={
+                              customerDetail.company?.company_level?.level_name
+                                ? customerDetail.company.company_level
+                                    .level_name
+                                : "—"
+                            }
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs mb-1 block">Type</Label>
+                          <Input
+                            value={customerDetail.type || "—"}
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs mb-1 block">Email</Label>
+                          <Input
+                            value={customerDetail.email || "—"}
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs mb-1 block">Phone</Label>
+                          <Input
+                            value={customerDetail.phone || "—"}
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <Label className="text-xs mb-1 block">Address</Label>
+                          <Input
+                            value={
+                              customerDetail.address || "No address provided"
+                            }
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                      </div>
+                    )
+                  )}
+                  {/* Edit Button selalu tampil jika ada customer */}
+                  {customerDetail && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mb-2"
+                      onClick={() => setIsCustomerEditMode(true)}
+                    >
+                      Edit Customer
+                    </Button>
                   )}
                 </div>
               </CardContent>
@@ -809,6 +859,17 @@ export default function QuotationForm({
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
+                  {/* Info Diskon Company */}
+                  <div className="flex flex-col gap-1 mb-2">
+                    <span>
+                      Company Level Discount 1: <b>{companyLevelDiscount1}%</b>
+                    </span>
+                    <span>
+                      Company Level Discount 2: <b>{companyLevelDiscount2}%</b>
+                    </span>
+                    {companyLevelName && <span>Level: {companyLevelName}</span>}
+                  </div>
+
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">
                       Subtotal
@@ -818,31 +879,43 @@ export default function QuotationForm({
                     </span>
                   </div>
 
-                  {/* Diskon perusahaan */}
-                  {companyLevelDiscount > 0 && (
+                  {/* Diskon 1 */}
+                  {companyLevelDiscount1 > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-blue-700">
-                        Diskon Perusahaan ({companyLevelDiscount}%)
+                        Diskon 1 ({companyLevelDiscount1}%)
                       </span>
                       <span className="font-medium text-blue-700">
-                        -{formatCurrency(companyDiscountAmount)}
+                        -{formatCurrency(discount1Amount)}
                       </span>
                     </div>
                   )}
 
-                  {/* Harga setelah diskon perusahaan */}
-                  {companyLevelDiscount > 0 && (
+                  {/* Diskon 2 */}
+                  {companyLevelDiscount2 > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-purple-700">
+                        Diskon 2 ({companyLevelDiscount2}%)
+                      </span>
+                      <span className="font-medium text-purple-700">
+                        -{formatCurrency(discount2Amount)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Setelah dua diskon */}
+                  {(companyLevelDiscount1 > 0 || companyLevelDiscount2 > 0) && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Setelah Diskon Perusahaan
+                        Setelah Diskon Company
                       </span>
                       <span className="font-medium">
-                        {formatCurrency(afterCompanyDiscount)}
+                        {formatCurrency(afterDiscount2)}
                       </span>
                     </div>
                   )}
 
-                  {/* Diskon tambahan */}
+                  {/* Additional Discount */}
                   <div className="space-y-2">
                     <Label htmlFor="discount" className="text-sm">
                       Additional Discount (%)
@@ -854,28 +927,15 @@ export default function QuotationForm({
                       onChange={(e) =>
                         handleInputChange(
                           "discount",
-                          parseInt(e.target.value) || 0
+                          parseFloat(e.target.value) || 0,
                         )
                       }
                       placeholder="0"
                       min="0"
                       max="100"
+                      step="0.01"
                     />
-                    {companyLevelName && (
-                      <div className="text-xs text-blue-700 mt-1">
-                        Level perusahaan: <b>{companyLevelName}</b>
-                        {companyLevelDiscount > 0 && (
-                          <span>
-                            {" "}
-                            &mdash; Diskon default:{" "}
-                            <b>{companyLevelDiscount}%</b>
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
-
-                  {/* Diskon tambahan dalam rupiah */}
                   {additionalDiscountPercent > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -887,8 +947,9 @@ export default function QuotationForm({
                     </div>
                   )}
 
-                  {/* Harga setelah semua diskon */}
-                  {(companyLevelDiscount > 0 ||
+                  {/* Setelah semua diskon */}
+                  {(companyLevelDiscount1 > 0 ||
+                    companyLevelDiscount2 > 0 ||
                     additionalDiscountPercent > 0) && (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -901,6 +962,7 @@ export default function QuotationForm({
                     </div>
                   )}
 
+                  {/* Tax */}
                   <div className="space-y-2">
                     <Label htmlFor="tax" className="text-sm">
                       Tax (11%)
@@ -908,7 +970,7 @@ export default function QuotationForm({
                     <Input
                       id="tax"
                       type="text"
-                      value={formatCurrency(tax)}
+                      value={formatCurrency(displayTax)}
                       disabled
                       className="bg-gray-100 dark:bg-gray-800/40"
                     />
@@ -920,7 +982,7 @@ export default function QuotationForm({
                     <span className="font-semibold">Grand Total</span>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-primary">
-                        {formatCurrency(grandTotal)}
+                        {formatCurrency(displayGrandTotal)}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         Subtotal: {formatCurrency(subtotal)}
@@ -946,7 +1008,9 @@ export default function QuotationForm({
           </Button>
           <Button
             type="submit"
-            disabled={loading || generatingQuotationNo || !isFormValid}
+            disabled={
+              loading || generatingQuotationNo || !isFormValid || !isDirty
+            }
             className="min-w-[150px]"
           >
             {loading ? (

@@ -38,6 +38,8 @@ type Props = {
 
   // Add discount props
   discount?: number; // discount percentage
+  diskon1?: number;
+  diskon2?: number;
   discountAmount?: number; // discount amount in rupiah
 };
 
@@ -59,17 +61,25 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
       project,
       signatureName,
       fileName = "sales-quotation.pdf",
+      diskon1 = 0,
+      diskon2 = 0,
       discount = 0,
       discountAmount = 0,
     } = props;
 
     const divRef = useRef<HTMLDivElement | null>(null);
 
+    // Perhitungan sama persis dengan detail page
     const subtotal = items.reduce((s, it) => s + it.qty * it.unitPrice, 0);
-    const finalDiscountAmount = discountAmount || (subtotal * discount) / 100;
-    const total = subtotal - finalDiscountAmount;
-    const vat = Math.round(total * 0.11);
-    const grandTotal = total + vat;
+    const discount1Amount = (subtotal * diskon1) / 100;
+    const afterDiscount1 = subtotal - discount1Amount;
+    const discount2Amount = diskon2 > 0 ? (afterDiscount1 * diskon2) / 100 : 0;
+    const afterDiscount2 = afterDiscount1 - discount2Amount;
+    const additionalDiscountAmount =
+      discount > 0 ? (afterDiscount2 * discount) / 100 : 0;
+    const afterAllDiscount = afterDiscount2 - additionalDiscountAmount;
+    const vat = Math.round(afterAllDiscount * 0.11);
+    const grandTotal = afterAllDiscount + vat;
 
     const handleExport = async () => {
       if (!divRef.current) return;
@@ -106,7 +116,7 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
         (pageWidth - imgW * ratio) / 2,
         10,
         imgW * ratio,
-        imgH * ratio
+        imgH * ratio,
       );
 
       pdf.save(fileName);
@@ -291,18 +301,38 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
                 <td style={{ padding: "4px 8px" }}>Subtotal</td>
                 <td style={tdCellRight}>{fmt(subtotal)}</td>
               </tr>
-              {finalDiscountAmount > 0 && (
+              {diskon1 > 0 && (
                 <tr>
-                  <td style={{ padding: "4px 8px" }}>
-                    Discount {discount > 0 ? `(${discount}%)` : ""}
-                  </td>
-                  <td style={tdCellRight}>-{fmt(finalDiscountAmount)}</td>
+                  <td style={{ padding: "4px 8px" }}>Diskon 1 ({diskon1}%)</td>
+                  <td style={tdCellRight}>-{fmt(discount1Amount)}</td>
+                </tr>
+              )}
+              {diskon2 > 0 && (
+                <tr>
+                  <td style={{ padding: "4px 8px" }}>Diskon 2 ({diskon2}%)</td>
+                  <td style={tdCellRight}>-{fmt(discount2Amount)}</td>
+                </tr>
+              )}
+              {(diskon1 > 0 || diskon2 > 0) && (
+                <tr>
+                  <td style={{ padding: "4px 8px" }}>Setelah Diskon Company</td>
+                  <td style={tdCellRight}>{fmt(afterDiscount2)}</td>
                 </tr>
               )}
               <tr>
-                <td style={{ padding: "4px 8px" }}>Total</td>
-                <td style={tdCellRight}>{fmt(total)}</td>
+                <td style={{ padding: "4px 8px" }}>
+                  Additional Discount ({discount}%)
+                </td>
+                <td style={tdCellRight}>-{fmt(additionalDiscountAmount)}</td>
               </tr>
+              {(diskon1 > 0 || diskon2 > 0 || discount > 0) && (
+                <tr>
+                  <td style={{ padding: "4px 8px" }}>
+                    Setelah Semua Diskon (belum pajak)
+                  </td>
+                  <td style={tdCellRight}>{fmt(afterAllDiscount)}</td>
+                </tr>
+              )}
               <tr>
                 <td style={{ padding: "4px 8px" }}>VAT 11%</td>
                 <td style={tdCellRight}>{fmt(vat)}</td>
@@ -339,7 +369,7 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
         </div>
       </div>
     );
-  }
+  },
 );
 
 // Table cell styles

@@ -1,72 +1,23 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import { PrintButton } from "@/components/quotations/PrintButton";
-import {
-  Edit,
-  Trash2,
-  ShoppingBag,
-  Download,
-  ArrowLeft,
-  Copy,
-  CheckCircle,
-  XCircle,
-  DollarSign,
-  Calendar,
-  Truck,
-  Percent,
-  Receipt,
-  User,
-  Mail,
-  Building2,
-  FileText,
-  Clock,
-  Tag,
-  Package,
-  CreditCard,
-  MoreVertical,
-  Printer,
-  Share2,
-  Phone,
-  MapPin,
-  UserCheck,
-  Star,
-  Hash,
-  Target,
-  Activity,
-  Workflow,
-  LinkIcon,
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { format } from "date-fns";
-import { id as localeId } from "date-fns/locale";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ArrowLeft, Calendar, FileText } from "lucide-react";
+import { toast } from "react-hot-toast";
 import { useQuotationDetail } from "@/hooks/quotations/useQuotationDetail";
-import QuotationExport from "@/components/quotations/quotationExport";
-import { formatStatusDisplay } from "@/utils/statusHelpers";
 import { useLeadById } from "@/hooks/leads/useLeadsById";
-import toast from "react-hot-toast";
+import QuotationExport from "@/components/quotations/quotationExport";
 import { convertQuotationToSalesOrderAction } from "@/app/actions/sales-orders";
+import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { useCustomerById } from "@/hooks/customers/useCustomerById";
+import { PrintButton } from "@/components/quotations/PrintButton";
+import QuotationDetailSkeleton from "../_components/quotationDetailSkeleton";
 
 function getStatusBadgeClass(status: string): string {
   switch (status?.toLowerCase()) {
@@ -107,47 +58,19 @@ export default function QuotationDetailPage() {
   const { quotation, loading } = useQuotationDetail(idParam);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [converting, setConverting] = useState(false); // Tambahkan state untuk loading convert
+  const [converting, setConverting] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
-  const leadId = quotation?.lead_id;
-  const { lead, loading: loadingLead } = useLeadById(leadId);
-  const handleDelete = () => {
-    if (!idParam) return;
-    fetch(`/api/quotations/${idParam}`, { method: "DELETE" }).then(() => {
-      setShowDeleteDialog(false);
-      router.push("/crm/quotations");
-    });
-  };
 
-  const handleCopyQuotationNo = () => {
-    navigator.clipboard.writeText(quotation.quotation_no);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  // Ambil detail customer dari API (untuk company level & diskon)
+  const { customer: customerDetail } = useCustomerById(quotation?.customer_id);
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "-";
-    return format(new Date(dateString), "dd MMM yyyy", { locale: localeId });
-  };
+  // Company level & diskon
+  const companyLevel = customerDetail?.company?.company_level;
+  const companyLevelDiscount1 = companyLevel?.disc1 ?? 0;
+  const companyLevelDiscount2 = companyLevel?.disc2 ?? 0;
+  const companyLevelName = companyLevel?.level_name ?? "";
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(amount || 0);
-  };
-
-  // Calculate discount amount in rupiah
-  const calculateDiscountAmount = () => {
-    const subtotal = quotation?.total || 0;
-    const discountPercent = quotation?.discount || 0;
-    return (subtotal * discountPercent) / 100;
-  };
-
-  const canConvertToSO = quotation?.status?.toLowerCase() === "confirmed";
-
-  // Gunakan useMemo agar quotationDetail tidak berubah referensi setiap render
+  // Quotation detail (BOQ)
   const quotationDetail = useMemo(() => {
     if (Array.isArray(quotation?.quotation_detail)) {
       return quotation.quotation_detail;
@@ -162,49 +85,69 @@ export default function QuotationDetailPage() {
     return [];
   }, [quotation?.quotation_detail]);
 
-  const [detailWithUnit, setDetailWithUnit] = useState<any[]>([]);
+  // Perhitungan pricing summary (sama seperti form)
+  const subtotal = quotationDetail.reduce(
+    (sum: number, item: any) =>
+      sum + (Number(item.unit_price) || 0) * (Number(item.quantity) || 0),
+    0,
+  );
+  const discount1Amount = (subtotal * companyLevelDiscount1) / 100;
+  const afterDiscount1 = subtotal - discount1Amount;
+  const discount2Amount =
+    companyLevelDiscount2 > 0
+      ? (afterDiscount1 * companyLevelDiscount2) / 100
+      : 0;
+  const afterDiscount2 = afterDiscount1 - discount2Amount;
+  const additionalDiscountPercent = Number(quotation?.discount) || 0;
+  const additionalDiscountAmount =
+    additionalDiscountPercent > 0
+      ? (afterDiscount2 * additionalDiscountPercent) / 100
+      : 0;
+  const afterAllDiscount = afterDiscount2 - additionalDiscountAmount;
+  const tax = afterAllDiscount * 0.11;
+  const grandTotal = afterAllDiscount + tax;
 
-  useEffect(() => {
-    async function fetchUnits() {
-      if (!quotationDetail || quotationDetail.length === 0) {
-        setDetailWithUnit([]);
-        return;
-      }
-      const results = await Promise.all(
-        quotationDetail.map(async (item: any) => {
-          if (!item.product_id) return { ...item, unit: "" }; // kosong jika tidak ada product_id
-          try {
-            const res = await fetch(`/api/products/${item.product_id}`);
-            const prod = await res.json();
-            return { ...item, unit: prod.unit ?? "" }; // ambil langsung dari produk
-          } catch {
-            return { ...item, unit: "" };
-          }
-        })
-      );
-      setDetailWithUnit(results);
-    }
-    fetchUnits();
-  }, [quotationDetail]); // dependency sudah stabil
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(amount || 0);
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
+    return format(new Date(dateString), "dd MMM yyyy");
+  };
+
+  const handleCopyQuotationNo = () => {
+    navigator.clipboard.writeText(quotation.quotation_no);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDelete = () => {
+    if (!idParam) return;
+    fetch(`/api/quotations/${idParam}`, { method: "DELETE" }).then(() => {
+      setShowDeleteDialog(false);
+      router.push("/crm/quotations");
+    });
+  };
 
   const handleConvertToSO = async () => {
     if (!quotation?.id) return;
-
     setConverting(true);
     try {
       const result = await convertQuotationToSalesOrderAction(
-        Number(quotation.id)
+        Number(quotation.id),
       );
-
       if (result.success) {
         toast.success(
           result.message || "Quotation successfully converted to Sales Order!",
           {
             duration: 4000,
             icon: "🎉",
-          }
+          },
         );
-        // Redirect ke halaman detail SO yang baru dibuat
         if (result.data?.id) {
           router.push(`/crm/sales-orders/${result.data.id}`);
         } else {
@@ -215,16 +158,15 @@ export default function QuotationDetailPage() {
           result.message || "Failed to convert quotation to Sales Order",
           {
             duration: 5000,
-          }
+          },
         );
       }
     } catch (error) {
-      console.error("Error converting quotation:", error);
       toast.error(
         error instanceof Error
           ? error.message
           : "An unexpected error occurred while converting quotation",
-        { duration: 5000 }
+        { duration: 5000 },
       );
     } finally {
       setConverting(false);
@@ -232,14 +174,7 @@ export default function QuotationDetailPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center p-16 w-full h-full">
-        <div className="flex flex-col w-full justify-center items-center">
-          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
-          <span className="text-sm text-muted-foreground">Loading...</span>
-        </div>
-      </div>
-    );
+    return <QuotationDetailSkeleton />;
   }
 
   if (!quotation) {
@@ -264,14 +199,6 @@ export default function QuotationDetailPage() {
     );
   }
 
-  const canPrint =
-    quotation.status?.toLowerCase() === "approved" &&
-    quotation.stage?.toLowerCase() === "approved";
-
-  const canShowConvertToSO =
-    quotation.status?.toLowerCase() !== "draft" &&
-    quotation.stage?.toLowerCase() !== "draft";
-
   return (
     <>
       <DashboardBreadcrumb
@@ -283,545 +210,273 @@ export default function QuotationDetailPage() {
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mb-4 flex items-center gap-2 dark:border-gray-700"
-              onClick={() => router.push("/crm/quotations")}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Quotations
-            </Button>
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2 rounded-lg">
-                <FileText className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">
-                  {quotation.quotation_no}
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge className={getStatusBadgeClass(quotation.status)}>
-                    {quotation.status}
-                  </Badge>
-                  {quotation.stage && (
-                    <Badge
-                      className={getStageBadgeClass(quotation.stage)}
-                      variant="outline"
-                    >
-                      {quotation.stage}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={handleCopyQuotationNo}
-            >
-              {copied ? (
-                <CheckCircle className="w-4 h-4 text-green-600" />
-              ) : (
-                <Copy className="w-4 h-4" />
-              )}
-              {copied ? "Copied!" : "Copy No"}
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled={!canPrint}>
-                  <PrintButton printRef={printRef} />
-                </DropdownMenuItem>
-                {!canPrint && (
-                  <div className="text-xs text-red-500 px-3 pb-2">
-                    Print hanya bisa dilakukan jika status dan stage sudah{" "}
-                    <b>approved</b>
-                  </div>
-                )}
-                <DropdownMenuItem>
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {canShowConvertToSO && (
-              <Button
-                size="sm"
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                onClick={handleConvertToSO}
-                disabled={converting}
+            <h1 className="text-2xl font-bold tracking-tight">
+              Quotation Detail
+            </h1>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="outline" className="font-mono text-base">
+                {quotation.quotation_no}
+              </Badge>
+              <span
+                className={`px-2 py-1 rounded text-xs border ${getStatusBadgeClass(
+                  quotation.status,
+                )}`}
               >
-                {converting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Converting...
-                  </>
-                ) : (
-                  <>
-                    <ShoppingBag className="w-4 h-4" />
-                    Create SO
-                  </>
-                )}
+                {quotation.status}
+              </span>
+              <span
+                className={`px-2 py-1 rounded text-xs border ${getStageBadgeClass(
+                  quotation.stage,
+                )}`}
+              >
+                {quotation.stage}
+              </span>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handleCopyQuotationNo}
+                title="Copy Quotation No"
+              >
+                <FileText className="w-4 h-4" />
               </Button>
-            )}
+              {copied && (
+                <span className="text-xs text-green-600 ml-2">Copied!</span>
+              )}
+              {/* Tambahkan button Convert to SO */}
+              {quotation.status?.toLowerCase() !== "draft" &&
+                quotation.stage?.toLowerCase() !== "draft" && (
+                  <Button
+                    variant="default"
+                    disabled={converting}
+                    onClick={handleConvertToSO}
+                    className="ml-2"
+                  >
+                    {converting ? "Converting..." : "Convert to SO"}
+                  </Button>
+                )}
+              {/* Tambahkan tombol print di sini */}
+              <PrintButton printRef={printRef} />
+            </div>
+            <div className="text-sm text-gray-500 mt-1">
+              Created at: {formatDate(quotation.created_at)}
+            </div>
           </div>
         </div>
 
-        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Quotation Info & Items */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Customer & Company Info Card */}
-            <Card className="dark:bg-gray-800">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2 dark:text-gray-100">
-                  <User className="w-5 h-5" />
-                  Customer & Sales Information
+          {/* Left: Customer Information */}
+          <div className="space-y-6">
+            <Card className="dark:bg-gray-800 border dark:border-gray-700 h-full">
+              <CardHeader className="pb-4 border-b dark:border-gray-700">
+                <CardTitle className="text-lg font-medium flex items-center gap-3 dark:text-white">
+                  <Calendar className="w-5 h-5" />
+                  Customer Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Customer Information */}
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <User className="w-4 h-4" />
-                      <span>Customer Name</span>
+              <CardContent className="pt-2">
+                <div className="space-y-3">
+                  <div>
+                    <span className="block text-xs mb-1 font-semibold">
+                      Customer Name
+                    </span>
+                    <div className="bg-gray-100 dark:bg-gray-800/40 rounded px-3 py-2">
+                      {customerDetail?.customer_name || "-"}
                     </div>
-                    <p className="font-medium dark:text-gray-100">
-                      {quotation.customer?.customer_name || "-"}
-                    </p>
                   </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Mail className="w-4 h-4" />
-                      <span>Email</span>
+                  <div>
+                    <span className="block text-xs mb-1 font-semibold">
+                      Company
+                    </span>
+                    <div className="bg-gray-100 dark:bg-gray-800/40 rounded px-3 py-2">
+                      {customerDetail?.company?.company_name || "-"}
                     </div>
-                    <p className="font-medium dark:text-gray-200">
-                      {quotation.customer?.email || "-"}
-                    </p>
                   </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Phone className="w-4 h-4" />
-                      <span>Phone</span>
+                  <div>
+                    <span className="block text-xs mb-1 font-semibold">
+                      Company Level
+                    </span>
+                    <div className="bg-gray-100 dark:bg-gray-800/40 rounded px-3 py-2">
+                      {companyLevelName || "-"}
                     </div>
-                    <p className="font-medium dark:text-gray-200">
-                      {quotation.customer?.phone || "-"}
-                    </p>
                   </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <MapPin className="w-4 h-4" />
-                      <span>Address</span>
+                  <div>
+                    <span className="block text-xs mb-1 font-semibold">
+                      Type
+                    </span>
+                    <div className="bg-gray-100 dark:bg-gray-800/40 rounded px-3 py-2">
+                      {customerDetail?.type || "-"}
                     </div>
-                    <p className="font-medium dark:text-gray-200">
-                      {quotation.customer?.address || "-"}
-                    </p>
                   </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Building2 className="w-4 h-4" />
-                      <span>Company</span>
+                  <div>
+                    <span className="block text-xs mb-1 font-semibold">
+                      Email
+                    </span>
+                    <div className="bg-gray-100 dark:bg-gray-800/40 rounded px-3 py-2">
+                      {customerDetail?.email || "-"}
                     </div>
-                    <p className="font-medium dark:text-gray-200">
-                      {quotation.customer?.company?.company_name || "-"}
-                    </p>
                   </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Tag className="w-4 h-4" />
-                      <span>Customer Type</span>
+                  <div>
+                    <span className="block text-xs mb-1 font-semibold">
+                      Phone
+                    </span>
+                    <div className="bg-gray-100 dark:bg-gray-800/40 rounded px-3 py-2">
+                      {customerDetail?.phone || "-"}
                     </div>
-                    <p className="font-medium dark:text-gray-200">
-                      {quotation.customer?.type || "-"}
-                    </p>
                   </div>
-
-                  {/* Sales Information */}
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <UserCheck className="w-4 h-4" />
-                      <span>Sales Person</span>
+                  <div>
+                    <span className="block text-xs mb-1 font-semibold">
+                      Address
+                    </span>
+                    <div className="bg-gray-100 dark:bg-gray-800/40 rounded px-3 py-2">
+                      {customerDetail?.address || "-"}
                     </div>
-                    <p className="font-medium dark:text-gray-200">
-                      {quotation.user?.name || "-"}
-                    </p>
                   </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Mail className="w-4 h-4" />
-                      <span>Sales Email</span>
-                    </div>
-                    <p className="font-medium dark:text-gray-200">
-                      {quotation.user?.email || "-"}
-                    </p>
-                  </div>
-
-                  {/* Company Level Information (jika ada) */}
-                  {quotation.customer?.company?.company_level && (
-                    <>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                          <Star className="w-4 h-4" />
-                          <span>Company Level</span>
-                        </div>
-                        <p className="font-medium dark:text-gray-200">
-                          {quotation.customer?.company?.company_level
-                            ?.level_name || "-"}
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                          <Percent className="w-4 h-4" />
-                          <span>Discount Level</span>
-                        </div>
-                        <p className="font-medium dark:text-gray-200">
-                          {quotation.customer?.company?.company_level?.disc1 ||
-                            0}
-                          % /{" "}
-                          {quotation.customer?.company?.company_level?.disc2 ||
-                            0}
-                          %
-                        </p>
-                      </div>
-                    </>
-                  )}
                 </div>
               </CardContent>
             </Card>
+          </div>
 
-            {/* Quotation Items Card */}
+          {/* Middle: BOQ Table */}
+          <div className="lg:col-span-2 space-y-6">
             <Card className="dark:bg-gray-800">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2 dark:text-gray-100">
-                  <Package className="w-5 h-5" />
-                  Quotation Items
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Bill of Quantity (BOQ)
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {quotationDetail.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b dark:border-gray-700">
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Item
-                          </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Qty
-                          </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Price
-                          </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Total
-                          </th>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr>
+                        <th className="px-2 py-1 text-left">#</th>
+                        <th className="px-2 py-1 text-left">Product</th>
+                        <th className="px-2 py-1 text-right">Qty</th>
+                        <th className="px-2 py-1 text-right">Unit Price</th>
+                        <th className="px-2 py-1 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {quotationDetail.map((item: any, idx: number) => (
+                        <tr key={idx}>
+                          <td className="px-2 py-1">{idx + 1}</td>
+                          <td className="px-2 py-1">{item.product_name}</td>
+                          <td className="px-2 py-1 text-right">
+                            {item.quantity}
+                          </td>
+                          <td className="px-2 py-1 text-right">
+                            {formatCurrency(item.unit_price)}
+                          </td>
+                          <td className="px-2 py-1 text-right">
+                            {formatCurrency(
+                              (Number(item.unit_price) || 0) *
+                                (Number(item.quantity) || 0),
+                            )}
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {quotationDetail.map((item: any, index: number) => (
-                          <tr
-                            key={index}
-                            className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                          >
-                            <td className="py-3 px-4">
-                              <div className="font-medium dark:text-gray-200">
-                                {item.product_name || "-"}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="dark:text-gray-200">
-                                {item.quantity || 0}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="dark:text-gray-200">
-                                {formatCurrency(item.unit_price || 0)}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="font-medium dark:text-gray-100">
-                                {formatCurrency(item.total || 0)}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>No items in this quotation</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Notes Card */}
-            {quotation.note && (
-              <Card className="dark:bg-gray-800">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2 dark:text-gray-100">
-                    <FileText className="w-5 h-5" />
-                    Additional Notes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border dark:border-gray-700">
-                    <p className="whitespace-pre-line dark:text-gray-300">
-                      {quotation.note}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Right Column: Summary & Actions */}
-          <div className="space-y-6">
-            {/* Quotation Details Card */}
-            <Card className="dark:bg-gray-800">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2 dark:text-gray-100">
-                  <FileText className="w-5 h-5" />
-                  Quotation Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Hash className="w-4 h-4" />
-                      <span>Quotation Number</span>
-                    </div>
-                    <p className="font-medium text-lg dark:text-gray-100">
-                      {quotation.quotation_no}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Calendar className="w-4 h-4" />
-                      <span>Created Date</span>
-                    </div>
-                    <p className="font-medium dark:text-gray-200">
-                      {formatDate(quotation.created_at)}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Clock className="w-4 h-4" />
-                      <span>Last Updated</span>
-                    </div>
-                    <p className="font-medium dark:text-gray-200">
-                      {formatDate(quotation.updated_at)}
-                    </p>
-                  </div>
-
-                  {quotation.target_date && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                        <Target className="w-4 h-4" />
-                        <span>Target Date</span>
-                      </div>
-                      <p className="font-medium dark:text-gray-200">
-                        {formatDate(quotation.target_date)}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <CreditCard className="w-4 h-4" />
-                      <span>Terms of Payment</span>
-                    </div>
-                    <p className="font-medium dark:text-gray-200">
-                      {quotation.top || "Cash"}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Activity className="w-4 h-4" />
-                      <span>Status</span>
-                    </div>
-                    <Badge
-                      className={`${getStatusBadgeClass(
-                        quotation.status
-                      )} px-3 py-1.5 text-base font-medium`}
-                    >
-                      {formatStatusDisplay(quotation.status)}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Workflow className="w-4 h-4" />
-                      <span>Stage</span>
-                    </div>
-                    <Badge
-                      className={`${getStageBadgeClass(
-                        quotation.stage
-                      )} px-3 py-1.5 text-base font-medium`}
-                    >
-                      {quotation.stage || "Draft"}
-                    </Badge>
-                  </div>
-
-                  {/* Lead ID jika ada */}
-                  {quotation.lead_id && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
-                        <LinkIcon className="w-4 h-4" />
-                        <span className="font-semibold">Lead Info</span>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-gray-900/40 rounded-md p-3 border dark:border-gray-700">
-                        {loadingLead ? (
-                          <div className="text-xs text-gray-400">
-                            Loading lead...
-                          </div>
-                        ) : lead ? (
-                          <div className="grid grid-cols-1 gap-y-1 text-xs text-gray-700 dark:text-gray-200">
-                            <div>
-                              <span className="font-semibold">ID:</span> #
-                              {lead.id}
-                            </div>
-                            <div>
-                              <span className="font-semibold">Name:</span>{" "}
-                              {lead.lead_name}
-                            </div>
-                            {lead.contact && (
-                              <div>
-                                <span className="font-semibold">Contact:</span>{" "}
-                                {lead.contact}
-                              </div>
-                            )}
-                            {lead.email && (
-                              <div>
-                                <span className="font-semibold">Email:</span>{" "}
-                                {lead.email}
-                              </div>
-                            )}
-                            {lead.phone && (
-                              <div>
-                                <span className="font-semibold">Phone:</span>{" "}
-                                {lead.phone}
-                              </div>
-                            )}
-                            {lead.company && (
-                              <div>
-                                <span className="font-semibold">Company:</span>{" "}
-                                {lead.company}
-                              </div>
-                            )}
-                            {lead.status && (
-                              <div>
-                                <span className="font-semibold">Status:</span>{" "}
-                                {lead.status}
-                              </div>
-                            )}
-                            {lead.product_interest && (
-                              <div>
-                                <span className="font-semibold">
-                                  Product Interest:
-                                </span>{" "}
-                                {lead.product_interest}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-xs text-red-400">
-                            Lead not found
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Financial Summary Card */}
+            {/* Pricing Summary */}
             <Card className="dark:bg-gray-800">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2 dark:text-gray-100">
-                  <DollarSign className="w-5 h-5" />
-                  Financial Summary
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Pricing Summary
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
+                  <div className="flex flex-col gap-1 mb-2">
+                    <span>
+                      Diskon 1 (Company Level): <b>{companyLevelDiscount1}%</b>
+                    </span>
+                    <span>
+                      Diskon 2 (Company Level): <b>{companyLevelDiscount2}%</b>
+                    </span>
+                    {companyLevelName && <span>Level: {companyLevelName}</span>}
+                  </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
                       Subtotal
                     </span>
-                    <span className="font-medium dark:text-gray-200">
-                      {formatCurrency(quotation.total)}
+                    <span className="font-medium">
+                      {formatCurrency(subtotal)}
                     </span>
                   </div>
-
-                  {quotation.shipping > 0 && (
+                  {companyLevelDiscount1 > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Shipping
+                      <span className="text-sm text-blue-700">
+                        Diskon 1 ({companyLevelDiscount1}%)
                       </span>
-                      <span className="font-medium dark:text-gray-200">
-                        {formatCurrency(quotation.shipping)}
+                      <span className="font-medium text-blue-700">
+                        -{formatCurrency(discount1Amount)}
                       </span>
                     </div>
                   )}
-
-                  {quotation.discount > 0 && (
+                  {companyLevelDiscount2 > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Discount ({quotation.discount}%)
+                      <span className="text-sm text-purple-700">
+                        Diskon 2 ({companyLevelDiscount2}%)
                       </span>
-                      <span className="font-medium text-red-600 dark:text-red-400">
-                        -{formatCurrency(calculateDiscountAmount())}
+                      <span className="font-medium text-purple-700">
+                        -{formatCurrency(discount2Amount)}
                       </span>
                     </div>
                   )}
-
-                  {quotation.tax > 0 && (
+                  {(companyLevelDiscount1 > 0 || companyLevelDiscount2 > 0) && (
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Tax
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Setelah Diskon Company
                       </span>
-                      <span className="font-medium dark:text-gray-200">
-                        {formatCurrency(quotation.tax)}
+                      <span className="font-medium">
+                        {formatCurrency(afterDiscount2)}
                       </span>
                     </div>
                   )}
-
-                  <Separator className="dark:bg-gray-700" />
-
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold dark:text-gray-100">
-                      Grand Total
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Additional Discount ({additionalDiscountPercent}%)
                     </span>
-                    <span className="text-xl font-bold text-primary dark:text-blue-400">
-                      {formatCurrency(quotation.grand_total)}
+                    <span className="font-medium text-red-600">
+                      -{formatCurrency(additionalDiscountAmount)}
                     </span>
+                  </div>
+                  {(companyLevelDiscount1 > 0 ||
+                    companyLevelDiscount2 > 0 ||
+                    additionalDiscountPercent > 0) && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Setelah Semua Diskon{" "}
+                        <span className="italic">(belum termasuk pajak)</span>
+                      </span>
+                      <span className="font-medium">
+                        {formatCurrency(afterAllDiscount)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Tax (11%)
+                    </span>
+                    <span className="font-medium">{formatCurrency(tax)}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center pt-2">
+                    <span className="font-semibold">Grand Total</span>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-primary">
+                        {formatCurrency(grandTotal)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Subtotal: {formatCurrency(subtotal)}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -833,36 +488,25 @@ export default function QuotationDetailPage() {
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="dark:text-gray-100">
-              Delete Quotation?
-            </DialogTitle>
-            <DialogDescription className="dark:text-gray-400">
-              Are you sure you want to delete quotation{" "}
-              <span className="font-semibold text-red-600 dark:text-red-400">
-                {quotation.quotation_no}
-              </span>
-              ? This action cannot be undone. All related data will be
-              permanently removed.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
+          <div className="flex flex-col items-center">
+            <FileText className="w-12 h-12 text-red-500 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Delete Quotation?</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to delete this quotation? This action cannot
+              be undone.
+            </p>
+            <div className="flex gap-3">
               <Button
                 variant="outline"
-                className="dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+                onClick={() => setShowDeleteDialog(false)}
               >
                 Cancel
               </Button>
-            </DialogClose>
-            <Button
-              onClick={handleDelete}
-              className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete Quotation
-            </Button>
-          </DialogFooter>
+              <Button variant="destructive" onClick={handleDelete}>
+                Delete
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -874,25 +518,26 @@ export default function QuotationDetailPage() {
             date={formatDate(quotation.created_at)}
             paymentTerm={quotation.top || "-"}
             currency="IDR"
-            customerName={quotation.customer?.customer_name || "-"}
-            customerAddress={quotation.customer?.address || "-"}
-            customerEmail={quotation.customer?.email}
-            companyName={quotation.customer?.company?.company_name || ""}
-            companyAddress={quotation.customer?.company?.address || ""}
-            companyPhone={quotation.customer?.company?.phone}
-            items={detailWithUnit.map((item: any) => ({
-              partNo: item.product_code || "", // ambil dari product_code
+            customerName={customerDetail?.customer_name || "-"}
+            customerAddress={customerDetail?.address || "-"}
+            customerEmail={customerDetail?.email ?? undefined}
+            companyName={customerDetail?.company?.company_name || ""}
+            companyAddress={customerDetail?.company?.address || ""}
+            items={quotationDetail.map((item: any) => ({
+              partNo: item.product_code || "",
               desc: item.product_name,
               qty: item.quantity,
-              unit: item.unit, // ambil langsung dari hasil fetch, tanpa default "pcs"
+              unit: item.unit,
               unitPrice: item.unit_price,
             }))}
             notes={quotation.note}
             project={quotation.project}
             signatureName={quotation.sales_name}
             fileName={`quotation_${quotation.quotation_no}.pdf`}
-            discount={quotation.discount || 0}
-            discountAmount={calculateDiscountAmount()}
+            discount={additionalDiscountPercent}
+            discountAmount={additionalDiscountAmount}
+            diskon1={companyLevelDiscount1}
+            diskon2={companyLevelDiscount2}
           />
         </div>
       </div>

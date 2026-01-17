@@ -11,6 +11,7 @@ import {
 import QuotationActions from "./quotation-actions";
 import { formatDate } from "@/utils/formatDate";
 import { formatStatusDisplay } from "@/utils/statusHelpers";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 type Quotation = {
   id: string;
@@ -115,18 +116,11 @@ export default function QuotationsTable({
             <TableCell>{q.customer_name}</TableCell>
             <TableCell>{q.sales_pic || "-"}</TableCell>
             <TableCell>{q.company || "-"}</TableCell>
-            <TableCell>
-              {typeof q.grand_total === "number"
-                ? q.grand_total.toLocaleString("id-ID", {
-                    style: "currency",
-                    currency: "IDR",
-                  })
-                : "Rp0"}
-            </TableCell>
+            <TableCell>{formatCurrency(q.grand_total)}</TableCell>
             <TableCell>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusBadgeClass(
-                  q.status
+                  q.status,
                 )}`}
               >
                 {formatStatusDisplay(q.status)}

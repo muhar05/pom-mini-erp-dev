@@ -2,6 +2,7 @@
 import { useReactToPrint } from "react-to-print";
 import { Printer } from "lucide-react";
 import { RefObject } from "react";
+import { Button } from "../ui/button";
 
 export function PrintButton({
   printRef,
@@ -17,12 +18,12 @@ export function PrintButton({
   });
 
   return (
-    <span
+    <Button
       style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
       onClick={handlePrint}
     >
       <Printer className="w-4 h-4 mr-2" />
       Print Quotation
-    </span>
+    </Button>
   );
 }

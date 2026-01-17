@@ -35,8 +35,16 @@ function RenderSidebarItems({ items }: { items: SidebarItem[] }) {
   return (
     <>
       {items.map((item) => {
+        // Cek apakah parent menu aktif jika ada sub-menu yang aktif
+        const isSubActive =
+          item.items &&
+          item.items.some(
+            (sub) => pathname === sub.url || pathname.startsWith(sub.url),
+          );
         const isActive =
-          item.url && (pathname === item.url || pathname.startsWith(item.url));
+          (item.url &&
+            (pathname === item.url || pathname.startsWith(item.url))) ||
+          isSubActive;
 
         // PARENT MENU
         if (item.items && item.items.length > 0) {
@@ -68,21 +76,28 @@ function RenderSidebarItems({ items }: { items: SidebarItem[] }) {
 
                     return (
                       <SidebarMenuSubItem key={sub.title}>
-                        <SidebarMenuSubButton
-                          asChild
-                          isActive={isSubActive}
-                          circleColor={sub.circleColor}
-                          className="py-5.5 px-3 text-base hover:text-white cursor-pointer"
+                        <Link
+                          href={sub.url}
+                          className="flex items-center gap-2 w-full"
                         >
-                          <Link
-                            href={sub.url}
-                            className="flex items-center gap-2 w-full"
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isSubActive}
+                            circleColor={sub.circleColor}
+                            className="py-5.5 px-3 text-base hover:text-white cursor-pointer"
                           >
-                            <span className="text-black dark:text-white transition-colors duration-200">
+                            <span
+                              className={cn(
+                                "transition-colors duration-200",
+                                isSubActive
+                                  ? "text-white"
+                                  : "text-black dark:text-white",
+                              )}
+                            >
                               {sub.title}
                             </span>
-                          </Link>
-                        </SidebarMenuSubButton>
+                          </SidebarMenuSubButton>
+                        </Link>
                       </SidebarMenuSubItem>
                     );
                   })}
@@ -96,18 +111,12 @@ function RenderSidebarItems({ items }: { items: SidebarItem[] }) {
         if (item.url && item.title) {
           return (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                asChild
-                tooltip={item.title}
-                className={cn(
-                  "cursor-pointer py-5.5 px-3 text-base transition-colors duration-200",
-                  "text-[#2A2A2A] dark:text-white",
-                  "hover:bg-[#006533] hover:text-white",
-                  "active:bg-[#35CD2C] active:text-white",
-                  isActive ? "font-bold bg-[#35CD2C] text-white" : "",
-                )}
-              >
-                <Link href={item.url} className="flex items-center gap-2">
+              <SidebarMenuButton asChild>
+                <Link
+                  href={item.url}
+                  className="flex items-center gap-2 w-full h-full"
+                  style={{ display: "flex", width: "100%", height: "100%" }}
+                >
                   {item.icon && <item.icon className="w-4.5! h-4.5!" />}
                   <span>{item.title}</span>
                 </Link>

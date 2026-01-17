@@ -22,7 +22,7 @@ function convertMenuToSidebar(items: MenuItem[]): SidebarItem[] {
         items: item.items.map((sub) => ({
           title: sub.title,
           url: sub.url ?? "#",
-          circleColor: getColorByTitle(sub.title),
+          circleColor: getColorByTitle(sub.title), // tambahkan ini untuk semua sub-menu
         })),
       };
     }
@@ -36,14 +36,52 @@ function convertMenuToSidebar(items: MenuItem[]): SidebarItem[] {
 }
 
 // mapping warna bullet
+// mapping warna bullet
 function getColorByTitle(title: string) {
   const map: Record<string, string> = {
+    // Dashboard
     CRM: "bg-emerald-500",
     Sales: "bg-blue-500",
     Finance: "bg-yellow-500",
     Purchase: "bg-purple-500",
     Warehouse: "bg-orange-500",
     Delivery: "bg-red-500",
+
+    // CRM
+    "Lead List": "bg-emerald-500",
+    Opportunity: "bg-blue-500",
+
+    // Sales
+    "Quotation (SQ)": "bg-purple-500",
+    "Sales Order (SO)": "bg-orange-500",
+
+    // Purchasing
+    "Purchase Order": "bg-red-500",
+    "Purchase Request": "bg-pink-500",
+
+    // Warehouse
+    "Stock Reservation (SR)": "bg-yellow-500",
+    "Goods Receipt (GR)": "bg-green-500",
+
+    // Logistics
+    "Delivery Request (DR)": "bg-blue-500",
+
+    // Inventory
+    "Stock List": "bg-orange-500",
+    "Stock Movements": "bg-gray-500",
+
+    // Finance
+    FAR: "bg-yellow-500",
+
+    // Settings
+    Users: "bg-blue-500",
+    Company: "bg-green-500",
+
+    // Master
+    "Customer List": "bg-emerald-500",
+    "Company List": "bg-blue-500",
+    "Product List": "bg-purple-500",
+    "Vendor List": "bg-pink-500",
   };
 
   return map[title] ?? "bg-gray-400";
