@@ -1,28 +1,54 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { roleMap } from "@/config/roleMap";
 
-export function middleware(req: NextRequest) {
-  // Cek berbagai kemungkinan nama cookie session NextAuth
-  const sessionCookies = [
-    req.cookies.get("__Secure-authjs.session-token"), // prod (HTTPS)
-    req.cookies.get("authjs.session-token"), // dev (HTTP)
-    req.cookies.get("next-auth.session-token"), // fallback
-    req.cookies.get("__Secure-next-auth.session-token"), // NextAuth v4
-  ];
-
-  const hasSession = sessionCookies.some((cookie) => cookie?.value);
+export async function middleware(req: NextRequest) {
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
 
   const url = req.nextUrl.pathname;
-  const isDashboard = url.startsWith("/dashboard");
-  const isSettings = url.startsWith("/settings");
 
-  if (!hasSession && (isDashboard || isSettings)) {
+  // belum login
+  if (!token) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
+  }
+
+  const roleId = token.role_id as string;
+  const roleName = roleMap[roleId];
+
+  console.log(roleName);
+
+  // safety
+  if (!roleName) {
+    return NextResponse.redirect(new URL("/auth/login", req.url));
+  }
+
+  // allow forbidden page
+  // if (url.startsWith("/dashboard/forbidden")) {
+  //   return NextResponse.next();
+  // }
+
+  // kalau sudah di dashboard role sendiri
+  if (url.startsWith(`/dashboard/${roleName}`)) {
+    return NextResponse.next();
+  }
+
+  // akses root dashboard
+  if (url === "/dashboard") {
+    return NextResponse.redirect(new URL(`/dashboard/${roleName}`, req.url));
+  }
+
+  // akses dashboard role lain
+  if (url.startsWith("/dashboard")) {
+    return NextResponse.redirect(new URL(`/dashboard/${roleName}`, req.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/settings/:path*"],
+  matcher: ["/dashboard/:path*"],
 };

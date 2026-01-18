@@ -62,11 +62,16 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       title: "Sales",
       icon: ShoppingCart,
       items: [
-        { title: "Quotation (SQ)", url: "/crm/quotations", icon: FileCheck },
+        { title: "Quotation (SQ)", url: "/sales/quotations", icon: FileCheck },
         {
           title: "Sales Order (SO)",
-          url: "/crm/sales-orders",
+          url: "/sales/sales-orders",
           icon: ShoppingCart,
+        },
+        {
+          title: "Term of Payment",
+          url: "/sales/term-of-payment",
+          icon: Banknote,
         },
       ],
     },
@@ -150,6 +155,90 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
         { title: "Product List", url: "/products", icon: Package },
         { title: "Vendor List", url: "/purchasing/vendors", icon: Building2 },
       ],
+    },
+  ],
+
+  sales: [
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      items: [
+        { title: "Sales", url: "/dashboard/sales" },
+      ],
+    },
+    {
+      title: "CRM",
+      icon: FileText,
+      items: [
+        { title: "Lead List", url: "/crm/leads", icon: Users },
+        {
+          title: "Opportunity",
+          url: "/crm/opportunities",
+          icon: ClipboardList,
+        },
+      ],
+    },
+    {
+      title: "Sales",
+      icon: ShoppingCart,
+      items: [
+        { title: "Quotation (SQ)", url: "/sales/quotations", icon: FileCheck },
+        {
+          title: "Sales Order (SO)",
+          url: "/sales/sales-orders",
+          icon: ShoppingCart,
+        },
+        {
+          title: "Term of Payment",
+          url: "/sales/term-of-payment",
+          icon: Banknote,
+        },
+      ],
+    },
+  ],
+
+  manager_sales: [
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      items: [
+        { title: "CRM", url: "/dashboard/crm" },
+        { title: "Sales", url: "/dashboard/sales" },
+      ],
+    },
+    {
+      title: "CRM",
+      icon: FileText,
+      items: [
+        { title: "Lead List", url: "/crm/leads", icon: Users },
+        {
+          title: "Opportunity",
+          url: "/crm/opportunities",
+          icon: ClipboardList,
+        },
+      ],
+    },
+    {
+      title: "Sales",
+      icon: ShoppingCart,
+      items: [
+        { title: "Quotation (SQ)", url: "/sales/quotations", icon: FileCheck },
+        {
+          title: "Sales Order (SO)",
+          url: "/sales/sales-orders",
+          icon: ShoppingCart,
+        },
+        {
+          title: "Term of Payment",
+          url: "/sales/term-of-payment",
+          icon: Banknote,
+        },
+      ],
+    },
+    {
+      title: "Report",
+      icon: FileText,
+      items: [{ title: "Sales Report", url: "/sales/report", icon: FileText }],
     },
   ],
 };

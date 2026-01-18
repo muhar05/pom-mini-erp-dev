@@ -5,6 +5,7 @@ import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import QuotationsTable from "./_components/quotations-table";
 import QuotationFilters from "./_components/quotation-filters";
 import { useQuotations } from "@/hooks/quotations/useQuotations";
+import { Button } from "@/components/ui/button";
 
 export default function QuotationsPage() {
   const { quotations, loading, refetch } = useQuotations(); // Gunakan refetch
@@ -14,7 +15,7 @@ export default function QuotationsPage() {
   const filteredQuotations = quotations.filter(
     (q: any) =>
       q.quotation_no?.toLowerCase().includes(search.toLowerCase()) ||
-      q.customer_name?.toLowerCase().includes(search.toLowerCase())
+      q.customer_name?.toLowerCase().includes(search.toLowerCase()),
   );
 
   // Setelah filter
@@ -30,6 +31,16 @@ export default function QuotationsPage() {
         title="Quotations"
         text="Manage and monitor your sales quotations"
       />
+      <div className="flex justify-end mb-4">
+        <Button
+          variant="outline"
+          onClick={() =>
+            (window.location.href = "/crm/quotations/term-of-payment")
+          }
+        >
+          Term of Payment
+        </Button>
+      </div>
       <QuotationFilters search={search} setSearch={setSearch} />
       <div className="grid grid-cols-1 gap-6 mt-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

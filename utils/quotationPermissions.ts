@@ -190,8 +190,6 @@ export function validateQuotationChange(
   user: users,
   currentStatus: string,
   newStatus: string,
-  currentStage: string,
-  newStage: string
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
@@ -199,18 +197,6 @@ export function validateQuotationChange(
   const statusCheck = canChangeStatus(user, currentStatus, newStatus);
   if (!statusCheck.allowed) {
     errors.push(statusCheck.message!);
-  }
-
-  // Validasi permission stage
-  const stageCheck = canChangeStage(user, currentStage, newStage);
-  if (!stageCheck.allowed) {
-    errors.push(stageCheck.message!);
-  }
-
-  // Validasi konsistensi status-stage
-  const consistencyCheck = isStatusStageConsistent(newStatus, newStage);
-  if (!consistencyCheck.consistent) {
-    errors.push(consistencyCheck.message!);
   }
 
   return {

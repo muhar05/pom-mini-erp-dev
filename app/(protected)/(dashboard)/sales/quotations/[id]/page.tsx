@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ArrowLeft, Calendar, FileText } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Pencil } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useQuotationDetail } from "@/hooks/quotations/useQuotationDetail";
 import { useLeadById } from "@/hooks/leads/useLeadsById";
@@ -243,6 +243,17 @@ export default function QuotationDetailPage() {
                 <span className="text-xs text-green-600 ml-2">Copied!</span>
               )}
               {/* Tambahkan button Convert to SO */}
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  router.push(`/crm/quotations/${quotation.id}/edit`)
+                }
+                className="ml-2"
+                title="Edit Quotation"
+              >
+                <Pencil className="w-4 h-4 mr-1" />
+                Edit
+              </Button>
               {quotation.status?.toLowerCase() !== "draft" &&
                 quotation.stage?.toLowerCase() !== "draft" && (
                   <Button

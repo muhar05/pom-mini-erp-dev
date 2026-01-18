@@ -60,7 +60,6 @@ model quotations {
   tax              Decimal?       @default(0) @db.Decimal(18, 2)
   grand_total      Decimal?       @default(0) @db.Decimal(18, 2)
   status           String?        @default("draft") @db.VarChar(50)
-  stage            String?        @db.VarChar(50)
   note             String?
   target_date      DateTime?      @db.Date
   top              String?        @db.VarChar(50)
@@ -69,6 +68,8 @@ model quotations {
   customer         customers?      @relation(fields: [customer_id], references: [id])
   user             users?         @relation(fields: [user_id], references: [id]) // <--- Relasi ke users
   sales_orders     sales_orders[] @relation("QuotationToSalesOrder")
+  payment_term_id  Int?
+  payment_term     payment_terms? @relation(fields: [payment_term_id], references: [id])
 }
 
 model roles {
@@ -242,6 +243,8 @@ model sales_orders {
   customers         customers?          @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   quotation         quotations?         @relation("QuotationToSalesOrder", fields: [quotation_id], references: [id])
   user              users?              @relation("UserToSalesOrders", fields: [user_id], references: [id]) // <-- Tambahkan relasi ini
+  payment_term_id  Int?
+  payment_term     payment_terms? @relation(fields: [payment_term_id], references: [id])
 }
 
 model stock_reservations {
@@ -277,4 +280,23 @@ model warehouses_history {
   note        String?
   created_at  DateTime? @default(now()) @db.Timestamp(6)
   created_by  BigInt?
+}
+
+enum PaymentTerm {
+  cash
+  net30
+  net60
+  cod
+}
+
+model payment_terms {
+  id        Int     @id @default(autoincrement())
+  code      String  @unique @db.VarChar(50)
+  name      String  @db.VarChar(100)
+  days      Int?
+  note      String?
+  is_active Boolean @default(true)
+
+  quotations   quotations[]
+  sales_orders sales_orders[]
 }

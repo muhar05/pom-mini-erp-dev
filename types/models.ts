@@ -73,7 +73,6 @@ export interface quotations {
   tax?: number | null;
   grand_total?: number | null;
   status?: string | null;
-  stage?: string | null;
   note?: string | null;
   target_date?: Date | null;
   top?: string | null;
@@ -82,6 +81,8 @@ export interface quotations {
   customer?: customers | null;
   user?: users | null; // <-- Tambahkan relasi ke users
   lead?: leads | null; // <-- Tambahkan relasi ke leads (jika dibutuhkan)
+  payment_term_id?: number | null;
+  payment_term?: payment_terms | null;
 }
 
 // roles
@@ -259,6 +260,8 @@ export interface sales_orders {
   payment_status?: string | null;
   file_po_customer?: string | null;
   created_at?: Date | null;
+  payment_term_id?: number | null;
+  payment_term?: payment_terms | null;
 }
 
 // stock_reservations
@@ -391,8 +394,18 @@ export type QuotationFormData = {
   tax: number;
   grand_total: number;
   status: string;
-  stage?: string;
   note?: string;
   target_date?: string;
   top?: string;
 };
+
+export interface payment_terms {
+  id: number;
+  code: string;
+  name: string;
+  days?: number | null;
+  note?: string | null;
+  is_active: boolean;
+  quotations?: quotations[];
+  sales_orders?: sales_orders[];
+}

@@ -79,11 +79,11 @@ export async function createQuotationAction(data: QuotationFormData) {
     ) {
       if (!validatedData.target_date.includes("T")) {
         validatedData.target_date = new Date(
-          validatedData.target_date + "T00:00:00.000Z"
+          validatedData.target_date + "T00:00:00.000Z",
         ).toISOString();
       } else {
         validatedData.target_date = new Date(
-          validatedData.target_date
+          validatedData.target_date,
         ).toISOString();
       }
     }
@@ -127,7 +127,7 @@ export async function createQuotationAction(data: QuotationFormData) {
     }
 
     throw new Error(
-      "Failed to create quotation. Please check your input and try again."
+      "Failed to create quotation. Please check your input and try again.",
     );
   }
 }
@@ -135,7 +135,7 @@ export async function createQuotationAction(data: QuotationFormData) {
 // UPDATE
 export async function updateQuotationAction(
   id: number,
-  data: UpdateQuotationData
+  data: UpdateQuotationData,
 ) {
   const session = await auth();
   const user = session?.user as users | undefined;
@@ -154,14 +154,11 @@ export async function updateQuotationAction(
     // Validate status/stage changes if provided
     if (data.status || data.stage) {
       const newStatus = data.status || currentQuotation.status || "sq_draft";
-      const newStage = data.stage || currentQuotation.stage || "draft";
 
       const validation = validateQuotationChange(
         user,
         currentQuotation.status || "sq_draft",
         newStatus,
-        currentQuotation.stage || "draft",
-        newStage
       );
 
       if (!validation.valid) {
@@ -349,7 +346,7 @@ export async function getOpportunityQualifiedLeadsAction() {
 // CREATE QUOTATION FROM LEAD
 export async function createQuotationFromLeadAction(
   leadId: number,
-  formData: FormData
+  formData: FormData,
 ) {
   const session = await auth();
   const user = session?.user as users | undefined;
@@ -454,7 +451,7 @@ export async function createQuotationFromLeadAction(
     }
 
     throw new Error(
-      "Failed to create quotation from lead. Please check your input and try again."
+      "Failed to create quotation from lead. Please check your input and try again.",
     );
   }
 }
@@ -462,7 +459,7 @@ export async function createQuotationFromLeadAction(
 // Add this new action that accepts object data
 export async function createQuotationFromLeadObjectAction(
   leadId: number,
-  quotationData: any
+  quotationData: any,
 ) {
   const session = await auth();
   const user = session?.user as users | undefined;
@@ -573,7 +570,6 @@ export async function approveQuotationAction(id: number, note?: string) {
 
     const updatedQuotation = await updateQuotationDb(id, {
       status: "sq_approved",
-      stage: "approved",
       note: note || currentQuotation.note,
     });
 
@@ -609,7 +605,6 @@ export async function rejectQuotationAction(id: number, reason: string) {
 
     const updatedQuotation = await updateQuotationDb(id, {
       status: "sq_rejected",
-      stage: "review",
       note: reason,
     });
 
