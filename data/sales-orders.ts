@@ -391,7 +391,6 @@ export async function getSalesOrderByIdDb(id: string) {
           ? Number(salesOrder.quotation.grand_total)
           : 0,
         status: salesOrder.quotation.status,
-        stage: salesOrder.quotation.stage,
         note: salesOrder.quotation.note,
         target_date: salesOrder.quotation.target_date,
         top: salesOrder.quotation.top,

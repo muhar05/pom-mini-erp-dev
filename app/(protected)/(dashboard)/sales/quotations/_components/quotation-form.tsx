@@ -582,7 +582,7 @@ export default function QuotationForm({
                       </SelectContent>
                     </Select>
                   </div>
-
+                  {/* 
                   <div className="space-y-2">
                     <Label htmlFor="stage">Stage</Label>
                     <Select
@@ -600,7 +600,7 @@ export default function QuotationForm({
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </div> */}
                 </div>
 
                 <Separator />
