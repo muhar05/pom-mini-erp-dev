@@ -70,7 +70,7 @@ export default function StockReservationRelatedData({
             <ShoppingBag className="w-4 h-4" />
             Source Sales Order
           </CardTitle>
-          <Link href={`/crm/sales-orders/${mockSalesOrder.id}`}>
+          <Link href={`/sales/sales-orders/${mockSalesOrder.id}`}>
             <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
               <ExternalLink className="w-4 h-4" />
             </Button>

@@ -48,7 +48,7 @@ export default function AddSalesOrderButton() {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Link href="/crm/quotations">
+          <Link href="/sales/quotations">
             <Button className="flex items-center gap-2">
               Go to Quotations <ArrowRight className="w-4 h-4" />
             </Button>

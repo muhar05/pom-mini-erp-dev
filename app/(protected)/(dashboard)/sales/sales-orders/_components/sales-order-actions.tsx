@@ -142,7 +142,7 @@ export default function SalesOrderActions({
 
       <div className="flex gap-1">
         {/* View - Always available */}
-        <Link href={`/crm/sales-orders/${salesOrder.id}`}>
+        <Link href={`/sales/sales-orders/${salesOrder.id}`}>
           <Button
             size="icon"
             variant="ghost"
@@ -155,7 +155,7 @@ export default function SalesOrderActions({
 
         {/* Edit - Only for limited fields based on status */}
         {permissions.editableFields.length > 0 && (
-          <Link href={`/crm/sales-orders/${salesOrder.id}/edit`}>
+          <Link href={`/sales/sales-orders/${salesOrder.id}/edit`}>
             <Button
               size="icon"
               variant="ghost"

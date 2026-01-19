@@ -129,7 +129,7 @@ export default function QuotationDetailPage() {
     if (!idParam) return;
     fetch(`/api/quotations/${idParam}`, { method: "DELETE" }).then(() => {
       setShowDeleteDialog(false);
-      router.push("/crm/quotations");
+      router.push("/sales/quotations");
     });
   };
 
@@ -149,9 +149,9 @@ export default function QuotationDetailPage() {
           },
         );
         if (result.data?.id) {
-          router.push(`/crm/sales-orders/${result.data.id}`);
+          router.push(`/sales/sales-orders/${result.data.id}`);
         } else {
-          router.push("/crm/sales-orders");
+          router.push("/sales/sales-orders");
         }
       } else {
         toast.error(
@@ -190,7 +190,7 @@ export default function QuotationDetailPage() {
         <Button
           variant="outline"
           className="mt-4"
-          onClick={() => router.push("/crm/quotations")}
+          onClick={() => router.push("/sales/quotations")}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Quotations
@@ -246,7 +246,7 @@ export default function QuotationDetailPage() {
               <Button
                 variant="secondary"
                 onClick={() =>
-                  router.push(`/crm/quotations/${quotation.id}/edit`)
+                  router.push(`/sales/quotations/${quotation.id}/edit`)
                 }
                 className="ml-2"
                 title="Edit Quotation"

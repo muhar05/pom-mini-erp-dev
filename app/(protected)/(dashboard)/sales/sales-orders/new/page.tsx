@@ -8,7 +8,7 @@ export default function SalesOrderNewPage() {
   const router = useRouter();
 
   const handleSuccess = () => {
-    router.push("/crm/sales-orders");
+    router.push("/sales/sales-orders");
   };
 
   const handleClose = () => {

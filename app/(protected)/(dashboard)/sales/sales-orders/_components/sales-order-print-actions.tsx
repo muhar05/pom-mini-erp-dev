@@ -26,7 +26,7 @@ export default function SalesOrderPrintActions({
   const exportRef = useRef<SOExportHandle>(null);
 
   const handleView = () => {
-    router.push(`/crm/sales-orders/${salesOrder.id}`);
+    router.push(`/sales/sales-orders/${salesOrder.id}`);
   };
 
   const handleDownloadPDF = () => {

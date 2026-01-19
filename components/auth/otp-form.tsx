@@ -25,12 +25,16 @@ export default function VerifyOtpPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp }),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "OTP invalid");
+
       toast.success("Login success!");
-      const result = await signIn("credentials", {
+
+      await signIn("credentials", {
         email,
         password: otp,
+        mode: "otp",
         redirect: true,
         callbackUrl: "/dashboard",
       });

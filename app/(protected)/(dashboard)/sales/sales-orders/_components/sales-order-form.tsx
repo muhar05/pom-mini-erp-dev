@@ -601,7 +601,7 @@ export default function SalesOrderForm({
           if (onSuccess) {
             onSuccess();
           } else {
-            router.push("/crm/sales-orders");
+            router.push("/sales/sales-orders");
           }
         } else {
           toast.error(result?.message || "Failed to create sales order");
@@ -645,7 +645,7 @@ export default function SalesOrderForm({
           if (onSuccess) {
             onSuccess();
           } else {
-            router.push("/crm/sales-orders");
+            router.push("/sales/sales-orders");
           }
         } else {
           toast.error(result?.message || "Failed to update sales order");

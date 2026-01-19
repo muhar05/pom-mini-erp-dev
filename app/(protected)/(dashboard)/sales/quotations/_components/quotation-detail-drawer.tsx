@@ -97,7 +97,7 @@ export default function QuotationDetailDrawer({
 
         {/* Action Buttons */}
         <div className="flex gap-2 mb-6">
-          <Link href={`/crm/quotations/${quotation.id}/edit`}>
+          <Link href={`/sales/quotations/${quotation.id}/edit`}>
             <Button
               size="sm"
               variant="outline"
@@ -117,7 +117,7 @@ export default function QuotationDetailDrawer({
             Delete
           </Button>
           {canConvertToSO && (
-            <Link href={`/crm/sales-orders/new?quotation_id=${quotation.id}`}>
+            <Link href={`/sales/sales-orders/new?quotation_id=${quotation.id}`}>
               <Button
                 size="sm"
                 className="flex items-center gap-2 bg-green-600 hover:bg-green-700"

@@ -74,7 +74,7 @@ export default function SalesOrderEditPage() {
   }, [id]);
 
   const handleSuccess = () => {
-    router.push("/crm/sales-orders");
+    router.push("/sales/sales-orders");
   };
 
   const handleClose = () => {

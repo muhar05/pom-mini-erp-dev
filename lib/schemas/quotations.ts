@@ -32,11 +32,6 @@ const statusSchema = z
   .optional()
   .default("draft");
 
-const stageSchema = z
-  .string()
-  .max(50, "Stage must be less than 50 characters")
-  .optional();
-
 // Main quotation schema for CREATE
 export const createQuotationSchema = z.object({
   quotation_no: quotationNoSchema,
@@ -48,7 +43,6 @@ export const createQuotationSchema = z.object({
   tax: z.number().min(0).optional().default(0),
   grand_total: z.number().min(0).optional().default(0),
   status: statusSchema,
-  stage: stageSchema,
   note: z
     .string()
     .max(1000, "Note must be less than 1000 characters")
@@ -68,7 +62,6 @@ export const updateQuotationSchema = z.object({
   tax: z.number().min(0).optional(),
   grand_total: z.number().min(0).optional(),
   status: z.string().max(50).optional(),
-  stage: z.string().max(50).optional(),
   note: z.string().max(1000).optional(),
   target_date: z.string().optional(),
   top: z.string().max(50).optional(),
@@ -86,7 +79,6 @@ export const createQuotationFromLeadSchema = z.object({
   tax: z.number().min(0).optional().default(0),
   grand_total: z.number().min(0).optional().default(0),
   status: statusSchema,
-  stage: stageSchema,
   note: z.string().max(1000).optional(),
   target_date: z.string().optional(),
   top: z.string().max(50).optional(),
@@ -103,7 +95,7 @@ export type QuotationDetailItem = z.infer<typeof quotationDetailItemSchema>;
 // Helper function untuk validasi FormData atau object
 export function validateQuotationFormData(
   formData: FormData | Record<string, any>,
-  mode: "create" | "update"
+  mode: "create" | "update",
 ) {
   let data: Record<string, any> = {};
 

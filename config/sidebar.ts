@@ -36,6 +36,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       title: "Dashboard",
       icon: LayoutDashboard,
       items: [
+        { title: "Superuser", url: "/dashboard/superuser" },
         { title: "CRM", url: "/dashboard/crm" },
         { title: "Sales", url: "/dashboard/sales" },
         { title: "Finance", url: "/dashboard/finance" },
@@ -162,9 +163,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
     {
       title: "Dashboard",
       icon: LayoutDashboard,
-      items: [
-        { title: "Sales", url: "/dashboard/sales" },
-      ],
+      items: [{ title: "Sales", url: "/dashboard/sales" }],
     },
     {
       title: "CRM",

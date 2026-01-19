@@ -108,7 +108,7 @@ export async function createQuotationAction(data: QuotationFormData) {
       tax: quotation.tax ? Number(quotation.tax) : 0,
       grand_total: quotation.grand_total ? Number(quotation.grand_total) : 0,
     };
-    revalidatePath("/crm/quotations");
+    revalidatePath("/sales/quotations");
     return {
       success: true,
       message: "Quotation created successfully",
@@ -152,7 +152,7 @@ export async function updateQuotationAction(
     }
 
     // Validate status/stage changes if provided
-    if (data.status || data.stage) {
+    if (data.status) {
       const newStatus = data.status || currentQuotation.status || "sq_draft";
 
       const validation = validateQuotationChange(
@@ -179,7 +179,18 @@ export async function updateQuotationAction(
       }
     }
 
-    const updatedQuotation = await updateQuotationDb(id, data);
+    // Convert customer_id to number if it's a string
+    if (data.customer_id && typeof data.customer_id === "string") {
+      data.customer_id = parseInt(data.customer_id, 10);
+    }
+
+    // Update quotation
+    const updateData: any = { ...data };
+    if (updateData.customer_id) {
+      updateData.customer = { connect: { id: Number(updateData.customer_id) } };
+      delete updateData.customer_id;
+    }
+    const updatedQuotation = await updateQuotationDb(id, updateData);
 
     // Convert Decimal fields to numbers for client compatibility
     const safeQuotation = {
@@ -197,7 +208,7 @@ export async function updateQuotationAction(
         : 0,
     };
 
-    revalidatePath("/crm/quotations");
+    revalidatePath("/sales/quotations");
     return {
       success: true,
       message: "Quotation updated successfully",
@@ -227,7 +238,7 @@ export async function deleteQuotationAction(formData: FormData) {
     // Use direct database call instead of fetch
     await deleteQuotationDb(id);
 
-    revalidatePath("/crm/quotations");
+    revalidatePath("/sales/quotations");
     return { success: true, message: "Quotation deleted successfully" };
   } catch (error) {
     console.error("Error deleting quotation:", error);
@@ -432,7 +443,7 @@ export async function createQuotationFromLeadAction(
       },
     });
 
-    revalidatePath("/crm/quotations");
+    revalidatePath("/sales/quotations");
     return {
       success: true,
       message: "Quotation created successfully from lead",
@@ -524,7 +535,7 @@ export async function createQuotationFromLeadObjectAction(
       },
     });
 
-    revalidatePath("/crm/quotations");
+    revalidatePath("/sales/quotations");
     return {
       success: true,
       message: "Quotation created successfully from lead",
@@ -573,7 +584,7 @@ export async function approveQuotationAction(id: number, note?: string) {
       note: note || currentQuotation.note,
     });
 
-    revalidatePath("/crm/quotations");
+    revalidatePath("/sales/quotations");
     return {
       success: true,
       message: "Quotation approved successfully",
@@ -608,7 +619,7 @@ export async function rejectQuotationAction(id: number, reason: string) {
       note: reason,
     });
 
-    revalidatePath("/crm/quotations");
+    revalidatePath("/sales/quotations");
     return {
       success: true,
       message: "Quotation rejected successfully",

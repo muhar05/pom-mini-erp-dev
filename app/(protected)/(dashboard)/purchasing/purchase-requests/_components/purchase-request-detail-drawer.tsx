@@ -150,7 +150,7 @@ export default function PurchaseRequestDetailDrawer({
                 <div>
                   <p className="text-sm text-gray-500">SO Reference</p>
                   <Link
-                    href={`/crm/sales-orders/${purchaseRequest.so_no}`}
+                    href={`/sales/sales-orders/${purchaseRequest.so_no}`}
                     className="font-medium text-blue-600 hover:underline"
                   >
                     {purchaseRequest.so_no}

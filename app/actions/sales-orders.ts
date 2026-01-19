@@ -163,7 +163,7 @@ export async function createSalesOrderAction(data: CreateSalesOrderData) {
 
     const safeSalesOrder = convertSalesOrderForClient(salesOrder);
 
-    revalidatePath("/crm/sales-orders");
+    revalidatePath("/sales/sales-orders");
     return {
       success: true,
       message: "Sales order created successfully",
@@ -317,7 +317,7 @@ export async function updateSalesOrderAction(
 
     const safeSalesOrder = convertSalesOrderForClient(salesOrder);
 
-    revalidatePath("/crm/sales-orders");
+    revalidatePath("/sales/sales-orders");
     return {
       success: true,
       message: "Sales order updated successfully",
@@ -367,7 +367,7 @@ export async function deleteSalesOrderAction(formData: FormData) {
     // Delete the sales order
     await deleteSalesOrderDb(id);
 
-    revalidatePath("/crm/sales-orders");
+    revalidatePath("/sales/sales-orders");
     return {
       success: true,
       message: "Sales order deleted successfully",
@@ -909,8 +909,8 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
       customers: result.customers,
     };
 
-    revalidatePath("/crm/sales-orders");
-    revalidatePath("/crm/quotations");
+    revalidatePath("/sales/sales-orders");
+    revalidatePath("/sales/quotations");
 
     return {
       success: true,

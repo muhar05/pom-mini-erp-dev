@@ -83,7 +83,7 @@ export default function SalesOrderDetailPage() {
   }, [params.id]);
 
   const handleBack = () => {
-    router.push("/crm/sales-orders");
+    router.push("/sales/sales-orders");
   };
 
   const handlePrint = () => {

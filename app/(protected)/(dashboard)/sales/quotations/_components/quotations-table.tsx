@@ -148,12 +148,12 @@ export default function QuotationsTable({
               className="text-center py-8 text-gray-500"
             >
               No quotations found.
-              <a
-                href="/crm/quotations/new"
+              {/* <a
+                href="/sales/quotations/new"
                 className="text-blue-600 hover:underline ml-1"
               >
                 Create your first quotation
-              </a>
+              </a> */}
               .
             </TableCell>
           </TableRow>

@@ -76,7 +76,7 @@ export default function OpportunityDetailClient({
     if (success && result && result.id) {
       toast.success("Berhasil convert ke SQ!");
       setDialogOpen(false);
-      router.push(`/crm/quotations/${result.id}/edit`);
+      router.push(`/sales/quotations/${result.id}/edit`);
     } else {
       toast.error(error || "Gagal convert ke SQ");
     }

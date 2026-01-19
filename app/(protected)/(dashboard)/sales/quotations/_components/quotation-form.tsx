@@ -41,11 +41,8 @@ import {
   getQuotationPermissions,
   getUserRole,
   canChangeStatus,
-  canChangeStage,
   QUOTATION_STATUSES,
-  QUOTATION_STAGES,
   QuotationPermission,
-  STATUS_STAGE_MAPPING,
 } from "@/utils/quotationPermissions";
 import { useCustomerById } from "@/hooks/customers/useCustomerById";
 
@@ -60,7 +57,6 @@ type QuotationFormData = {
   tax: number;
   grand_total: number;
   status: string;
-  stage?: string;
   note?: string;
   target_date?: string;
   top?: string;
@@ -81,7 +77,6 @@ type Quotation = {
   tax: number;
   grand_total: number;
   status: string;
-  stage?: string;
   target_date?: string;
   top?: string;
   valid_until?: string;
@@ -133,7 +128,6 @@ export default function QuotationForm({
     tax: quotation?.tax ?? 0,
     grand_total: quotation?.grand_total ?? 0,
     status: quotation?.status || "sq_draft",
-    stage: quotation?.stage || "draft",
     note: quotation?.note || "",
     target_date: quotation?.target_date || "",
     top: quotation?.top || "cash",
@@ -395,22 +389,6 @@ export default function QuotationForm({
     );
   };
 
-  // Filter stage options based on permissions
-  const getAvailableStageOptions = () => {
-    if (!permissions) return [];
-
-    const allStageOptions = [
-      { value: "draft", label: "Draft" },
-      { value: "review", label: "Review" },
-      { value: "approved", label: "Approved" },
-      { value: "sent", label: "Sent" },
-    ];
-
-    return allStageOptions.filter((option) =>
-      permissions.allowedStages.includes(option.value),
-    );
-  };
-
   // Validate status change on client side
   const handleStatusChange = (newStatus: string) => {
     if (!user) return;
@@ -422,30 +400,6 @@ export default function QuotationForm({
     }
 
     handleInputChange("status", newStatus);
-
-    // Auto-adjust stage based on status
-    const validStages =
-      STATUS_STAGE_MAPPING[newStatus as keyof typeof STATUS_STAGE_MAPPING];
-    if (validStages && !validStages.includes(formData.stage as any)) {
-      handleInputChange("stage", validStages[0]);
-    }
-  };
-
-  // Validate stage change on client side
-  const handleStageChange = (newStage: string) => {
-    if (!user) return;
-
-    const stageCheck = canChangeStage(
-      user,
-      formData.stage || "draft",
-      newStage,
-    );
-    if (!stageCheck.allowed) {
-      toast.error(stageCheck.message || "Cannot change to this stage");
-      return;
-    }
-
-    handleInputChange("stage", newStage);
   };
 
   // Set isInitialLoad to false after first render
@@ -582,25 +536,6 @@ export default function QuotationForm({
                       </SelectContent>
                     </Select>
                   </div>
-                  {/* 
-                  <div className="space-y-2">
-                    <Label htmlFor="stage">Stage</Label>
-                    <Select
-                      value={formData.stage}
-                      onValueChange={handleStageChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getAvailableStageOptions().map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div> */}
                 </div>
 
                 <Separator />
@@ -718,7 +653,7 @@ export default function QuotationForm({
               <CardContent className="pt-2">
                 <div className="space-y-5">
                   {/* Jika mode edit, tampilkan dropdown */}
-                  {isCustomerEditMode ? (
+                  {isCustomerEditMode || !customerDetail ? (
                     <div className="space-y-3">
                       <Label
                         htmlFor="customer_id"

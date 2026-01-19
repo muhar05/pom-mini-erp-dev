@@ -38,7 +38,7 @@ export default function QuotationActions({
   return (
     <div className="flex gap-2">
       {/* View */}
-      <Link href={`/crm/quotations/${quotation.id}`}>
+      <Link href={`/sales/quotations/${quotation.id}`}>
         <Button
           size="icon"
           variant="ghost"
@@ -50,7 +50,7 @@ export default function QuotationActions({
       </Link>
 
       {/* Edit */}
-      <Link href={`/crm/quotations/${quotation.id}/edit`}>
+      <Link href={`/sales/quotations/${quotation.id}/edit`}>
         <Button
           size="icon"
           variant="ghost"

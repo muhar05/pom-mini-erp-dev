@@ -35,7 +35,7 @@ export default function QuotationsPage() {
         <Button
           variant="outline"
           onClick={() =>
-            (window.location.href = "/crm/quotations/term-of-payment")
+            (window.location.href = "/sales/quotations/term-of-payment")
           }
         >
           Term of Payment

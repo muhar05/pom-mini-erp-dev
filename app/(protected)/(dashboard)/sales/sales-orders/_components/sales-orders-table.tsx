@@ -215,7 +215,7 @@ export default function SalesOrdersTable({
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem asChild>
                         <Link
-                          href={`/crm/sales-orders/${salesOrder.id}`}
+                          href={`/sales/sales-orders/${salesOrder.id}`}
                           className="flex items-center"
                         >
                           <Eye className="mr-2 h-4 w-4" />
@@ -226,7 +226,7 @@ export default function SalesOrdersTable({
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
                         <Link
-                          href={`/crm/sales-orders/${salesOrder.id}/edit`}
+                          href={`/sales/sales-orders/${salesOrder.id}/edit`}
                           className="flex items-center"
                         >
                           <Edit className="mr-2 h-4 w-4" />
@@ -263,14 +263,14 @@ export default function SalesOrdersTable({
                 <p className="text-sm">
                   Sales Orders can be created from{" "}
                   <a
-                    href="/crm/quotations"
+                    href="/sales/quotations"
                     className="text-blue-600 hover:underline font-medium"
                   >
                     approved quotations
                   </a>{" "}
                   or{" "}
                   <a
-                    href="/crm/sales-orders/add"
+                    href="/sales/sales-orders/add"
                     className="text-blue-600 hover:underline font-medium"
                   >
                     created directly

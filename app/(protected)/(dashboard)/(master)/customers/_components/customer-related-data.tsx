@@ -123,7 +123,7 @@ export default function CustomerRelatedData({
             <DollarSign className="w-4 h-4" />
             Quotations ({mockQuotations.length})
           </CardTitle>
-          <Link href={`/crm/quotations?customer=${customerId}`}>
+          <Link href={`/sales/quotations?customer=${customerId}`}>
             <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
               <ExternalLink className="w-4 h-4" />
             </Button>
@@ -171,7 +171,7 @@ export default function CustomerRelatedData({
             <ShoppingCart className="w-4 h-4" />
             Sales Orders ({mockSalesOrders.length})
           </CardTitle>
-          <Link href={`/crm/sales-orders?customer=${customerId}`}>
+          <Link href={`/sales/sales-orders?customer=${customerId}`}>
             <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
               <ExternalLink className="w-4 h-4" />
             </Button>

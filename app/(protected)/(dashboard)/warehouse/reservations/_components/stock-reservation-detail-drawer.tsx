@@ -147,7 +147,7 @@ export default function StockReservationDetailDrawer({
                 <div>
                   <p className="text-sm text-gray-500">SO Reference</p>
                   <Link
-                    href={`/crm/sales-orders/${stockReservation.so_no}`}
+                    href={`/sales/sales-orders/${stockReservation.so_no}`}
                     className="font-medium text-blue-600 hover:underline"
                   >
                     {stockReservation.so_no}

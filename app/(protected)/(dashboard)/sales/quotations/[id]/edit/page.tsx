@@ -15,7 +15,7 @@ export default function QuotationEditPage() {
   const { quotation, loading } = useQuotationDetail(idParam);
 
   const handleSuccess = () => {
-    router.push("/crm/quotations");
+    router.push("/sales/quotations");
   };
 
   const handleClose = () => {

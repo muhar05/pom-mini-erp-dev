@@ -95,7 +95,7 @@ export default function QuotationRelatedData({
             <ShoppingBag className="w-4 h-4" />
             Sales Orders ({mockSalesOrders.length})
           </CardTitle>
-          <Link href={`/crm/sales-orders?quotation=${quotationId}`}>
+          <Link href={`/sales/sales-orders?quotation=${quotationId}`}>
             <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
               <ExternalLink className="w-4 h-4" />
             </Button>

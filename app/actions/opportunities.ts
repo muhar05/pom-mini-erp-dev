@@ -230,7 +230,6 @@ export async function convertOpportunityToSQ(
     tax: 0,
     grand_total: total,
     status: "draft",
-    stage: "draft",
     note: opportunity.note ?? "",
     target_date: null,
     top: "",
