@@ -19,7 +19,7 @@ export default function QuotationEditPage() {
   };
 
   const handleClose = () => {
-    router.back();
+    router.push("/sales/quotations");
   };
 
   // Konversi Decimal ke number

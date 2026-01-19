@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { formatStatusDisplay } from "@/utils/statusHelpers";
 import {
   createOpportunityDb,
   updateOpportunityDb,
@@ -11,23 +10,6 @@ import {
 import { prisma } from "@/lib/prisma"; // untuk query produk
 import { getUserByIdDb } from "@/data/users";
 // import { createQuotationDb } from "@/data/quotations"; // COMMENT OUT untuk bypass
-
-// Helper untuk hitung total harga dari product_interest
-async function calculatePotentialValue(productInterest: string | null) {
-  if (!productInterest) return 0;
-  const productNames = productInterest
-    .split(",")
-    .map((p) => p.trim())
-    .filter(Boolean);
-  if (productNames.length === 0) return 0;
-
-  const products = await prisma.products.findMany({
-    where: { name: { in: productNames } },
-    select: { price: true },
-  });
-
-  return products.reduce((sum, p) => sum + Number(p.price ?? 0), 0);
-}
 
 // UPDATE OPPORTUNITY
 export async function updateOpportunityAction(
@@ -87,7 +69,6 @@ export async function getOpportunityByIdAction(id: number) {
     expected_close_date: "", // jika ada field di leads, isi sesuai
     notes: opportunity.note ?? "",
     status: opportunity.status ?? "",
-    stage: formatStatusDisplay(opportunity.status ?? ""),
     created_at: opportunity.created_at
       ? opportunity.created_at.toISOString().split("T")[0]
       : "",
@@ -118,13 +99,10 @@ export async function getAllOpportunitiesAction() {
       sales_pic: opportunity.users_leads_id_userTousers?.name ?? "",
       type: opportunity.type ?? "",
       company: opportunity.company ?? "",
-      potential_value: await calculatePotentialValue(
-        opportunity.product_interest ?? "",
-      ),
+      potential_value: Number(opportunity.potential_value ?? 0),
       expected_close_date: "",
       notes: opportunity.note ?? "",
       status: opportunity.status ?? "",
-      stage: formatStatusDisplay(opportunity.status ?? ""),
       created_at: opportunity.created_at
         ? opportunity.created_at.toISOString().split("T")[0]
         : "",
@@ -157,13 +135,12 @@ export async function GET() {
       sales_pic: "",
       type: opportunity.type ?? "",
       company: opportunity.company ?? "",
-      potential_value: await calculatePotentialValue(
-        opportunity.product_interest ?? "",
-      ),
+      potential_value: opportunity.potential_value
+        ? Number(opportunity.potential_value)
+        : 0,
       expected_close_date: "",
       notes: opportunity.note ?? "",
       status: opportunity.status ?? "",
-      stage: formatStatusDisplay(opportunity.status ?? ""),
       created_at: opportunity.created_at
         ? opportunity.created_at.toISOString().split("T")[0]
         : "",
@@ -229,12 +206,12 @@ export async function convertOpportunityToSQ(
     discount: 0,
     tax: 0,
     grand_total: total,
-    status: "draft",
+    status: "sq_draft",
     note: opportunity.note ?? "",
     target_date: null,
-    top: "",
-    lead_id: leadId, // <-- Tambahkan lead_id
-    user_id: userId, // <-- Tambahkan user_id
+    lead_id: leadId,
+    revision_no: 0,
+    user: { connect: { id: userId } }, // <-- BENAR, gunakan relasi user
   };
 
   let newQuotation;
@@ -242,11 +219,10 @@ export async function convertOpportunityToSQ(
     newQuotation = await prisma.quotations.create({
       data: {
         ...baseQuotationData,
-        customer_id: customerId,
+        customer: { connect: { id: customerId } }, // gunakan relasi customer
       },
     });
   } else {
-    // Jangan kirim customer_id sama sekali!
     newQuotation = await prisma.quotations.create({
       data: baseQuotationData,
     });

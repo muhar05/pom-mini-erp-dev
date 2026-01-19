@@ -69,11 +69,6 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
           url: "/sales/sales-orders",
           icon: ShoppingCart,
         },
-        {
-          title: "Term of Payment",
-          url: "/sales/term-of-payment",
-          icon: Banknote,
-        },
       ],
     },
 
@@ -144,6 +139,11 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       items: [
         { title: "Users", url: "/settings/users", icon: Users },
         { title: "Company", url: "/settings/company", icon: Building2 },
+        {
+          title: "Term of Payment",
+          url: "/settings/term-of-payment",
+          icon: Banknote,
+        },
       ],
     },
 

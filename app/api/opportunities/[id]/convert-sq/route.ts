@@ -4,13 +4,13 @@ import { auth } from "@/auth";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const id = Number(params.id);
+  const id = Number(await params.id);
   if (isNaN(id)) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
@@ -36,7 +36,7 @@ export async function POST(
   } catch (error) {
     return NextResponse.json(
       { error: (error as Error).message },
-      { status: 400 }
+      { status: 400 },
     );
   }
 }

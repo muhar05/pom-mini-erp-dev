@@ -86,7 +86,7 @@ const CrmStatCard = () => {
     },
     {
       title: "Converted Leads",
-      value: stats.leadsByStatus.prospecting?.toLocaleString?.() ?? "0",
+      value: stats.leadsByStatus.qualified?.toLocaleString?.() ?? "0",
       icon: TrendingUp,
       iconBg: "bg-cyan-600",
       gradientFrom: "from-cyan-600/10",

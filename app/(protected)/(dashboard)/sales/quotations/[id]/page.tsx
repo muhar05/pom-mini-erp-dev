@@ -18,6 +18,7 @@ import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { useCustomerById } from "@/hooks/customers/useCustomerById";
 import { PrintButton } from "@/components/quotations/PrintButton";
 import QuotationDetailSkeleton from "../_components/quotationDetailSkeleton";
+import { usePaymentTermById } from "@/hooks/payment-terms/usePaymentTerms";
 
 function getStatusBadgeClass(status: string): string {
   switch (status?.toLowerCase()) {
@@ -63,6 +64,7 @@ export default function QuotationDetailPage() {
 
   // Ambil detail customer dari API (untuk company level & diskon)
   const { customer: customerDetail } = useCustomerById(quotation?.customer_id);
+  const { paymentTerm } = usePaymentTermById(quotation?.payment_term_id);
 
   // Company level & diskon
   const companyLevel = customerDetail?.company?.company_level;
@@ -340,6 +342,18 @@ export default function QuotationDetailPage() {
                     </span>
                     <div className="bg-gray-100 dark:bg-gray-800/40 rounded px-3 py-2">
                       {customerDetail?.address || "-"}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Payment Term</span>
+                    <div className="font-medium">
+                      {paymentTerm
+                        ? `${paymentTerm.name}${
+                            paymentTerm.days
+                              ? ` (${paymentTerm.days} hari)`
+                              : ""
+                          }`
+                        : "-"}
                     </div>
                   </div>
                 </div>

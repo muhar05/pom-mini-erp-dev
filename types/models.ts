@@ -64,8 +64,8 @@ export interface quotations {
   id: number;
   quotation_no: string;
   customer_id?: number | null;
-  user_id?: number | null; // <-- Tambahkan ini
-  lead_id?: number | null; // <-- Tambahkan ini
+  user_id?: number | null;
+  lead_id?: number | null;
   quotation_detail: unknown;
   total?: number | null;
   shipping?: number | null;
@@ -75,14 +75,15 @@ export interface quotations {
   status?: string | null;
   note?: string | null;
   target_date?: Date | null;
-  top?: string | null;
   created_at?: Date | null;
   updated_at?: Date | null;
+  revision_no?: number; // <--- Tambahkan revision_no
   customer?: customers | null;
-  user?: users | null; // <-- Tambahkan relasi ke users
-  lead?: leads | null; // <-- Tambahkan relasi ke leads (jika dibutuhkan)
+  user?: users | null;
+  lead?: leads | null;
   payment_term_id?: number | null;
   payment_term?: payment_terms | null;
+  sales_orders?: sales_orders[]; // <--- relasi ke sales_orders
 }
 
 // roles
@@ -248,7 +249,8 @@ export interface sale_order_detail {
 export interface sales_orders {
   id: string; // BigInt as string
   sale_no: string;
-  quotation_id?: string | null;
+  quotation_id?: number | null;
+  user_id?: number | null;
   total?: number | null;
   discount?: number | null;
   shipping?: number | null;
@@ -260,8 +262,14 @@ export interface sales_orders {
   payment_status?: string | null;
   file_po_customer?: string | null;
   created_at?: Date | null;
+  customer_id?: number | null;
   payment_term_id?: number | null;
   payment_term?: payment_terms | null;
+  revision_no?: number; // <--- Tambahkan revision_no
+  customers?: customers | null;
+  quotation?: quotations | null;
+  user?: users | null;
+  sale_order_detail?: sale_order_detail[];
 }
 
 // stock_reservations

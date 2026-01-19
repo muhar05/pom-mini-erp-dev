@@ -68,31 +68,11 @@ export async function createQuotationAction(data: QuotationFormData) {
   try {
     const validatedData = validateQuotationFormData(data, "create");
 
-    if (!validatedData.quotation_no) {
-      validatedData.quotation_no = await generateQuotationNo();
-    }
-
-    // Convert target_date to ISO string if present and not already a Date
-    if (
-      validatedData.target_date &&
-      typeof validatedData.target_date === "string"
-    ) {
-      if (!validatedData.target_date.includes("T")) {
-        validatedData.target_date = new Date(
-          validatedData.target_date + "T00:00:00.000Z",
-        ).toISOString();
-      } else {
-        validatedData.target_date = new Date(
-          validatedData.target_date,
-        ).toISOString();
-      }
-    }
-
-    validatedData.total = data.total;
-    validatedData.grand_total = data.grand_total;
+    // JANGAN hitung ulang total, discount, tax, grand_total di sini!
+    // Gunakan nilai dari validatedData (yang sudah dihitung di UI)
 
     const { customer_id, quotation_no, quotation_detail, ...rest } =
-      validatedData;
+      validatedData; // ^^^ tambahkan top di sini agar tidak ikut ke Prisma
     const prismaData: CreateQuotationInput = {
       ...rest,
       quotation_no: quotation_no ?? (await generateQuotationNo()),
@@ -184,8 +164,33 @@ export async function updateQuotationAction(
       data.customer_id = parseInt(data.customer_id, 10);
     }
 
-    // Update quotation
+    // Handle revision
+    const oldRevision =
+      typeof currentQuotation.revision_no === "number"
+        ? currentQuotation.revision_no
+        : 0;
+    const newRevision = oldRevision + 1;
+
+    // Update SQ No: ganti R{old} → R{new}
+    let newQuotationNo = currentQuotation.quotation_no;
+    if (/R\d+$/i.test(newQuotationNo)) {
+      newQuotationNo = newQuotationNo.replace(/R\d+$/i, `R${newRevision}`);
+    } else {
+      newQuotationNo = `${newQuotationNo}R${newRevision}`;
+    }
+
     const updateData: any = { ...data };
+
+    // Pastikan update quotation_no dan revision_no
+    updateData.quotation_no = newQuotationNo;
+    updateData.revision_no = newRevision;
+
+    // Handle payment_term_id as relation
+    if (updateData.payment_term_id) {
+      updateData.payment_term = { connect: { id: updateData.payment_term_id } };
+      delete updateData.payment_term_id;
+    }
+
     if (updateData.customer_id) {
       updateData.customer = { connect: { id: Number(updateData.customer_id) } };
       delete updateData.customer_id;
@@ -403,17 +408,8 @@ export async function createQuotationFromLeadAction(
     // Set customer_id from created/found customer
     validatedData.customer_id = customer.id;
 
-    // Calculate totals
-    const quotationDetail = validatedData.quotation_detail as any[];
-    const total = quotationDetail.reduce((sum, item) => sum + item.total, 0);
-    const grandTotal =
-      total +
-      (validatedData.shipping || 0) +
-      (validatedData.tax || 0) -
-      (validatedData.discount || 0);
-
-    validatedData.total = total;
-    validatedData.grand_total = grandTotal;
+    // JANGAN hitung ulang total, discount, tax, grand_total di sini!
+    // Gunakan nilai dari validatedData (hasil UI)
 
     const { customer_id, ...rest } = validatedData;
     const prismaData: CreateQuotationInput = {
@@ -558,75 +554,5 @@ export async function generateQuotationNumberAction(): Promise<string> {
   } catch (error) {
     console.error("Error generating quotation number:", error);
     throw new Error("Failed to generate quotation number");
-  }
-}
-
-// Fungsi khusus untuk approve quotation (Manager only)
-export async function approveQuotationAction(id: number, note?: string) {
-  const session = await auth();
-  const user = session?.user as users | undefined;
-  if (!user) throw new Error("Unauthorized");
-
-  const userRole = getUserRole(user);
-  if (userRole !== "manager_sales" && userRole !== "superuser") {
-    throw new Error("Only managers can approve quotations");
-  }
-
-  try {
-    const currentQuotation = await getQuotationByIdDb(id);
-
-    if (currentQuotation.status !== "sq_review") {
-      throw new Error("Can only approve quotations in review status");
-    }
-
-    const updatedQuotation = await updateQuotationDb(id, {
-      status: "sq_approved",
-      note: note || currentQuotation.note,
-    });
-
-    revalidatePath("/sales/quotations");
-    return {
-      success: true,
-      message: "Quotation approved successfully",
-      data: updatedQuotation,
-    };
-  } catch (error) {
-    console.error("Error approving quotation:", error);
-    throw error;
-  }
-}
-
-// Fungsi khusus untuk reject quotation (Manager only)
-export async function rejectQuotationAction(id: number, reason: string) {
-  const session = await auth();
-  const user = session?.user as users | undefined;
-  if (!user) throw new Error("Unauthorized");
-
-  const userRole = getUserRole(user);
-  if (userRole !== "manager_sales" && userRole !== "superuser") {
-    throw new Error("Only managers can reject quotations");
-  }
-
-  try {
-    const currentQuotation = await getQuotationByIdDb(id);
-
-    if (currentQuotation.status !== "sq_review") {
-      throw new Error("Can only reject quotations in review status");
-    }
-
-    const updatedQuotation = await updateQuotationDb(id, {
-      status: "sq_rejected",
-      note: reason,
-    });
-
-    revalidatePath("/sales/quotations");
-    return {
-      success: true,
-      message: "Quotation rejected successfully",
-      data: updatedQuotation,
-    };
-  } catch (error) {
-    console.error("Error rejecting quotation:", error);
-    throw error;
   }
 }

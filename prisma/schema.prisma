@@ -62,13 +62,13 @@ model quotations {
   status           String?        @default("draft") @db.VarChar(50)
   note             String?
   target_date      DateTime?      @db.Date
-  top              String?        @db.VarChar(50)
   created_at       DateTime?      @default(now()) @db.Timestamp(6)
   updated_at       DateTime?      @default(now()) @db.Timestamp(6)
   customer         customers?      @relation(fields: [customer_id], references: [id])
   user             users?         @relation(fields: [user_id], references: [id]) // <--- Relasi ke users
   sales_orders     sales_orders[] @relation("QuotationToSalesOrder")
   payment_term_id  Int?
+  revision_no      Int            @default(1)
   payment_term     payment_terms? @relation(fields: [payment_term_id], references: [id])
 }
 
@@ -245,6 +245,7 @@ model sales_orders {
   user              users?              @relation("UserToSalesOrders", fields: [user_id], references: [id]) // <-- Tambahkan relasi ini
   payment_term_id  Int?
   payment_term     payment_terms? @relation(fields: [payment_term_id], references: [id])
+  revision_no      Int            @default(1)
 }
 
 model stock_reservations {

@@ -3,6 +3,8 @@
  * Handles prefixed status names with clean display formatting
  */
 
+import { QUOTATION_STAGES } from "./quotationPermissions";
+
 // Lead Status Enum
 export const LEAD_STATUSES = {
   NEW: "lead_new",
@@ -14,7 +16,7 @@ export const LEAD_STATUSES = {
 
 // Opportunity Status Enum
 export const OPPORTUNITY_STATUSES = {
-  PROSPECTING: "prospecting",
+  QUALIFIED: "opp_qualified",
   LOST: "opp_lost",
   SQ: "opp_sq",
 } as const;
@@ -118,7 +120,7 @@ export function formatStatusDisplay(status: string | null | undefined): string {
  */
 export function formatStatusValue(
   displayStatus: string,
-  prefix: string
+  prefix: string,
 ): string {
   const cleanStatus = displayStatus.toLowerCase().replace(/\s+/g, "_");
   return `${prefix}_${cleanStatus}`;
@@ -128,7 +130,7 @@ export function formatStatusValue(
  * Get all statuses for a specific prefix
  */
 export function getStatusesByPrefix(
-  prefix: string
+  prefix: string,
 ): Array<{ value: string; label: string }> {
   const statusMap: Record<string, any> = {
     lead: LEAD_STATUSES,
@@ -153,7 +155,7 @@ export function getStatusesByPrefix(
  */
 export function validateStatusPrefix(
   status: string,
-  expectedPrefix: string
+  expectedPrefix: string,
 ): boolean {
   return getStatusPrefix(status) === expectedPrefix;
 }
@@ -163,7 +165,7 @@ export function validateStatusPrefix(
  */
 export function isValidStatusTransition(
   fromStatus: string,
-  toStatus: string
+  toStatus: string,
 ): boolean {
   const prefix = getStatusPrefix(fromStatus);
 
@@ -186,7 +188,7 @@ export function isValidStatusTransition(
       [LEAD_STATUSES.UNQUALIFIED]: [],
     },
     opp: {
-      [OPPORTUNITY_STATUSES.PROSPECTING]: [OPPORTUNITY_STATUSES.LOST],
+      [OPPORTUNITY_STATUSES.QUALIFIED]: [OPPORTUNITY_STATUSES.LOST],
       [OPPORTUNITY_STATUSES.LOST]: [],
       [OPPORTUNITY_STATUSES.SQ]: [],
     },
@@ -280,7 +282,7 @@ export const LEAD_STATUS_OPTIONS = (
 }));
 
 export const OPPORTUNITY_STATUS_OPTIONS = [
-  { value: OPPORTUNITY_STATUSES.PROSPECTING, label: "Prospecting" },
+  { value: OPPORTUNITY_STATUSES.QUALIFIED, label: "Qualified" },
   { value: OPPORTUNITY_STATUSES.LOST, label: "Lost" },
   { value: OPPORTUNITY_STATUSES.SQ, label: "SQ" },
 ];
@@ -299,7 +301,7 @@ export const SO_STATUS_OPTIONS = (Object.values(SO_STATUSES) as string[]).map(
   (status) => ({
     value: status,
     label: formatStatusDisplay(status),
-  })
+  }),
 );
 
 export const PAYMENT_STATUS_OPTIONS = (
@@ -313,5 +315,5 @@ export const BOQ_STATUS_OPTIONS = (Object.values(BOQ_STATUSES) as string[]).map(
   (status) => ({
     value: status,
     label: formatStatusDisplay(status),
-  })
+  }),
 );

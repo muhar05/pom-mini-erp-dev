@@ -121,7 +121,7 @@ export async function updateLeadAction(formData: FormData) {
 
     // Jika status qualified, ubah ke prospecting dan redirect ke opportunities
     if (validatedData.status === LEAD_STATUSES.QUALIFIED) {
-      validatedData.status = OPPORTUNITY_STATUSES.PROSPECTING;
+      validatedData.status = OPPORTUNITY_STATUSES.QUALIFIED;
       // Generate nomor opportunity baru dengan prefix OP
       validatedData.reference_no = generateOpportunityNo();
       // Update lead status
@@ -295,7 +295,7 @@ export async function convertLeadAction(id: number) {
 
   // Ubah status menjadi converted dan update reference_no
   const updatedLead = await updateLeadDb(id, {
-    status: "prospecting", // ganti dari LEAD_STATUSES.CONVERTED
+    status: "opp_qualified", // ganti dari LEAD_STATUSES.CONVERTED
     reference_no: opportunityNo,
   });
 

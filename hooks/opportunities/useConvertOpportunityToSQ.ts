@@ -1,13 +1,15 @@
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export function useConvertOpportunityToSQ() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
+  const router = useRouter();
 
   const convert = async (
     opportunityId: string | number,
-    customerId: number | null
+    customerId: number | null,
   ) => {
     setLoading(true);
     setError(null);
@@ -19,7 +21,7 @@ export function useConvertOpportunityToSQ() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ customerId }),
-        }
+        },
       );
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -29,6 +31,10 @@ export function useConvertOpportunityToSQ() {
       }
       setResult(data.data);
       setLoading(false);
+      // Redirect otomatis ke halaman edit SQ
+      if (data.data && data.data.id) {
+        router.push(`/sales/quotations/${data.data.id}/edit`);
+      }
       return true;
     } catch (err: any) {
       setError(err.message || "Failed to convert opportunity to SQ");

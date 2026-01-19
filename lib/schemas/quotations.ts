@@ -48,7 +48,6 @@ export const createQuotationSchema = z.object({
     .max(1000, "Note must be less than 1000 characters")
     .optional(),
   target_date: z.string().optional(), // ISO date string
-  top: z.string().max(50, "TOP must be less than 50 characters").optional(),
 });
 
 // Schema untuk update (all fields optional except required validations)
@@ -64,7 +63,6 @@ export const updateQuotationSchema = z.object({
   status: z.string().max(50).optional(),
   note: z.string().max(1000).optional(),
   target_date: z.string().optional(),
-  top: z.string().max(50).optional(),
 });
 
 // Extended schema for creating quotation from lead
@@ -81,7 +79,6 @@ export const createQuotationFromLeadSchema = z.object({
   status: statusSchema,
   note: z.string().max(1000).optional(),
   target_date: z.string().optional(),
-  top: z.string().max(50).optional(),
 });
 
 // Export base schema

@@ -45,6 +45,8 @@ import {
   QuotationPermission,
 } from "@/utils/quotationPermissions";
 import { useCustomerById } from "@/hooks/customers/useCustomerById";
+import { usePaymentTerms } from "@/hooks/payment-terms/usePaymentTerms";
+import { Skeleton } from "@/components/ui/skeleton"; // pastikan ada komponen ini
 
 // 1. Ubah type Quotation (atau buat type baru)
 type QuotationFormData = {
@@ -59,7 +61,7 @@ type QuotationFormData = {
   status: string;
   note?: string;
   target_date?: string;
-  top?: string;
+  payment_term_id?: number | null;
 };
 
 type Quotation = {
@@ -83,6 +85,7 @@ type Quotation = {
   note?: string;
   quotation_detail?: BoqItem[];
   customer_id?: string | number;
+  payment_term_id?: number | null;
 };
 
 interface QuotationFormProps {
@@ -107,9 +110,9 @@ export default function QuotationForm({
   const [generatingQuotationNo, setGeneratingQuotationNo] = useState(false);
   const [showTargetCalendar, setShowTargetCalendar] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
-  const [isPricingDirty, setIsPricingDirty] = useState(false); // <-- Tambahkan state baru
   const [isInitialLoad, setIsInitialLoad] = useState(true); // Tambahkan state isInitialLoad
   const [isCustomerEditMode, setIsCustomerEditMode] = useState(false);
+  const [customerLoadingDelay, setCustomerLoadingDelay] = useState(false);
 
   // 2. Inisialisasi state
   const [formData, setFormData] = useState<QuotationFormData>({
@@ -127,11 +130,21 @@ export default function QuotationForm({
     discount: quotation?.discount ?? 0,
     tax: quotation?.tax ?? 0,
     grand_total: quotation?.grand_total ?? 0,
-    status: quotation?.status || "sq_draft",
+    status: quotation?.status || "draft",
     note: quotation?.note || "",
     target_date: quotation?.target_date || "",
-    top: quotation?.top || "cash",
+    payment_term_id: quotation?.payment_term_id ?? null,
   });
+
+  // Trigger delay when customer_id changes
+  useEffect(() => {
+    if (!formData.customer_id) return;
+    setCustomerLoadingDelay(true);
+    const timer = setTimeout(() => {
+      setCustomerLoadingDelay(false);
+    }, 500); // 500ms delay
+    return () => clearTimeout(timer);
+  }, [formData.customer_id]);
 
   const [boqItems, setBoqItems] = useState<BoqItem[]>(
     quotation?.quotation_detail
@@ -149,6 +162,18 @@ export default function QuotationForm({
   const [permissions, setPermissions] = useState<QuotationPermission | null>(
     null,
   );
+
+  // Ambil data payment terms
+  const { paymentTerms, isLoading: paymentTermsLoading } = usePaymentTerms();
+
+  function isDateInPast(dateStr: string) {
+    if (!dateStr) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const inputDate = new Date(dateStr);
+    inputDate.setHours(0, 0, 0, 0);
+    return inputDate < today;
+  }
 
   // Generate quotation number when form loads for new quotations
   useEffect(() => {
@@ -219,20 +244,24 @@ export default function QuotationForm({
     field: keyof QuotationFormData,
     value: string | number | BoqItem[],
   ) => {
+    if (
+      field === "target_date" &&
+      typeof value === "string" &&
+      isDateInPast(value)
+    ) {
+      toast.error("Tanggal tidak boleh di masa lalu");
+      return;
+    }
     setFormData((prev) => ({ ...prev, [field]: value }));
     setIsDirty(true);
-
-    // Hanya set isPricingDirty jika field yang berubah adalah field pricing
-    if (["discount", "shipping", "tax"].includes(field)) {
-      setIsPricingDirty(true);
-    }
+    // Jangan trigger kalkulasi di sini!
   };
 
   // Update handleBoqChange - set isPricingDirty jika BOQ berubah
   const handleBoqChange = (items: BoqItem[]) => {
     setBoqItems(items);
     setIsDirty(true);
-    setIsPricingDirty(true); // <-- BOQ berubah = pricing harus dihitung ulang
+    // <-- BOQ berubah = pricing harus dihitung ulang
   };
 
   const calculateTotals = () => {
@@ -240,10 +269,28 @@ export default function QuotationForm({
       (sum, item) => sum + item.unit_price * item.quantity,
       0,
     );
-    const discountPercent = formData.discount || 0;
-    const discountAmount = (subtotal * discountPercent) / 100;
-    const tax = 0.11 * (subtotal - discountAmount); // 11% tax
-    const grandTotal = subtotal - discountAmount + tax;
+
+    const disc1 = companyLevelDiscount1 || 0;
+    const disc2 = companyLevelDiscount2 || 0;
+    const addDisc = Number(formData.discount) || 0;
+
+    // Diskon company 1
+    const d1 = (subtotal * disc1) / 100;
+    const afterD1 = subtotal - d1;
+
+    // Diskon company 2
+    const d2 = (afterD1 * disc2) / 100;
+    const afterD2 = afterD1 - d2;
+
+    // Additional discount
+    const addDiscAmount = (afterD2 * addDisc) / 100;
+    const afterAllDiscount = afterD2 - addDiscAmount;
+
+    // Tax 11%
+    const tax = afterAllDiscount * 0.11;
+
+    // Grand total
+    const grandTotal = afterAllDiscount + tax;
 
     setFormData((prev) => ({
       ...prev,
@@ -257,11 +304,9 @@ export default function QuotationForm({
   useEffect(() => {
     // Skip kalkulasi saat initial load
     if (isInitialLoad) return;
-    if (isPricingDirty) {
-      calculateTotals();
-    }
+    calculateTotals();
     // eslint-disable-next-line
-  }, [boqItems, formData.discount, isPricingDirty, isInitialLoad]);
+  }, [boqItems, formData.discount, isInitialLoad]);
 
   // Simpan data original saat inisialisasi
   const [originalData] = useState(quotation);
@@ -295,9 +340,9 @@ export default function QuotationForm({
       const changedFields = getChangedFields();
 
       // Jika pricing berubah, pastikan tax & grand_total ikut dikirim
-      if (isPricingDirty) {
-        changedFields.tax = tax;
-        changedFields.grand_total = grandTotal;
+      // Pastikan payment_term_id dikirim jika berubah
+      if (formData.payment_term_id !== originalData.payment_term_id) {
+        changedFields.payment_term_id = formData.payment_term_id;
       }
 
       const result = await updateQuotationAction(
@@ -323,7 +368,12 @@ export default function QuotationForm({
       (c) => c.id.toString() === customerId,
     );
     setSelectedCustomer(customer);
-    handleInputChange("customer_id", customerId);
+    setFormData((prev) => ({
+      ...prev,
+      customer_id: customerId,
+    }));
+    // Trigger kalkulasi ulang
+    calculateTotals();
   };
 
   // Cek field wajib (tanpa selectedCustomer)
@@ -409,14 +459,14 @@ export default function QuotationForm({
 
   // Only recalculate totals if user has changed pricing-related fields
   useEffect(() => {
-    if (!isInitialLoad && isPricingDirty) {
+    if (!isInitialLoad) {
       calculateTotals();
     }
     // eslint-disable-next-line
-  }, [boqItems, formData.discount, isPricingDirty, isInitialLoad]);
+  }, [boqItems, formData.discount, isInitialLoad]);
 
-  const displayTax = isPricingDirty ? tax : formData.tax;
-  const displayGrandTotal = isPricingDirty ? grandTotal : formData.grand_total;
+  const displayTax = tax;
+  const displayGrandTotal = grandTotal;
 
   return (
     <div className="w-full mx-auto py-4 space-y-6">
@@ -586,19 +636,27 @@ export default function QuotationForm({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="top">Terms of Payment</Label>
+                    <Label htmlFor="payment_term_id">Terms of Payment</Label>
                     <Select
-                      value={formData.top}
-                      onValueChange={(value) => handleInputChange("top", value)}
+                      value={formData.payment_term_id?.toString() || ""}
+                      onValueChange={(value) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          payment_term_id: value ? Number(value) : null,
+                        }));
+                        setIsDirty(true); // <-- Tambahkan ini agar tombol update aktif jika payment term berubah
+                      }}
+                      disabled={paymentTermsLoading}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Pilih Terms of Payment" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cash">Cash</SelectItem>
-                        <SelectItem value="net30">Net 30</SelectItem>
-                        <SelectItem value="net60">Net 60</SelectItem>
-                        <SelectItem value="cod">COD</SelectItem>
+                        {paymentTerms?.map((term) => (
+                          <SelectItem key={term.id} value={term.id.toString()}>
+                            {term.name} {term.days ? `(${term.days} hari)` : ""}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -693,8 +751,33 @@ export default function QuotationForm({
                         </SelectContent>
                       </Select>
                     </div>
+                  ) : customerLoading || customerLoadingDelay ? (
+                    // SKELETON LOADER SAAT LOADING CUSTOMER DETAIL
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                      <div className="md:col-span-2">
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div>
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div>
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div>
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div>
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div>
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                    </div>
                   ) : (
-                    // Customer Info Panel selalu tampil jika ada customer
+                    // ...customer detail panel...
                     customerDetail && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         {/* Tambahkan ini untuk nama customer */}
@@ -769,17 +852,19 @@ export default function QuotationForm({
                     )
                   )}
                   {/* Edit Button selalu tampil jika ada customer */}
-                  {customerDetail && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="mb-2"
-                      onClick={() => setIsCustomerEditMode(true)}
-                    >
-                      Edit Customer
-                    </Button>
-                  )}
+                  {customerDetail &&
+                    !customerLoading &&
+                    !customerLoadingDelay && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mb-2"
+                        onClick={() => setIsCustomerEditMode(true)}
+                      >
+                        Edit Customer
+                      </Button>
+                    )}
                 </div>
               </CardContent>
             </Card>
@@ -805,125 +890,142 @@ export default function QuotationForm({
                     {companyLevelName && <span>Level: {companyLevelName}</span>}
                   </div>
 
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Subtotal
-                    </span>
-                    <span className="font-medium">
-                      {formatCurrency(subtotal)}
-                    </span>
-                  </div>
+                  {/* Pricing summary hanya tampil jika customer sudah dipilih */}
+                  {formData.customer_id &&
+                    customerDetail &&
+                    !customerLoading && (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            Subtotal
+                          </span>
+                          <span className="font-medium">
+                            {formatCurrency(subtotal)}
+                          </span>
+                        </div>
 
-                  {/* Diskon 1 */}
-                  {companyLevelDiscount1 > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-blue-700">
-                        Diskon 1 ({companyLevelDiscount1}%)
-                      </span>
-                      <span className="font-medium text-blue-700">
-                        -{formatCurrency(discount1Amount)}
-                      </span>
+                        {/* Diskon 1 */}
+                        {companyLevelDiscount1 > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm dark:text-white text-blue-700">
+                              Diskon 1 ({companyLevelDiscount1}%)
+                            </span>
+                            <span className="font-medium dark:text-white text-blue-700">
+                              -{formatCurrency(discount1Amount)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Diskon 2 */}
+                        {companyLevelDiscount2 > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm dark:text-white text-purple-700">
+                              Diskon 2 ({companyLevelDiscount2}%)
+                            </span>
+                            <span className="font-medium dark:text-white text-purple-700">
+                              -{formatCurrency(discount2Amount)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Setelah dua diskon */}
+                        {(companyLevelDiscount1 > 0 ||
+                          companyLevelDiscount2 > 0) && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              Setelah Diskon Company
+                            </span>
+                            <span className="font-medium">
+                              {formatCurrency(afterDiscount2)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Additional Discount */}
+                        <div className="space-y-2">
+                          <Label htmlFor="discount" className="text-sm">
+                            Additional Discount (%)
+                          </Label>
+                          <Input
+                            id="discount"
+                            type="number"
+                            value={formData.discount}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "discount",
+                                parseFloat(e.target.value) || 0,
+                              )
+                            }
+                            placeholder="0"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                          />
+                        </div>
+                        {additionalDiscountPercent > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              Additional Discount Amount
+                            </span>
+                            <span className="font-medium text-red-600">
+                              -{formatCurrency(additionalDiscountAmount)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Setelah semua diskon */}
+                        {(companyLevelDiscount1 > 0 ||
+                          companyLevelDiscount2 > 0 ||
+                          additionalDiscountPercent > 0) && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              Setelah Semua Diskon{" "}
+                              <span className="italic">
+                                (belum termasuk pajak)
+                              </span>
+                            </span>
+                            <span className="font-medium">
+                              {formatCurrency(afterAllDiscount)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Tax 11% */}
+                        <div className="space-y-2">
+                          <Label htmlFor="tax" className="text-sm">
+                            Tax (11%)
+                          </Label>
+                          <Input
+                            id="tax"
+                            type="text"
+                            value={formatCurrency(displayTax)}
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+
+                        <Separator />
+
+                        <div className="flex justify-between items-center pt-2">
+                          <span className="font-semibold">Grand Total</span>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-primary">
+                              {formatCurrency(displayGrandTotal)}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Subtotal: {formatCurrency(subtotal)}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  {/* Jika belum pilih customer, bisa tampilkan info atau kosong */}
+                  {!formData.customer_id && (
+                    <div className="text-sm text-muted-foreground">
+                      Pilih customer terlebih dahulu untuk melihat perhitungan
+                      tax dan total.
                     </div>
                   )}
-
-                  {/* Diskon 2 */}
-                  {companyLevelDiscount2 > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-purple-700">
-                        Diskon 2 ({companyLevelDiscount2}%)
-                      </span>
-                      <span className="font-medium text-purple-700">
-                        -{formatCurrency(discount2Amount)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Setelah dua diskon */}
-                  {(companyLevelDiscount1 > 0 || companyLevelDiscount2 > 0) && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Setelah Diskon Company
-                      </span>
-                      <span className="font-medium">
-                        {formatCurrency(afterDiscount2)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Additional Discount */}
-                  <div className="space-y-2">
-                    <Label htmlFor="discount" className="text-sm">
-                      Additional Discount (%)
-                    </Label>
-                    <Input
-                      id="discount"
-                      type="number"
-                      value={formData.discount}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "discount",
-                          parseFloat(e.target.value) || 0,
-                        )
-                      }
-                      placeholder="0"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                    />
-                  </div>
-                  {additionalDiscountPercent > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Additional Discount Amount
-                      </span>
-                      <span className="font-medium text-red-600">
-                        -{formatCurrency(additionalDiscountAmount)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Setelah semua diskon */}
-                  {(companyLevelDiscount1 > 0 ||
-                    companyLevelDiscount2 > 0 ||
-                    additionalDiscountPercent > 0) && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Setelah Semua Diskon{" "}
-                        <span className="italic">(belum termasuk pajak)</span>
-                      </span>
-                      <span className="font-medium">
-                        {formatCurrency(afterAllDiscount)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Tax */}
-                  <div className="space-y-2">
-                    <Label htmlFor="tax" className="text-sm">
-                      Tax (11%)
-                    </Label>
-                    <Input
-                      id="tax"
-                      type="text"
-                      value={formatCurrency(displayTax)}
-                      disabled
-                      className="bg-gray-100 dark:bg-gray-800/40"
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex justify-between items-center pt-2">
-                    <span className="font-semibold">Grand Total</span>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-primary">
-                        {formatCurrency(displayGrandTotal)}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Subtotal: {formatCurrency(subtotal)}
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>

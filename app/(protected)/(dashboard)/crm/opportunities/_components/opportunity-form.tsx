@@ -107,7 +107,7 @@ export default function OpportunityForm({
               <p>
                 Are you sure you want to change status to{" "}
                 <span className="font-semibold">
-                  {pendingStatus === OPPORTUNITY_STATUSES.PROSPECTING
+                  {pendingStatus === OPPORTUNITY_STATUSES.QUALIFIED
                     ? "Qualified"
                     : pendingStatus === OPPORTUNITY_STATUSES.SQ
                     ? "SQ"
@@ -162,13 +162,13 @@ export default function OpportunityForm({
           </div>
           {isEdit && (
             <div className="flex flex-wrap gap-2">
-              {formData.status !== OPPORTUNITY_STATUSES.PROSPECTING && (
+              {formData.status !== OPPORTUNITY_STATUSES.QUALIFIED && (
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
                   onClick={() =>
-                    handleStatusChange(OPPORTUNITY_STATUSES.PROSPECTING)
+                    handleStatusChange(OPPORTUNITY_STATUSES.QUALIFIED)
                   }
                   disabled={loading}
                 >

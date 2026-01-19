@@ -57,7 +57,7 @@ export async function getAllOpportunitiesDb() {
     where: {
       status: {
         in: [
-          "prospecting",
+          "opp_qualified",
           "opp_lost",
           "opp_sq",
           "lead_converted",

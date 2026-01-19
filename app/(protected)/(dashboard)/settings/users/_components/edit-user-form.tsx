@@ -52,7 +52,7 @@ export default function EditUserForm({ user, roles }: EditUserFormProps) {
       </div>
 
       {/* Form Card */}
-      <Card className="max-w-2xl">
+      <Card className="w-full dark:bg-slate-800">
         <CardHeader>
           <CardTitle>Edit User Information</CardTitle>
         </CardHeader>
@@ -92,6 +92,23 @@ export default function EditUserForm({ user, roles }: EditUserFormProps) {
                 required
                 disabled={isPending}
               />
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2">
+              <Label htmlFor="password">New Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Leave blank to keep current password"
+                minLength={6}
+                disabled={isPending}
+                autoComplete="new-password"
+              />
+              <p className="text-xs text-muted-foreground">
+                Kosongkan jika tidak ingin mengganti password.
+              </p>
             </div>
 
             {/* Role Field */}
