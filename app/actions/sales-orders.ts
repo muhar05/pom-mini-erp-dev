@@ -194,7 +194,7 @@ export async function createSalesOrderAction(data: CreateSalesOrderData) {
 // UPDATE
 export async function updateSalesOrderAction(
   id: string,
-  data: UpdateSalesOrderData
+  data: UpdateSalesOrderData,
 ) {
   const session = await auth();
   const user = session?.user as users | undefined;
@@ -453,7 +453,7 @@ export async function createSalesOrderFromQuotationAction(quotationId: number) {
           total: Number(
             item.total ||
               (item.unit_price || item.price || 0) *
-                (item.quantity || item.qty || 1)
+                (item.quantity || item.qty || 1),
           ),
           status: "ACTIVE",
         }));
@@ -660,7 +660,7 @@ export async function updateSalesOrderNoteAction(id: string, note: string) {
 
     if (!permissions.canUpdateNote) {
       throw new Error(
-        "You don't have permission to update notes for this sales order"
+        "You don't have permission to update notes for this sales order",
       );
     }
 
@@ -682,7 +682,7 @@ export async function updateSalesOrderNoteAction(id: string, note: string) {
 // UPLOAD PO CUSTOMER FILE - New limited action
 export async function updateSalesOrderPOFileAction(
   id: string,
-  filePath: string
+  filePath: string,
 ) {
   const session = await auth();
   const user = session?.user as users | undefined;
@@ -694,7 +694,7 @@ export async function updateSalesOrderPOFileAction(
 
     if (!permissions.canUploadPO) {
       throw new Error(
-        "You don't have permission to upload PO file for this sales order"
+        "You don't have permission to upload PO file for this sales order",
       );
     }
 
@@ -745,10 +745,7 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
     }
 
     // 2. Check if quotation is eligible for conversion (not draft)
-    if (
-      quotation.status?.toLowerCase() === "draft" ||
-      quotation.stage?.toLowerCase() === "draft"
-    ) {
+    if (quotation.status?.toLowerCase() === "draft") {
       return {
         success: false,
         message:
@@ -785,7 +782,7 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
           total: Number(
             item.total ||
               (item.unit_price || item.price || 0) *
-                (item.quantity || item.qty || 1)
+                (item.quantity || item.qty || 1),
           ),
           status: "ACTIVE",
         }));
