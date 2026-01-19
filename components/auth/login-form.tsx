@@ -18,6 +18,7 @@ import toast from "react-hot-toast";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { SignInResponse } from "next-auth/react"; // Tambahkan import ini
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -62,12 +63,12 @@ const LoginForm = () => {
         );
       } else {
         // Login dengan password pakai next-auth
-        const res = await signIn("credentials", {
+        const res = (await signIn("credentials", {
           email: values.email,
           password: values.password,
           mode: "password",
-          redirect: false, // supaya tidak auto redirect, handle manual
-        });
+          redirect: true,
+        })) as SignInResponse | undefined; // Tambahkan tipe di sini
 
         if (res?.error) {
           toast.error(res.error || "Login failed");

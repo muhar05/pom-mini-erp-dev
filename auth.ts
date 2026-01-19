@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./lib/prisma";
 
 export const { handlers, auth } = NextAuth({
-  trustHost: true, // TAMBAHKAN INI
+  trustHost: true,
   secret: process.env.NEXTAUTH_SECRET,
 
   session: { strategy: "jwt" },
@@ -15,7 +15,7 @@ export const { handlers, auth } = NextAuth({
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: true, // wajib di prod (https)
+        secure: true,
       },
     },
   },
@@ -23,65 +23,63 @@ export const { handlers, auth } = NextAuth({
   providers: [
     Credentials({
       credentials: { email: {}, password: {}, mode: {} },
+
       authorize: async (credentials) => {
-        const email = credentials.email as string;
-        const passwordOrOtp = credentials.password as string;
-        const mode = credentials.mode as string;
+        const email = credentials?.email as string;
+        const input = credentials?.password as string;
+        const mode = credentials?.mode as string;
 
         const user = await prisma.users.findUnique({
           where: { email },
           include: { roles: true },
         });
+
         if (!user) return null;
 
+        // MODE PASSWORD
         if (mode === "password") {
-          // DEVELOPMENT ONLY: cek password polos
-          if (!user.password_hash) {
-            console.log("No password hash for user", user.email);
-            return null;
-          }
-          if (passwordOrOtp !== user.password_hash) {
-            console.log("Password not valid for user", user.email);
-            return null;
-          }
-          return {
-            id: String(user.id),
-            name: user.name,
-            email: user.email,
-            role_id: String(user.role_id ?? ""),
-            role_name: user.roles?.role_name,
-          };
-        } else if (mode === "otp") {
+          if (!user.password_hash) return null;
+          if (input !== user.password_hash) return null;
+        }
+
+        // MODE OTP
+        if (mode === "otp") {
           const otpRecord = await prisma.user_otp.findFirst({
             where: {
               user_id: user.id,
-              otp_code: passwordOrOtp,
+              otp_code: input,
               is_used: false,
               expires_at: { gt: new Date() },
             },
             orderBy: { expires_at: "desc" },
           });
+
           if (!otpRecord) return null;
 
           await prisma.user_otp.update({
             where: { id: otpRecord.id },
             data: { is_used: true },
           });
-
-          return {
-            id: String(user.id),
-            name: user.name,
-            email: user.email,
-            role_id: String(user.role_id ?? ""),
-            role_name: user.roles?.role_name,
-          };
         }
-        return null;
+
+        return {
+          id: String(user.id),
+          name: user.name,
+          email: user.email,
+          role_id: String(user.role_id ?? ""),
+          role_name: user.roles?.role_name,
+        };
       },
     }),
   ],
 
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+      return `${baseUrl}/dashboard`;
+    },
+
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
@@ -90,6 +88,7 @@ export const { handlers, auth } = NextAuth({
       }
       return token;
     },
+
     async session({ session, token }) {
       session.user.id = token.id;
       session.user.role_id = token.role_id;
@@ -100,7 +99,6 @@ export const { handlers, auth } = NextAuth({
 
   pages: {
     signIn: "/auth/login",
-    signOut: "/auth/login",
     error: "/auth/login",
   },
 });
