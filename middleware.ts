@@ -26,11 +26,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
-  // allow forbidden page
-  // if (url.startsWith("/dashboard/forbidden")) {
-  //   return NextResponse.next();
-  // }
-
   // kalau sudah di dashboard role sendiri
   if (url.startsWith(`/dashboard/${roleName}`)) {
     return NextResponse.next();

@@ -1,12 +1,24 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./lib/prisma";
-import bcrypt from "bcryptjs";
 
 export const { handlers, auth } = NextAuth({
+  trustHost: true, // TAMBAHKAN INI
   secret: process.env.NEXTAUTH_SECRET,
 
   session: { strategy: "jwt" },
+
+  cookies: {
+    sessionToken: {
+      name: "__Secure-next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: true, // wajib di prod (https)
+      },
+    },
+  },
 
   providers: [
     Credentials({
