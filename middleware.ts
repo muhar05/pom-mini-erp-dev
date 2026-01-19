@@ -7,11 +7,15 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
+
+    // WAJIB TAMBAH INI
+    cookieName: "__Secure-next-auth.session-token",
   });
 
   const url = req.nextUrl.pathname;
 
-  // belum login
+  console.log("TOKEN:", token); // DEBUG
+
   if (!token) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
@@ -19,24 +23,18 @@ export async function middleware(req: NextRequest) {
   const roleId = token.role_id as string;
   const roleName = roleMap[roleId];
 
-  console.log(roleName);
-
-  // safety
   if (!roleName) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
-  // kalau sudah di dashboard role sendiri
   if (url.startsWith(`/dashboard/${roleName}`)) {
     return NextResponse.next();
   }
 
-  // akses root dashboard
   if (url === "/dashboard") {
     return NextResponse.redirect(new URL(`/dashboard/${roleName}`, req.url));
   }
 
-  // akses dashboard role lain
   if (url.startsWith("/dashboard")) {
     return NextResponse.redirect(new URL(`/dashboard/${roleName}`, req.url));
   }
