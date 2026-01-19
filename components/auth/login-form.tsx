@@ -68,6 +68,7 @@ const LoginForm = () => {
           password: values.password,
           mode: "password",
           redirect: true,
+          callbackUrl: "/dashboard",
         })) as SignInResponse | undefined; // Tambahkan tipe di sini
 
         if (res?.error) {
