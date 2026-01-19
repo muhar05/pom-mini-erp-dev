@@ -839,7 +839,6 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
         where: { id: quotationId },
         data: {
           status: "sq_converted",
-          stage: "sent",
         },
       });
 
