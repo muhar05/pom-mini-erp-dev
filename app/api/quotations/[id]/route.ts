@@ -15,7 +15,7 @@ import {
 // GET: Ambil quotation by ID
 export async function GET(
   req: Request,
-  context: { params: Promise<{ id: string }> | { id: string } }
+  context: { params: Promise<{ id: string }> | { id: string } },
 ) {
   const params = await Promise.resolve(context.params);
   const session = await auth();
@@ -29,7 +29,7 @@ export async function GET(
     if (isNaN(quotationId)) {
       return NextResponse.json(
         { error: "Invalid quotation ID" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -52,13 +52,13 @@ export async function GET(
     if (error instanceof Error && error.message === "Quotation not found") {
       return NextResponse.json(
         { error: "Quotation not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     return NextResponse.json(
       { error: "Failed to fetch quotation" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -66,7 +66,7 @@ export async function GET(
 // PUT: Update quotation
 export async function PUT(
   req: Request,
-  context: { params: Promise<{ id: string }> | { id: string } }
+  context: { params: Promise<{ id: string }> | { id: string } },
 ) {
   const params = await Promise.resolve(context.params);
   const session = await auth();
@@ -82,7 +82,7 @@ export async function PUT(
     if (isNaN(id)) {
       return NextResponse.json(
         { error: "Invalid quotation ID" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -96,21 +96,18 @@ export async function PUT(
         {
           error: "Insufficient permissions to edit quotation",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     // Validate status/stage changes
     if (data.status || data.stage) {
       const newStatus = data.status || currentQuotation.status || "sq_draft";
-      const newStage = data.stage || currentQuotation.stage || "draft";
 
       const validation = validateQuotationChange(
         user,
         currentQuotation.status || "sq_draft",
         newStatus,
-        currentQuotation.stage || "draft",
-        newStage
       );
 
       if (!validation.valid) {
@@ -119,7 +116,7 @@ export async function PUT(
             error: "Validation failed",
             details: validation.errors,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -136,7 +133,7 @@ export async function PUT(
       {
         error: "Failed to update quotation",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 }
@@ -144,7 +141,7 @@ export async function PUT(
 // DELETE: Hapus quotation
 export async function DELETE(
   req: Request,
-  context: { params: Promise<{ id: string }> | { id: string } }
+  context: { params: Promise<{ id: string }> | { id: string } },
 ) {
   const params = await Promise.resolve(context.params);
   const session = await auth();
@@ -159,7 +156,7 @@ export async function DELETE(
     if (isNaN(quotationId)) {
       return NextResponse.json(
         { error: "Invalid quotation ID" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -182,13 +179,13 @@ export async function DELETE(
     ) {
       return NextResponse.json(
         { error: "Quotation not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     return NextResponse.json(
       { error: "Failed to delete quotation" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
