@@ -100,8 +100,7 @@ export async function PUT(
       );
     }
 
-    // Validate status/stage changes
-    if (data.status || data.stage) {
+    if (data.status) {
       const newStatus = data.status || currentQuotation.status || "sq_draft";
 
       const validation = validateQuotationChange(
