@@ -75,7 +75,7 @@ export default function SalesOrdersPage() {
 
   // Convert hook data to component format
   const convertToComponentFormat = (
-    hookData: SalesOrder[]
+    hookData: SalesOrder[],
   ): ComponentSalesOrder[] => {
     return hookData.map((so) => {
       // Determine customer source - prioritize direct customer, fallback to quotation customer
@@ -172,7 +172,7 @@ export default function SalesOrdersPage() {
   const totalPages = Math.ceil(convertedData.length / pageSize);
   const pagedData = convertedData.slice(
     (currentPage - 1) * pageSize,
-    currentPage * pageSize
+    currentPage * pageSize,
   );
 
   if (loading) {
@@ -224,7 +224,7 @@ export default function SalesOrdersPage() {
       />
 
       <div className="grid grid-cols-1 gap-6 mt-6">
-        <Card>
+        <Card className="w-full dark:bg-gray-800">
           <CardHeader>
             <CardTitle>Sales Orders</CardTitle>
           </CardHeader>

@@ -46,6 +46,7 @@ export async function updateUserAction(formData: FormData) {
   const name = formData.get("name") as string;
   const email = formData.get("email") as string;
   const role_id = formData.get("role_id") as string;
+  const password = formData.get("password") as string; // tambahkan ini
 
   if (!id || !name || !email || !role_id) {
     throw new Error("All fields are required");
@@ -61,6 +62,7 @@ export async function updateUserAction(formData: FormData) {
     name,
     email,
     role_id: parseInt(role_id),
+    password: password || undefined, // tambahkan ini
   });
 
   // Log activity

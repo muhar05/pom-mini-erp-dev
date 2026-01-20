@@ -7,9 +7,10 @@ import {
   getOpportunityByIdDb,
   getAllOpportunitiesDb,
 } from "@/data/opportunities";
-import { prisma } from "@/lib/prisma"; // untuk query produk
+import { prisma } from "@/lib/prisma";
 import { getUserByIdDb } from "@/data/users";
-// import { createQuotationDb } from "@/data/quotations"; // COMMENT OUT untuk bypass
+import { users } from "@/types/models";
+// import { isSuperuser } from "@/utils/leadHelpers"; // Uncomment if you want superuser bypass
 
 // UPDATE OPPORTUNITY
 export async function updateOpportunityAction(
@@ -17,17 +18,38 @@ export async function updateOpportunityAction(
   data: Record<string, any>,
 ) {
   const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
+  const user = session?.user as users | undefined;
+  if (!user) throw new Error("Unauthorized");
+
+  const opportunity = await getOpportunityByIdDb(id);
+  if (!opportunity) throw new Error("Opportunity not found");
+
+  // Perbandingan id_user, hanya owner yang boleh update
+  if (Number(opportunity.id_user) !== Number(user.id)) {
+    throw new Error("Unauthorized");
+    // Jika ingin superuser bisa update semua, tambahkan:
+    // if (!isSuperuser(user) && Number(opportunity.id_user) !== Number(user.id)) { ... }
+  }
 
   const updated = await updateOpportunityDb(id, data);
-
   return updated;
 }
 
 // DELETE OPPORTUNITY
 export async function deleteOpportunityAction(id: number) {
   const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
+  const user = session?.user as users | undefined;
+  if (!user) throw new Error("Unauthorized");
+
+  const opportunity = await getOpportunityByIdDb(id);
+  if (!opportunity) throw new Error("Opportunity not found");
+
+  // Perbandingan id_user, hanya owner yang boleh delete
+  if (Number(opportunity.id_user) !== Number(user.id)) {
+    throw new Error("Unauthorized");
+    // Jika ingin superuser bisa delete semua, tambahkan:
+    // if (!isSuperuser(user) && Number(opportunity.id_user) !== Number(user.id)) { ... }
+  }
 
   try {
     const deleted = await deleteOpportunityDb(id);
@@ -66,7 +88,7 @@ export async function getOpportunityByIdAction(id: number) {
     potential_value: opportunity.potential_value
       ? Number(opportunity.potential_value)
       : 0,
-    expected_close_date: "", // jika ada field di leads, isi sesuai
+    expected_close_date: "",
     notes: opportunity.note ?? "",
     status: opportunity.status ?? "",
     created_at: opportunity.created_at
@@ -116,7 +138,6 @@ export async function getAllOpportunitiesAction() {
       source: opportunity.source ?? "",
       id_user: opportunity.id_user ?? null,
       assigned_to: opportunity.assigned_to ?? null,
-      // Tambahkan field lain dari leads jika ada
     })),
   );
 
@@ -164,11 +185,18 @@ export async function convertOpportunityToSQ(
   const opportunity = await getOpportunityByIdDb(opportunityId);
   if (!opportunity) throw new Error("Opportunity not found");
 
+  // Perbandingan id_user, hanya owner yang boleh convert
+  if (Number(opportunity.id_user) !== Number(session.user.id)) {
+    throw new Error("Unauthorized");
+    // Jika ingin superuser bisa convert semua, tambahkan:
+    // if (!isSuperuser(session.user) && Number(opportunity.id_user) !== Number(session.user.id)) { ... }
+  }
+
   // Ambil user_id dari session
-  const userId = Number(session.user.id); // Pastikan number
+  const userId = Number(session.user.id);
 
   // Ambil lead_id dari opportunity
-  const leadId = opportunity.id; // atau opportunity.lead_id jika ada field khusus
+  const leadId = opportunity.id;
 
   // Ambil daftar nama produk dari product_interest
   const productNames = (opportunity.product_interest || "")
@@ -186,7 +214,7 @@ export async function convertOpportunityToSQ(
       product_id: product.id,
       product_name: product.name,
       product_code: product.product_code,
-      quantity: 1, // Default 1, bisa diubah jika ada info qty di opportunity
+      quantity: 1,
       unit_price: Number(product.price ?? 0),
     }));
   }
@@ -197,7 +225,7 @@ export async function convertOpportunityToSQ(
     0,
   );
 
-  // Siapkan data quotation - LANGSUNG KE PRISMA
+  // Siapkan data quotation
   const baseQuotationData = {
     quotation_no: generateQuotationNo(),
     quotation_detail,
@@ -211,7 +239,7 @@ export async function convertOpportunityToSQ(
     target_date: null,
     lead_id: leadId,
     revision_no: 0,
-    user: { connect: { id: userId } }, // <-- BENAR, gunakan relasi user
+    user: { connect: { id: userId } },
   };
 
   let newQuotation;
@@ -219,7 +247,7 @@ export async function convertOpportunityToSQ(
     newQuotation = await prisma.quotations.create({
       data: {
         ...baseQuotationData,
-        customer: { connect: { id: customerId } }, // gunakan relasi customer
+        customer: { connect: { id: customerId } },
       },
     });
   } else {

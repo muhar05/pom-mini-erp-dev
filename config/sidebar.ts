@@ -187,9 +187,16 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
           url: "/sales/sales-orders",
           icon: ShoppingCart,
         },
+      ],
+    },
+    {
+      title: "Settings",
+      icon: Settings,
+      items: [
+        { title: "Company", url: "/settings/company", icon: Building2 },
         {
           title: "Term of Payment",
-          url: "/sales/term-of-payment",
+          url: "/settings/term-of-payment",
           icon: Banknote,
         },
       ],
@@ -235,9 +242,11 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       ],
     },
     {
-      title: "Report",
+      title: "Pending Task",
       icon: FileText,
-      items: [{ title: "Sales Report", url: "/sales/report", icon: FileText }],
+      items: [
+        { title: "Pending Task", url: "/sales/pending-task", icon: FileText },
+      ],
     },
   ],
 };

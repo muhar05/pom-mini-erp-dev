@@ -66,7 +66,9 @@ export async function createQuotationAction(data: QuotationFormData) {
   if (!user) throw new Error("Unauthorized");
 
   try {
+    console.log("Data diterima dari UI:", data);
     const validatedData = validateQuotationFormData(data, "create");
+    console.log("Data setelah validasi:", validatedData);
 
     // JANGAN hitung ulang total, discount, tax, grand_total di sini!
     // Gunakan nilai dari validatedData (yang sudah dihitung di UI)

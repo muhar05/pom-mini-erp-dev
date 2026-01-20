@@ -166,15 +166,6 @@ export default function QuotationForm({
   // Ambil data payment terms
   const { paymentTerms, isLoading: paymentTermsLoading } = usePaymentTerms();
 
-  function isDateInPast(dateStr: string) {
-    if (!dateStr) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const inputDate = new Date(dateStr);
-    inputDate.setHours(0, 0, 0, 0);
-    return inputDate < today;
-  }
-
   // Generate quotation number when form loads for new quotations
   useEffect(() => {
     if (!quotation?.quotation_no) {
@@ -244,17 +235,15 @@ export default function QuotationForm({
     field: keyof QuotationFormData,
     value: string | number | BoqItem[],
   ) => {
+    let newValue = value;
+    // Pastikan field pricing bertipe number
     if (
-      field === "target_date" &&
-      typeof value === "string" &&
-      isDateInPast(value)
+      ["total", "tax", "grand_total", "discount", "shipping"].includes(field)
     ) {
-      toast.error("Tanggal tidak boleh di masa lalu");
-      return;
+      newValue = typeof value === "string" ? Number(value) : value;
     }
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: newValue }));
     setIsDirty(true);
-    // Jangan trigger kalkulasi di sini!
   };
 
   // Update handleBoqChange - set isPricingDirty jika BOQ berubah
@@ -263,50 +252,6 @@ export default function QuotationForm({
     setIsDirty(true);
     // <-- BOQ berubah = pricing harus dihitung ulang
   };
-
-  const calculateTotals = () => {
-    const subtotal = boqItems.reduce(
-      (sum, item) => sum + item.unit_price * item.quantity,
-      0,
-    );
-
-    const disc1 = companyLevelDiscount1 || 0;
-    const disc2 = companyLevelDiscount2 || 0;
-    const addDisc = Number(formData.discount) || 0;
-
-    // Diskon company 1
-    const d1 = (subtotal * disc1) / 100;
-    const afterD1 = subtotal - d1;
-
-    // Diskon company 2
-    const d2 = (afterD1 * disc2) / 100;
-    const afterD2 = afterD1 - d2;
-
-    // Additional discount
-    const addDiscAmount = (afterD2 * addDisc) / 100;
-    const afterAllDiscount = afterD2 - addDiscAmount;
-
-    // Tax 11%
-    const tax = afterAllDiscount * 0.11;
-
-    // Grand total
-    const grandTotal = afterAllDiscount + tax;
-
-    setFormData((prev) => ({
-      ...prev,
-      total: subtotal,
-      tax: tax,
-      grand_total: grandTotal,
-    }));
-  };
-
-  // Kalkulasi hanya jika isDirty true
-  useEffect(() => {
-    // Skip kalkulasi saat initial load
-    if (isInitialLoad) return;
-    calculateTotals();
-    // eslint-disable-next-line
-  }, [boqItems, formData.discount, isInitialLoad]);
 
   // Simpan data original saat inisialisasi
   const [originalData] = useState(quotation);
@@ -352,6 +297,7 @@ export default function QuotationForm({
 
       if (result?.success) {
         toast.success("Quotation updated successfully");
+        setIsDirty(false);
         if (onSuccess) onSuccess();
       } else {
         toast.error(result?.message || "Failed to update quotation");
@@ -399,37 +345,6 @@ export default function QuotationForm({
   const companyLevelDiscount2 = companyLevel?.disc2 ?? 0;
   const companyLevelName = companyLevel?.level_name ?? "";
 
-  // Perhitungan diskon berlapis
-  const subtotal = boqItems.reduce(
-    (sum, item) => sum + item.unit_price * item.quantity,
-    0,
-  );
-
-  // Diskon 1
-  const discount1Amount = (subtotal * companyLevelDiscount1) / 100;
-  const afterDiscount1 = subtotal - discount1Amount;
-
-  // Diskon 2 (jika ada)
-  const discount2Amount =
-    companyLevelDiscount2 > 0
-      ? (afterDiscount1 * companyLevelDiscount2) / 100
-      : 0;
-  const afterDiscount2 = afterDiscount1 - discount2Amount;
-
-  // Additional Discount (setelah dua diskon company)
-  const additionalDiscountPercent = Number(formData.discount) || 0;
-  const additionalDiscountAmount =
-    additionalDiscountPercent > 0
-      ? (afterDiscount2 * additionalDiscountPercent) / 100
-      : 0;
-  const afterAllDiscount = afterDiscount2 - additionalDiscountAmount;
-
-  // Tax 11%
-  const tax = afterAllDiscount * 0.11;
-
-  // Grand Total
-  const grandTotal = afterAllDiscount + tax;
-
   // Filter status options based on permissions
   const getAvailableStatusOptions = () => {
     if (!permissions) return [];
@@ -459,14 +374,77 @@ export default function QuotationForm({
 
   // Only recalculate totals if user has changed pricing-related fields
   useEffect(() => {
-    if (!isInitialLoad) {
+    if (!isInitialLoad && isDirty) {
       calculateTotals();
     }
-    // eslint-disable-next-line
-  }, [boqItems, formData.discount, isInitialLoad]);
+  }, [boqItems, formData.discount, isDirty, isInitialLoad]);
 
-  const displayTax = tax;
-  const displayGrandTotal = grandTotal;
+  const calculatePricing = () => {
+    const subtotal = boqItems.reduce(
+      (sum, item) => sum + item.unit_price * item.quantity,
+      0,
+    );
+
+    const disc1 = companyLevelDiscount1 || 0;
+    const disc2 = companyLevelDiscount2 || 0;
+    const addDisc = Number(formData.discount) || 0;
+
+    // Diskon company 1
+    const discount1Amount = (subtotal * disc1) / 100;
+    const afterDiscount1 = subtotal - discount1Amount;
+
+    // Diskon company 2
+    const discount2Amount = disc2 > 0 ? (afterDiscount1 * disc2) / 100 : 0;
+    const afterDiscount2 = afterDiscount1 - discount2Amount;
+
+    // Additional discount
+    const additionalDiscountAmount =
+      addDisc > 0 ? (afterDiscount2 * addDisc) / 100 : 0;
+    const afterAllDiscount = afterDiscount2 - additionalDiscountAmount;
+
+    // Pajak 11%
+    const tax = afterAllDiscount * 0.11;
+    const grandTotal = afterAllDiscount + tax;
+
+    return {
+      total: subtotal,
+      tax,
+      grand_total: grandTotal,
+      discount1Amount,
+      discount2Amount,
+      additionalDiscountAmount,
+      afterAllDiscount,
+      afterDiscount2,
+    };
+  };
+
+  // ================= DISPLAY VAR =================
+
+  const pricing = calculatePricing();
+
+  const {
+    total: subtotal,
+    discount1Amount,
+    discount2Amount,
+    additionalDiscountAmount,
+    afterAllDiscount,
+    afterDiscount2,
+  } = pricing;
+
+  const additionalDiscountPercent = Number(formData.discount) || 0;
+  const displayTax = pricing.tax;
+  const displayGrandTotal = pricing.grand_total;
+
+  // Gunakan untuk calculateTotals
+  const calculateTotals = () => {
+    const pricing = calculatePricing();
+    setFormData((prev) => ({
+      ...prev,
+      total: pricing.total,
+      tax: pricing.tax,
+      grand_total: pricing.grand_total,
+    }));
+  };
 
   return (
     <div className="w-full mx-auto py-4 space-y-6">

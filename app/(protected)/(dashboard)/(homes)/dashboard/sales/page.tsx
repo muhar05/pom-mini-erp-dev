@@ -1,29 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSession } from "@/contexts/session-context";
 import DashboardSales from "./_components/dashboard-sales";
 import DashboardManagerSales from "./_components/dashboard-manager-sales";
 
 export default function DashboardSalesPage() {
-  const [role, setRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const session = useSession();
+  const role = session?.user?.role_name;
 
-  useEffect(() => {
-    async function fetchSession() {
-      try {
-        const res = await fetch("/api/_session");
-        const session = await res.json();
-        setRole(session?.user?.role_name || null);
-      } catch {
-        setRole(null);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchSession();
-  }, []);
-
-  if (loading) {
+  if (!session) {
     return <div className="p-8 text-center">Loading dashboard...</div>;
   }
 

@@ -32,8 +32,9 @@ export async function updateUserDb(input: {
   name: string;
   email: string;
   role_id: number;
+  password?: string; // tambahkan ini
 }) {
-  const { id, name, email, role_id } = input;
+  const { id, name, email, role_id, password } = input;
 
   const existingUser = await prisma.users.findUnique({
     where: { id },
@@ -53,13 +54,19 @@ export async function updateUserDb(input: {
     }
   }
 
+  // Siapkan data update
+  const updateData: any = {
+    name,
+    email,
+    role_id,
+  };
+  if (password) {
+    updateData.password_hash = password; // plain, sesuai permintaan
+  }
+
   return prisma.users.update({
     where: { id },
-    data: {
-      name,
-      email,
-      role_id,
-    },
+    data: updateData,
   });
 }
 

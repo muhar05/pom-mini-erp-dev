@@ -151,7 +151,7 @@ export default function QuotationDetailPage() {
           },
         );
         if (result.data?.id) {
-          router.push(`/sales/sales-orders/${result.data.id}`);
+          router.push(`/sales/sales-orders/${result.data.id}/edit`);
         } else {
           router.push("/sales/sales-orders");
         }
@@ -256,17 +256,16 @@ export default function QuotationDetailPage() {
                 <Pencil className="w-4 h-4 mr-1" />
                 Edit
               </Button>
-              {quotation.status?.toLowerCase() !== "draft" &&
-                quotation.stage?.toLowerCase() !== "draft" && (
-                  <Button
-                    variant="default"
-                    disabled={converting}
-                    onClick={handleConvertToSO}
-                    className="ml-2"
-                  >
-                    {converting ? "Converting..." : "Convert to SO"}
-                  </Button>
-                )}
+              {quotation.status === "sq_approved" && (
+                <Button
+                  variant="default"
+                  disabled={converting}
+                  onClick={handleConvertToSO}
+                  className="ml-2"
+                >
+                  {converting ? "Converting..." : "Convert to SO"}
+                </Button>
+              )}
               {/* Tambahkan tombol print di sini */}
               <PrintButton printRef={printRef} />
             </div>
@@ -541,7 +540,11 @@ export default function QuotationDetailPage() {
           <QuotationExport
             sqNumber={quotation.quotation_no}
             date={formatDate(quotation.created_at)}
-            paymentTerm={quotation.top || "-"}
+            paymentTerm={
+              paymentTerm
+                ? `${paymentTerm.name}${paymentTerm.days ? ` (${paymentTerm.days} hari)` : ""}`
+                : "-"
+            }
             currency="IDR"
             customerName={customerDetail?.customer_name || "-"}
             customerAddress={customerDetail?.address || "-"}

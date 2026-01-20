@@ -109,8 +109,8 @@ export async function updateLeadAction(formData: FormData) {
     const id = Number(extractLeadId(formData));
     const oldLead = await getLeadByIdDb(id);
 
-    // Hanya superuser atau sales yang boleh update, sales hanya miliknya sendiri
-    if (isSales(user) && oldLead.id_user !== user.id) {
+    // Perbaiki perbandingan id
+    if (isSales(user) && Number(oldLead.id_user) !== Number(user.id)) {
       throw new Error("Unauthorized");
     }
     if (isSales(user) && oldLead.status === "prospecting") {
@@ -219,7 +219,8 @@ export async function deleteLeadAction(formData: FormData) {
     if (!id) throw new Error("Lead ID is required");
     const lead = await getLeadByIdDb(id);
 
-    if (isSales(user)) {
+    // Perbaiki perbandingan id
+    if (isSales(user) && Number(lead.id_user) !== Number(user.id)) {
       throw new Error("Unauthorized");
     }
 
@@ -256,7 +257,8 @@ export async function getLeadByIdAction(id: number) {
   const user = session?.user as users | undefined;
   const lead = await getLeadByIdDb(id);
   if (!user) throw new Error("Unauthorized");
-  if (isSales(user) && lead.id_user !== user.id) {
+  // Perbaiki perbandingan id
+  if (isSales(user) && Number(lead.id_user) !== Number(user.id)) {
     throw new Error("Unauthorized");
   }
   return lead;
@@ -280,6 +282,11 @@ export async function convertLeadAction(id: number) {
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
   const lead = await getLeadByIdDb(id);
+
+  // Perbaiki perbandingan id
+  if (isSales(user) && Number(lead.id_user) !== Number(user.id)) {
+    throw new Error("Unauthorized");
+  }
 
   const normalizedStatus = normalizeStatusToNewFormat(lead.status || "");
 

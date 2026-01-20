@@ -21,6 +21,7 @@ import {
 import type { OpportunityFormType, OpportunityFormProps } from "@/types/models";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import toast from "react-hot-toast";
 
 export default function OpportunityForm({
   mode,
@@ -72,21 +73,32 @@ export default function OpportunityForm({
     setDialogOpen(true);
   };
 
+
   // Handler untuk submit perubahan status
   const handleConfirmStatus = async () => {
     if (!pendingStatus) return;
     setLoading(true);
     try {
-      await fetch(`/api/opportunities/${formData.id}`, {
+      const res = await fetch(`/api/opportunities/${formData.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: pendingStatus }),
       });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        // Tampilkan pesan error dari server jika ada, jika tidak tampilkan default
+        toast.error(data?.message || "Gagal update status (Unauthorized)");
+        return;
+      }
+
       setFormData((prev) => ({
         ...prev,
         status: pendingStatus,
       }));
       onSuccess?.();
+    } catch (err) {
+      toast.error("Terjadi kesalahan saat update status");
     } finally {
       setLoading(false);
       setDialogOpen(false);
@@ -110,10 +122,10 @@ export default function OpportunityForm({
                   {pendingStatus === OPPORTUNITY_STATUSES.QUALIFIED
                     ? "Qualified"
                     : pendingStatus === OPPORTUNITY_STATUSES.SQ
-                    ? "SQ"
-                    : pendingStatus === OPPORTUNITY_STATUSES.LOST
-                    ? "Lost"
-                    : pendingStatus}
+                      ? "SQ"
+                      : pendingStatus === OPPORTUNITY_STATUSES.LOST
+                        ? "Lost"
+                        : pendingStatus}
                 </span>
                 ?
               </p>

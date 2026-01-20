@@ -16,7 +16,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Upload, Plus, Trash2, Package } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Calendar, Upload } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/utils/formatCurrency";
 import {
   CreateSalesOrderData,
@@ -33,43 +42,41 @@ import { getAllProductsAction } from "@/app/actions/products";
 import { getAllQuotationsAction } from "@/app/actions/quotations";
 import { getSalesOrderByIdAction } from "@/app/actions/sales-orders";
 import { useSession } from "@/contexts/session-context";
+import { useCustomerById } from "@/hooks/customers/useCustomerById";
+import {
+  usePaymentTerms,
+  usePaymentTermById,
+} from "@/hooks/payment-terms/usePaymentTerms";
 import { users } from "@/types/models";
 import { ZodError } from "zod";
 import toast from "react-hot-toast";
 import POFileUpload from "./po-file-upload";
-
-// Add BOQ Item interface similar to quotation
-interface BoqItem {
-  id?: string;
-  product_id: number | null;
-  product_name: string;
-  product_code?: string;
-  quantity: number;
-  unit_price: number;
-  total: number;
-}
+import BoqTable from "../../quotations/_components/BoqTable";
+import type { BoqItem } from "../../quotations/_components/BoqTable";
 
 type SalesOrderFormData = {
   sale_no: string;
-  customer_id: string;
-  quotation_id: string;
+  customer_id: string | number;
+  quotation_id?: string | number; // Pastikan optional
+  boq_items: BoqItem[];
   total: number;
   discount: number;
   shipping: number;
   tax: number;
   grand_total: number;
   status: string;
-  note: string;
+  note?: string;
   sale_status: string;
   payment_status: string;
-  file_po_customer: string;
+  file_po_customer?: string;
+  payment_term_id?: number | null;
 };
 
 type SalesOrder = {
   id?: string;
   sale_no: string;
-  customer_id?: string | null;
-  quotation_id?: string | null;
+  customer_id?: string | number | null;
+  quotation_id?: string | number | null;
   total?: number | null;
   discount?: number | null;
   shipping?: number | null;
@@ -80,7 +87,9 @@ type SalesOrder = {
   sale_status?: string | null;
   payment_status?: string | null;
   file_po_customer?: string | null;
+  payment_term_id?: number | null;
   created_at?: Date | null;
+  sale_order_detail?: any[];
 };
 
 interface SalesOrderFormProps {
@@ -90,24 +99,26 @@ interface SalesOrderFormProps {
   onSuccess?: () => void;
 }
 
-interface FormErrors {
-  [key: string]: string;
-}
-
 const STATUS_OPTIONS = [
   { value: "DRAFT", label: "Draft" },
-  { value: "PENDING", label: "Pending" },
   { value: "ACTIVE", label: "Active" },
   { value: "CANCELLED", label: "Cancelled" },
 ];
 
+
 const SALE_STATUS_OPTIONS = [
-  { value: "OPEN", label: "Open" },
-  { value: "CONFIRMED", label: "Confirmed" },
-  { value: "IN_PROGRESS", label: "In Progress" },
-  { value: "COMPLETED", label: "Completed" },
-  { value: "CANCELLED", label: "Cancelled" },
+  { value: "NEW", label: "Baru" },
+  { value: "PR", label: "Sudah Purchase Request" },
+  { value: "PO", label: "Sudah Purchase Order" },
+  { value: "SR", label: "Sudah Stock Reservation" },
+  { value: "FAR", label: "Sudah input Finance Approval Request" },
+  { value: "DR", label: "Sudah input Delivery Request" },
+  { value: "DELIVERED", label: "Sudah dikirim semua barang" },
+  { value: "DELIVERY", label: "Sudah dikirim semua barang" },
+  { value: "RECEIVED", label: "Sudah diterima semua barang oleh customer" },
 ];
+
+// ...existing code...
 
 const PAYMENT_STATUS_OPTIONS = [
   { value: "UNPAID", label: "Unpaid" },
@@ -128,15 +139,31 @@ export default function SalesOrderForm({
 
   const [loading, setLoading] = useState(false);
   const [generatingNumber, setGeneratingNumber] = useState(false);
-  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [isDirty, setIsDirty] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isCustomerEditMode, setIsCustomerEditMode] = useState(false);
+  const [customerLoadingDelay, setCustomerLoadingDelay] = useState(false);
 
+  // Form data state - mirip quotation form
   const [formData, setFormData] = useState<SalesOrderFormData>({
     sale_no: salesOrder?.sale_no || "",
     customer_id: salesOrder?.customer_id || "",
     quotation_id: salesOrder?.quotation_id || "",
+    boq_items: salesOrder?.sale_order_detail
+      ? salesOrder.sale_order_detail.map((item) => ({
+          id: item.id?.toString() || `item-${Date.now()}`,
+          product_id:
+            item.product_id != null ? Number(item.product_id) : undefined, // <-- fix here
+          product_name: item.product_name || "",
+          product_code: item.product_code || "",
+          quantity: Number(item.qty) || 0,
+          unit_price: Number(item.price) || 0,
+          unit: item.unit || "pcs",
+        }))
+      : [],
     total: Number(salesOrder?.total) || 0,
-    discount: Number(salesOrder?.discount) || 0,
     shipping: Number(salesOrder?.shipping) || 0,
+    discount: Number(salesOrder?.discount) || 0,
     tax: Number(salesOrder?.tax) || 0,
     grand_total: Number(salesOrder?.grand_total) || 0,
     status: salesOrder?.status || "DRAFT",
@@ -144,134 +171,53 @@ export default function SalesOrderForm({
     sale_status: salesOrder?.sale_status || "OPEN",
     payment_status: salesOrder?.payment_status || "UNPAID",
     file_po_customer: salesOrder?.file_po_customer || "",
+    payment_term_id: salesOrder?.payment_term_id ?? null,
   });
+
+  const [boqItems, setBoqItems] = useState<BoqItem[]>(
+    salesOrder?.sale_order_detail
+      ? salesOrder.sale_order_detail.map((item) => ({
+          id: item.id?.toString() || `item-${Date.now()}`,
+          product_id:
+            item.product_id != null ? Number(item.product_id) : undefined, // <-- fix here
+          product_name: item.product_name || "",
+          product_code: item.product_code || "",
+          quantity: Number(item.qty) || 0,
+          unit_price: Number(item.price) || 0,
+          unit: item.unit || "pcs",
+        }))
+      : [],
+  );
 
   const [customerOptions, setCustomerOptions] = useState<any[]>([]);
   const [quotationOptions, setQuotationOptions] = useState<any[]>([]);
-  const [productOptions, setProductOptions] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [selectedQuotation, setSelectedQuotation] = useState<any>(null);
   const [user, setUser] = useState<users | null>(null);
+  const [originalData] = useState(salesOrder);
 
-  // File handling state
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  // Hooks untuk payment terms dan customer detail - sama seperti quotation
+  const { paymentTerms, isLoading: paymentTermsLoading } = usePaymentTerms();
+  const { customer: customerDetail, loading: customerLoading } =
+    useCustomerById(formData.customer_id);
 
-  // Add BOQ state
-  const [boqItems, setBoqItems] = useState<BoqItem[]>([]);
+  // Company level & diskon - sama seperti quotation
+  const companyLevel = customerDetail?.company?.company_level;
+  const companyLevelDiscount1 = companyLevel?.disc1 ?? 0;
+  const companyLevelDiscount2 = companyLevel?.disc2 ?? 0;
+  const companyLevelName = companyLevel?.level_name ?? "";
 
-  // Add flag to prevent recalculation on initial load
-  const [isInitialLoad, setIsInitialLoad] = useState(mode === "edit");
-
-  // Load existing BOQ items for edit mode
+  // Trigger delay when customer_id changes - sama seperti quotation
   useEffect(() => {
-    const loadExistingData = async () => {
-      if (mode === "edit" && salesOrder?.id) {
-        try {
-          const fullSalesOrderData = await getSalesOrderByIdAction(
-            salesOrder.id
-          );
+    if (!formData.customer_id) return;
+    setCustomerLoadingDelay(true);
+    const timer = setTimeout(() => {
+      setCustomerLoadingDelay(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [formData.customer_id]);
 
-          // Update form data with all fields from database
-          setFormData((prev) => ({
-            ...prev,
-            sale_no: fullSalesOrderData.sale_no || prev.sale_no,
-            customer_id:
-              fullSalesOrderData.customer_id?.toString() || prev.customer_id,
-            quotation_id:
-              fullSalesOrderData.quotation_id?.toString() || prev.quotation_id,
-            total: Number(fullSalesOrderData.total) || prev.total,
-            discount: Number(fullSalesOrderData.discount) || prev.discount,
-            shipping: Number(fullSalesOrderData.shipping) || prev.shipping,
-            tax: Number(fullSalesOrderData.tax) || prev.tax,
-            grand_total:
-              Number(fullSalesOrderData.grand_total) || prev.grand_total,
-            status: fullSalesOrderData.status || prev.status,
-            note: fullSalesOrderData.note || prev.note,
-            sale_status: fullSalesOrderData.sale_status || prev.sale_status,
-            payment_status:
-              fullSalesOrderData.payment_status || prev.payment_status,
-            file_po_customer:
-              fullSalesOrderData.file_po_customer || prev.file_po_customer,
-          }));
-
-          // Load BOQ items from sale_order_detail
-          if (
-            fullSalesOrderData.sale_order_detail &&
-            fullSalesOrderData.sale_order_detail.length > 0
-          ) {
-            const existingItems: BoqItem[] =
-              fullSalesOrderData.sale_order_detail.map((item: any) => ({
-                id: item.id || `existing-${Date.now()}-${Math.random()}`,
-                product_id: item.product_id ? Number(item.product_id) : null,
-                product_name: item.product_name || "",
-                product_code: item.product_code || "",
-                quantity: Number(item.qty) || 1,
-                unit_price: Number(item.price) || 0,
-                total:
-                  Number(item.total) || Number(item.price) * Number(item.qty),
-              }));
-            setBoqItems(existingItems);
-          }
-
-          // Mark initial load complete after a short delay
-          setTimeout(() => setIsInitialLoad(false), 100);
-
-          // Set selected customer - prioritize direct customer, fallback to quotation customer
-          const customer =
-            fullSalesOrderData.customers ||
-            fullSalesOrderData.quotation?.customer;
-          if (customer) {
-            const matchedCustomer = customerOptions.find(
-              (c) =>
-                c.id === customer.id ||
-                c.id.toString() === customer.id.toString()
-            );
-            if (matchedCustomer) {
-              setSelectedCustomer(matchedCustomer);
-            }
-          }
-
-          // Set selected quotation if exists
-          if (fullSalesOrderData.quotation_id && fullSalesOrderData.quotation) {
-            const matchedQuotation = quotationOptions.find(
-              (q) =>
-                q.id === fullSalesOrderData.quotation_id ||
-                q.id.toString() === fullSalesOrderData.quotation_id?.toString()
-            );
-            if (matchedQuotation) {
-              setSelectedQuotation(matchedQuotation);
-            }
-          }
-
-          // Set selectedQuotation jika ada quotation
-          if (fullSalesOrderData.quotation) {
-            setSelectedQuotation(fullSalesOrderData.quotation);
-
-            // Jika quotation tidak ada di quotationOptions, tambahkan
-            setQuotationOptions((prev) => {
-              const exists =
-                fullSalesOrderData.quotation &&
-                prev.some((q) => q.id === fullSalesOrderData.quotation!.id);
-              if (!exists) {
-                return [...prev, fullSalesOrderData.quotation];
-              }
-              return prev;
-            });
-          }
-        } catch (error) {
-          console.error("Error loading existing sales order data:", error);
-          toast.error(
-            "Failed to load existing data: " +
-              (error instanceof Error ? error.message : "Unknown error")
-          );
-        }
-      }
-    };
-
-    loadExistingData();
-  }, [mode, salesOrder?.id, customerOptions.length, quotationOptions.length]);
-
-  // Generate sales order number for new sales orders
+  // Generate sales order number
   useEffect(() => {
     if (mode === "add" && !salesOrder?.sale_no) {
       const generateNumber = async () => {
@@ -281,59 +227,34 @@ export default function SalesOrderForm({
           setFormData((prev) => ({ ...prev, sale_no: saleNo }));
         } catch (error) {
           console.error("Error generating sales order number:", error);
-          toast.error("Failed to generate sales order number");
         } finally {
           setGeneratingNumber(false);
         }
       };
-
       generateNumber();
     }
   }, [mode, salesOrder]);
-
-  // Handle quotation conversion
-  useEffect(() => {
-    const quotationId = searchParams.get("quotationId");
-    if (quotationId && mode === "add") {
-      setFormData((prev) => ({ ...prev, quotation_id: quotationId }));
-    }
-  }, [searchParams, mode]);
 
   // Fetch customers
   useEffect(() => {
     async function fetchCustomers() {
       try {
-        const response = await getAllCustomersAction();
-        setCustomerOptions(response.data || []);
-      } catch (error) {
-        console.error("Error fetching customers:", error);
+        const res = await getAllCustomersAction();
+        setCustomerOptions(res.data || []);
+      } catch {
         setCustomerOptions([]);
       }
     }
     fetchCustomers();
   }, []);
 
-  // Fetch products
-  useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const products = await getAllProductsAction();
-        setProductOptions(products || []);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setProductOptions([]);
-      }
-    }
-    fetchProducts();
-  }, []);
-
-  // Fetch quotations for selection
+  // Fetch quotations
   useEffect(() => {
     async function fetchQuotations() {
       try {
         const quotations = await getAllQuotationsAction();
         const availableQuotations = (quotations || []).filter(
-          (q: any) => q.status === "approved" || q.status === "sq_approved"
+          (q: any) => q.status === "sq_approved",
         );
         setQuotationOptions(availableQuotations);
       } catch (error) {
@@ -351,54 +272,127 @@ export default function SalesOrderForm({
     }
   }, [session]);
 
+  // Handle input change - sama seperti quotation
   const handleInputChange = (
     field: keyof SalesOrderFormData,
-    value: string | number
+    value: string | number | BoqItem[],
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    let newValue = value;
+    if (
+      ["total", "tax", "grand_total", "discount", "shipping"].includes(field)
+    ) {
+      newValue = typeof value === "string" ? Number(value) : value;
+    }
+    setFormData((prev) => ({ ...prev, [field]: newValue }));
+    setIsDirty(true);
   };
 
-  // Handle file upload
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      // For now, just store the filename in the form data
-      // In a real implementation, you'd upload the file to a server
-      setFormData((prev) => ({ ...prev, file_po_customer: file.name }));
-    }
+  // Handle BOQ change - sama seperti quotation
+  const handleBoqChange = (items: BoqItem[]) => {
+    setBoqItems(items);
+    setIsDirty(true);
   };
 
-  // Handle customer selection
-  const handleCustomerSelect = (customerId: string) => {
-    if (customerId === "none") {
-      setSelectedCustomer(null);
-      setFormData((prev) => ({ ...prev, customer_id: "" }));
-      return;
-    }
-
-    const customer = customerOptions.find(
-      (c) => c.id.toString() === customerId
+  // Perhitungan pricing - SAMA PERSIS dengan quotation
+  const calculatePricing = () => {
+    const subtotal = boqItems.reduce(
+      (sum, item) => sum + item.unit_price * item.quantity,
+      0,
     );
-    if (customer) {
-      setSelectedCustomer(customer);
-      setFormData((prev) => ({ ...prev, customer_id: customerId }));
-    }
+
+    const disc1 = companyLevelDiscount1 || 0;
+    const disc2 = companyLevelDiscount2 || 0;
+    const addDisc = Number(formData.discount) || 0;
+
+    // Diskon company 1
+    const discount1Amount = (subtotal * disc1) / 100;
+    const afterDiscount1 = subtotal - discount1Amount;
+
+    // Diskon company 2
+    const discount2Amount = disc2 > 0 ? (afterDiscount1 * disc2) / 100 : 0;
+    const afterDiscount2 = afterDiscount1 - discount2Amount;
+
+    // Additional discount
+    const additionalDiscountAmount =
+      addDisc > 0 ? (afterDiscount2 * addDisc) / 100 : 0;
+    const afterAllDiscount = afterDiscount2 - additionalDiscountAmount;
+
+    // Tax 11%
+    const tax = afterAllDiscount * 0.11;
+    const grandTotal = afterAllDiscount + tax;
+
+    return {
+      total: subtotal,
+      tax,
+      grand_total: grandTotal,
+      discount1Amount,
+      discount2Amount,
+      additionalDiscountAmount,
+      afterAllDiscount,
+      afterDiscount2,
+    };
   };
 
-  // Handle quotation selection - OPTIONAL
+  // Display variables - sama seperti quotation
+  const pricing = calculatePricing();
+  const {
+    total: subtotal,
+    discount1Amount,
+    discount2Amount,
+    additionalDiscountAmount,
+    afterAllDiscount,
+    afterDiscount2,
+  } = pricing;
+  const additionalDiscountPercent = Number(formData.discount) || 0;
+  const displayTax = pricing.tax;
+  const displayGrandTotal = pricing.grand_total;
+
+  // Calculate totals - sama seperti quotation
+  const calculateTotals = () => {
+    const pricing = calculatePricing();
+    setFormData((prev) => ({
+      ...prev,
+      total: pricing.total,
+      tax: pricing.tax,
+      grand_total: pricing.grand_total,
+    }));
+  };
+
+  // Set isInitialLoad to false after first render
+  useEffect(() => {
+    setIsInitialLoad(false);
+  }, []);
+
+  // Only recalculate totals if user has changed pricing-related fields
+  useEffect(() => {
+    if (!isInitialLoad && isDirty) {
+      calculateTotals();
+    }
+  }, [boqItems, formData.discount, isDirty, isInitialLoad]);
+
+  // Handle customer change - sama seperti quotation
+  const handleCustomerChange = (customerId: string) => {
+    const customer = customerOptions.find(
+      (c) => c.id.toString() === customerId,
+    );
+    setSelectedCustomer(customer);
+    setFormData((prev) => ({
+      ...prev,
+      customer_id: customerId,
+    }));
+    calculateTotals();
+  };
+
+  // Handle quotation selection
   const handleQuotationSelect = (quotationId: string) => {
     if (quotationId === "none") {
       setSelectedQuotation(null);
-      setFormData((prev) => ({
-        ...prev,
-        quotation_id: "",
-      }));
+      setFormData((prev) => ({ ...prev, quotation_id: "" }));
       return;
     }
 
     const quotation = quotationOptions.find(
-      (q) => q.id.toString() === quotationId
+      (q) => q.id.toString() === quotationId,
     );
     if (quotation) {
       setSelectedQuotation(quotation);
@@ -413,20 +407,26 @@ export default function SalesOrderForm({
         grand_total: Number(quotation.grand_total) || 0,
       }));
 
-      // Also set selected customer
+      // Set selected customer
       const customer = customerOptions.find(
-        (c) => c.id === quotation.customer_id
+        (c) => c.id === quotation.customer_id,
       );
       if (customer) {
         setSelectedCustomer(customer);
       }
 
-      // Import quotation detail items to BOQ
-      if (
-        quotation.quotation_detail &&
-        Array.isArray(quotation.quotation_detail)
-      ) {
-        const importedItems: BoqItem[] = quotation.quotation_detail.map(
+      // Import quotation BOQ
+      if (quotation.quotation_detail) {
+        let quotationDetail = [];
+        try {
+          quotationDetail = Array.isArray(quotation.quotation_detail)
+            ? quotation.quotation_detail
+            : JSON.parse(quotation.quotation_detail);
+        } catch {
+          quotationDetail = [];
+        }
+
+        const importedItems: BoqItem[] = quotationDetail.map(
           (item: any, index: number) => ({
             id: `imported-${index}`,
             product_id: item.product_id || null,
@@ -434,143 +434,52 @@ export default function SalesOrderForm({
             product_code: item.product_code || "",
             quantity: Number(item.quantity) || 0,
             unit_price: Number(item.unit_price) || 0,
-            total: Number(item.total) || 0,
-          })
+            unit: item.unit || "pcs",
+          }),
         );
         setBoqItems(importedItems);
       }
     }
   };
 
-  // BOQ Management Functions
-  const addBoqItem = () => {
-    const newItem: BoqItem = {
-      id: Date.now().toString(),
-      product_id: null,
-      product_name: "",
-      product_code: "",
-      quantity: 1,
-      unit_price: 0,
-      total: 0,
-    };
-    setBoqItems([...boqItems, newItem]);
-  };
-
-  const removeBoqItem = (id: string) => {
-    setBoqItems(boqItems.filter((item) => item.id !== id));
-  };
-
-  const updateBoqItem = (id: string, field: keyof BoqItem, value: any) => {
-    setBoqItems(
-      boqItems.map((item) => {
-        if (item.id === id) {
-          const updatedItem = { ...item, [field]: value };
-
-          // Auto-calculate total
-          if (field === "quantity" || field === "unit_price") {
-            updatedItem.total = updatedItem.quantity * updatedItem.unit_price;
-          }
-
-          // Auto-fill product details when product is selected
-          if (field === "product_id" && value !== "manual") {
-            const product = productOptions.find((p) => p.id === Number(value));
-            if (product) {
-              updatedItem.product_name = product.name;
-              updatedItem.product_code = product.product_code;
-              updatedItem.unit_price = Number(product.price) || 0;
-              updatedItem.total = updatedItem.quantity * updatedItem.unit_price;
-            }
-          }
-
-          return updatedItem;
-        }
-        return item;
-      })
-    );
-  };
-
-  const calculateTotals = () => {
-    const subtotal = boqItems.reduce((sum, item) => sum + item.total, 0);
-    const discountPercent = formData.discount || 0;
-    const discountAmount = (subtotal * discountPercent) / 100;
-    const taxableAmount = subtotal - discountAmount;
-    const tax = taxableAmount * 0.11;
-    const grandTotal = taxableAmount + tax; // shipping is always 0
-
-    setFormData((prev) => ({
-      ...prev,
-      total: subtotal,
-      tax: tax,
-      grand_total: grandTotal,
-      shipping: 0, // always 0
-    }));
-  };
-
-  useEffect(() => {
-    // Skip recalculation on initial load in edit mode
-    if (isInitialLoad) return;
-
-    calculateTotals();
-  }, [boqItems, formData.discount, formData.shipping, isInitialLoad]);
-
-  // Client-side validation
-  const validateForm = (): boolean => {
-    try {
-      const validationData = { ...formData };
-      const { customer_id, ...dataForValidation } = validationData;
-
-      validateSalesOrderFormData(
-        dataForValidation,
-        mode === "add" ? "create" : "update"
-      );
-
-      // Additional validation for BOQ items
-      if (boqItems.length === 0) {
-        toast.error("At least one product item is required");
-        return false;
+  // Get changed fields - sama seperti quotation
+  const getChangedFields = () => {
+    const changed: any = {};
+    Object.keys(formData).forEach((key) => {
+      if (
+        formData[key as keyof SalesOrderFormData] !==
+        originalData?.[key as keyof SalesOrder]
+      ) {
+        changed[key] = formData[key as keyof SalesOrderFormData];
       }
-
-      const invalidItems = boqItems.filter(
-        (item) =>
-          !item.product_name || item.quantity <= 0 || item.unit_price < 0
-      );
-
-      if (invalidItems.length > 0) {
-        toast.error("Please check all product items have valid data");
-        return false;
-      }
-
-      setFormErrors({});
-      return true;
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const newErrors: FormErrors = {};
-        error.errors.forEach((err) => {
-          const field = err.path.join(".");
-          newErrors[field] = err.message;
-        });
-        setFormErrors(newErrors);
-        return false;
-      }
-      return false;
+    });
+    if (
+      JSON.stringify(boqItems) !==
+      JSON.stringify(originalData?.sale_order_detail)
+    ) {
+      changed.boq_items = boqItems.map((item) => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        product_code: item.product_code,
+        price: item.unit_price,
+        qty: item.quantity,
+        total: item.unit_price * item.quantity,
+        status: "ACTIVE",
+      }));
     }
+    return changed;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
     setLoading(true);
 
     try {
       if (mode === "add") {
         const dataToSend: CreateSalesOrderData = {
           sale_no: formData.sale_no,
-          quotation_id: formData.quotation_id || undefined,
-          customer_id: formData.customer_id || undefined, // Add customer_id support
+          quotation_id: formData.quotation_id?.toString() || undefined, // Convert to string
+          customer_id: formData.customer_id?.toString() || undefined, // Convert to string
           total: formData.total,
           discount: formData.discount,
           shipping: formData.shipping,
@@ -581,149 +490,141 @@ export default function SalesOrderForm({
           sale_status: formData.sale_status,
           payment_status: formData.payment_status,
           file_po_customer: formData.file_po_customer || undefined,
-          // Add BOQ items
           boq_items: boqItems.map((item) => ({
-            product_id: item.product_id,
+            product_id: item.product_id || undefined, // Convert null to undefined
             product_name: item.product_name,
             product_code: item.product_code,
             price: item.unit_price,
             qty: item.quantity,
-            total: item.total,
+            total: item.unit_price * item.quantity,
             status: "ACTIVE",
           })),
         };
 
         const result = await createSalesOrderAction(dataToSend);
-
         if (result?.success) {
           toast.success("Sales order created successfully");
-
-          if (onSuccess) {
-            onSuccess();
-          } else {
-            router.push("/sales/sales-orders");
-          }
+          setIsDirty(false);
+          if (onSuccess) onSuccess();
         } else {
           toast.error(result?.message || "Failed to create sales order");
         }
       } else {
-        // Update mode
-        const dataToSend: UpdateSalesOrderData = {
-          sale_no: formData.sale_no,
-          quotation_id: formData.quotation_id || undefined,
-          customer_id: formData.customer_id || undefined, // Add customer_id
-          total: formData.total,
-          discount: formData.discount,
-          shipping: formData.shipping,
-          tax: formData.tax,
-          grand_total: formData.grand_total,
-          status: formData.status,
-          note: formData.note,
-          sale_status: formData.sale_status,
-          payment_status: formData.payment_status,
-          file_po_customer: formData.file_po_customer || undefined,
-          // Add BOQ items for update
-          boq_items: boqItems.map((item) => ({
-            product_id: item.product_id,
-            product_name: item.product_name,
-            product_code: item.product_code,
-            price: item.unit_price,
-            qty: item.quantity,
-            total: item.total,
-            status: "ACTIVE",
-          })),
-        };
+        const changedFields = getChangedFields();
+        if (formData.payment_term_id !== originalData?.payment_term_id) {
+          changedFields.payment_term_id = formData.payment_term_id;
+        }
+
+        // Convert customer_id and quotation_id to string if needed
+        if (changedFields.customer_id) {
+          changedFields.customer_id = changedFields.customer_id.toString();
+        }
+        if (changedFields.quotation_id) {
+          changedFields.quotation_id = changedFields.quotation_id.toString();
+        }
 
         const result = await updateSalesOrderAction(
           salesOrder!.id!,
-          dataToSend
+          changedFields,
         );
-
         if (result?.success) {
           toast.success("Sales order updated successfully");
-
-          if (onSuccess) {
-            onSuccess();
-          } else {
-            router.push("/sales/sales-orders");
-          }
+          setIsDirty(false);
+          if (onSuccess) onSuccess();
         } else {
           toast.error(result?.message || "Failed to update sales order");
         }
       }
     } catch (error) {
-      console.error("Error saving sales order:", error);
-      toast.error("Failed to save sales order");
+      toast.error("Error: " + (error as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Tambahkan handler untuk update file_po_customer
   const handlePOUploadSuccess = (fileUrl: string) => {
-    // Ambil nama file dari url
     const fileName = fileUrl.split("/").pop() || "";
     setFormData((prev) => ({
       ...prev,
       file_po_customer: fileName,
     }));
+    setIsDirty(true);
   };
 
-  // Cek apakah sales order punya referensi quotation
-  const hasQuotationReference =
-    !!formData.quotation_id ||
-    (salesOrder && salesOrder.quotation_id) ||
-    (selectedQuotation && selectedQuotation.id);
-
-  // Atau jika data sales order dari backend sudah include objek quotation:
-  const hasQuotationObject = !!(salesOrder && (salesOrder as any).quotation);
+  // Form validation - sama seperti quotation
+  const isFormValid =
+    !!formData.sale_no &&
+    !!formData.customer_id &&
+    boqItems.length > 0 &&
+    boqItems.every(
+      (item) => item.product_name && item.quantity > 0 && item.unit_price >= 0,
+    );
 
   return (
-    <div className="mx-auto p-6 w-full">
+    <div className="w-full mx-auto py-4 space-y-6">
+      {/* Header - sama seperti quotation */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {mode === "add" ? "Create Sales Order" : "Edit Sales Order"}
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {mode === "add"
+              ? "Create a new sales order"
+              : "Update the sales order details"}
+          </p>
+        </div>
+        {formData.sale_no && (
+          <Badge variant="outline" className="text-base font-mono px-3 py-1">
+            {formData.sale_no}
+          </Badge>
+        )}
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Main Grid Layout - Similar to Quotation Form */}
+        {/* Main Grid Layout - sama seperti quotation */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Basic Information */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Basic Info Card */}
-            <Card>
+            {/* Sales Order Information Card */}
+            <Card className="dark:bg-gray-800">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
                   Sales Order Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Sales Order Number */}
-                  <div>
-                    <Label htmlFor="sale_no">Sales Order Number *</Label>
-                    <div className="relative">
-                      <Input
-                        id="sale_no"
-                        value={formData.sale_no}
-                        onChange={(e) =>
-                          handleInputChange("sale_no", e.target.value)
-                        }
-                        disabled={generatingNumber || mode === "edit"} // Disable in edit mode
-                        placeholder="Auto-generated"
-                        className="font-mono"
-                      />
-                      {generatingNumber && (
-                        <div className="absolute right-2 top-2">
-                          <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
-                        </div>
-                      )}
-                    </div>
-                    {formErrors.sale_no && (
-                      <p className="text-sm text-red-500 mt-1">
-                        {formErrors.sale_no}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="sale_no"
+                      className="flex items-center gap-1"
+                    >
+                      Sales Order Number
+                      <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="sale_no"
+                      value={formData.sale_no}
+                      onChange={(e) =>
+                        handleInputChange("sale_no", e.target.value)
+                      }
+                      placeholder={
+                        generatingNumber ? "Generating..." : "Auto-generated"
+                      }
+                      disabled={true}
+                      required
+                      className="font-mono"
+                    />
+                    {generatingNumber && (
+                      <p className="text-xs text-gray-500">
+                        Generating sales order number...
                       </p>
                     )}
                   </div>
 
-                  {/* Status */}
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
                     <Select
                       value={formData.status}
@@ -735,17 +636,21 @@ export default function SalesOrderForm({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {STATUS_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
+                        {STATUS_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
 
-                  {/* Sale Status */}
-                  <div>
+                <Separator />
+
+                {/* Status Section */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
                     <Label htmlFor="sale_status">Sale Status</Label>
                     <Select
                       value={formData.sale_status}
@@ -757,17 +662,16 @@ export default function SalesOrderForm({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {SALE_STATUS_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
+                        {SALE_STATUS_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  {/* Payment Status */}
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="payment_status">Payment Status</Label>
                     <Select
                       value={formData.payment_status}
@@ -779,79 +683,36 @@ export default function SalesOrderForm({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {PAYMENT_STATUS_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
+                        {PAYMENT_STATUS_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
 
-                {/* Note */}
-                <div>
-                  <Label htmlFor="note">Note</Label>
-                  <Textarea
-                    id="note"
-                    value={formData.note}
-                    onChange={(e) => handleInputChange("note", e.target.value)}
-                    placeholder="Additional notes..."
-                    rows={3}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Customer & Quotation Selection */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Customer & Source</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Customer Selection */}
-                  <div>
-                    <Label htmlFor="customer">Customer *</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="payment_term_id">Terms of Payment</Label>
                     <Select
-                      value={formData.customer_id}
-                      onValueChange={handleCustomerSelect}
+                      value={formData.payment_term_id?.toString() || ""}
+                      onValueChange={(value) => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          payment_term_id: value ? Number(value) : null,
+                        }));
+                        setIsDirty(true);
+                      }}
+                      disabled={paymentTermsLoading}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select customer" />
+                        <SelectValue placeholder="Select Terms of Payment" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">No customer</SelectItem>
-                        {customerOptions.map((customer) => (
-                          <SelectItem
-                            key={customer.id}
-                            value={customer.id.toString()}
-                          >
-                            {customer.customer_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Quotation Selection - Optional */}
-                  <div>
-                    <Label htmlFor="quotation">From Quotation (Optional)</Label>
-                    <Select
-                      value={formData.quotation_id}
-                      onValueChange={handleQuotationSelect}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select quotation or manual" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Manual Entry</SelectItem>
-                        {quotationOptions.map((quotation) => (
-                          <SelectItem
-                            key={quotation.id}
-                            value={quotation.id.toString()}
-                          >
-                            {quotation.quotation_no}
+                        {paymentTerms?.map((term) => (
+                          <SelectItem key={term.id} value={term.id.toString()}>
+                            {term.name}
+                            {term.days ? ` (${term.days} days)` : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -859,325 +720,433 @@ export default function SalesOrderForm({
                   </div>
                 </div>
 
-                {/* Selected Customer Display */}
-                {selectedCustomer && (
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-blue-900 mb-2">
-                      Selected Customer
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="font-medium">Name:</span>{" "}
-                        {selectedCustomer.customer_name}
-                      </div>
-                      <div>
-                        <span className="font-medium">Email:</span>{" "}
-                        {selectedCustomer.email || "N/A"}
-                      </div>
-                      <div>
-                        <span className="font-medium">Phone:</span>{" "}
-                        {selectedCustomer.phone || "N/A"}
-                      </div>
-                      <div>
-                        <span className="font-medium">Type:</span>{" "}
-                        <Badge variant="outline">{selectedCustomer.type}</Badge>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <Separator />
 
-                {/* Selected Quotation Display */}
-                {selectedQuotation && (
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-green-900 mb-2">
-                      Source Quotation
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                      <div>
-                        <span className="font-medium">Number:</span>{" "}
-                        {selectedQuotation.quotation_no}
-                      </div>
-                      <div>
-                        <span className="font-medium">Total:</span>{" "}
-                        {formatCurrency(selectedQuotation.grand_total || 0)}
-                      </div>
-                      <div>
-                        <span className="font-medium">Status:</span>{" "}
-                        <Badge variant="outline">
-                          {selectedQuotation.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* BOQ Items Section */}
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Bill of Quantities (BOQ)</CardTitle>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addBoqItem}
+                {/* Quotation Reference - Optional */}
+                <div className="space-y-2">
+                  <Label htmlFor="quotation">From Quotation (Optional)</Label>
+                  <Select
+                    value={formData.quotation_id?.toString() || ""}
+                    onValueChange={handleQuotationSelect}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Item
-                  </Button>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select quotation or create manually" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Create Manually</SelectItem>
+                      {quotationOptions.map((quotation) => (
+                        <SelectItem
+                          key={quotation.id}
+                          value={quotation.id.toString()}
+                        >
+                          {quotation.quotation_no} -{" "}
+                          {quotation.customer?.customer_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Bill of Quantity Card - sama seperti quotation */}
+            <Card className="dark:bg-gray-800">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Bill of Quantity (BOQ)
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                {boqItems.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No items added yet. Click "Add Item" to start.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {boqItems.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className="border border-gray-200 rounded-lg p-4 space-y-3"
+                <BoqTable items={boqItems} onChange={handleBoqChange} />
+              </CardContent>
+            </Card>
+
+            {/* Notes Card - sama seperti quotation */}
+            <Card className="dark:bg-gray-800">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Additional Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  id="note"
+                  value={formData.note}
+                  onChange={(e) => handleInputChange("note", e.target.value)}
+                  placeholder="Add any additional notes or comments here..."
+                  rows={4}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column: Customer & Pricing Information - sama seperti quotation */}
+          <div className="space-y-6">
+            {/* Customer Information Card - sama seperti quotation */}
+            <Card className="dark:bg-gray-800 border dark:border-gray-700">
+              <CardHeader className="pb-4 border-b dark:border-gray-700">
+                <CardTitle className="text-lg font-medium flex items-center gap-3 dark:text-white">
+                  <Calendar className="w-5 h-5" />
+                  Customer Information
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent className="pt-2">
+                <div className="space-y-5">
+                  {/* Customer selection or display */}
+                  {isCustomerEditMode || !customerDetail ? (
+                    <div className="space-y-3">
+                      <Label
+                        htmlFor="customer_id"
+                        className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5"
                       >
-                        <div className="flex justify-between items-start">
-                          <span className="text-sm font-medium text-gray-700">
-                            Item {index + 1}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeBoqItem(item.id!)}
-                            className="text-red-500 hover:text-red-700 h-8 w-8 p-0"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-                          {/* Product Selection */}
-                          <div className="lg:col-span-2">
-                            <Label>Product</Label>
-                            <Select
-                              value={item.product_id?.toString() || "manual"}
-                              onValueChange={(value) =>
-                                updateBoqItem(
-                                  item.id!,
-                                  "product_id",
-                                  value === "manual" ? null : Number(value)
-                                )
-                              }
+                        Customer <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={formData.customer_id?.toString() || ""}
+                        onValueChange={(value) => {
+                          handleCustomerChange(value);
+                          setIsCustomerEditMode(false);
+                        }}
+                      >
+                        <SelectTrigger className="h-11 dark:border-gray-600 dark:bg-gray-900 w-full">
+                          <SelectValue placeholder="Select customer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customerOptions.map((customer) => (
+                            <SelectItem
+                              key={customer.id}
+                              value={customer.id.toString()}
                             >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="manual">
-                                  Manual Entry
-                                </SelectItem>
-                                {productOptions.map((product) => (
-                                  <SelectItem
-                                    key={product.id}
-                                    value={product.id.toString()}
-                                  >
-                                    {product.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          {/* Product Name (Manual) */}
-                          <div className="lg:col-span-2">
-                            <Label>Product Name *</Label>
-                            <Input
-                              value={item.product_name}
-                              onChange={(e) =>
-                                updateBoqItem(
-                                  item.id!,
-                                  "product_name",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Enter product name"
-                            />
-                          </div>
-
-                          {/* Quantity */}
-                          <div>
-                            <Label>Quantity *</Label>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={item.quantity}
-                              onChange={(e) =>
-                                updateBoqItem(
-                                  item.id!,
-                                  "quantity",
-                                  Number(e.target.value)
-                                )
-                              }
-                            />
-                          </div>
-
-                          {/* Unit Price */}
-                          <div>
-                            <Label>Unit Price *</Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.unit_price}
-                              disabled
-                              onChange={(e) =>
-                                updateBoqItem(
-                                  item.id!,
-                                  "unit_price",
-                                  Number(e.target.value)
-                                )
-                              }
-                            />
-                          </div>
-
-                          {/* Total (Read-only) */}
-                          <div className="lg:col-span-3">
-                            <Label>Total</Label>
-                            <Input
-                              value={formatCurrency(item.total)}
-                              disabled
-                              className="bg-gray-50"
-                            />
-                          </div>
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {customer.customer_name}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {customer.company?.company_name ||
+                                    "No company"}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : customerLoading || customerLoadingDelay ? (
+                    // Skeleton loader
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                      <div className="md:col-span-2">
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div>
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div>
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div>
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div>
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div>
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                    </div>
+                  ) : (
+                    customerDetail && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <div className="md:col-span-2">
+                          <Label className="text-xs mb-1 block">
+                            Customer Name
+                          </Label>
+                          <Input
+                            value={customerDetail.customer_name || "—"}
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs mb-1 block">Company</Label>
+                          <Input
+                            value={customerDetail.company?.company_name || "—"}
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs mb-1 block">
+                            Company Level
+                          </Label>
+                          <Input
+                            value={
+                              customerDetail.company?.company_level?.level_name
+                                ? customerDetail.company.company_level
+                                    .level_name
+                                : "—"
+                            }
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs mb-1 block">Type</Label>
+                          <Input
+                            value={customerDetail.type || "—"}
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs mb-1 block">Email</Label>
+                          <Input
+                            value={customerDetail.email || "—"}
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs mb-1 block">Phone</Label>
+                          <Input
+                            value={customerDetail.phone || "—"}
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <Label className="text-xs mb-1 block">Address</Label>
+                          <Input
+                            value={
+                              customerDetail.address || "No address provided"
+                            }
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    )
+                  )}
+                  {/* Edit Button */}
+                  {customerDetail &&
+                    !customerLoading &&
+                    !customerLoadingDelay && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mb-2"
+                        onClick={() => setIsCustomerEditMode(true)}
+                      >
+                        Edit Customer
+                      </Button>
+                    )}
+                </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Right Column: Summary & Actions */}
-          <div className="space-y-6">
-            {/* Financial Summary */}
-            <Card>
+            {/* Pricing Information Card - sama seperti quotation */}
+            <Card className="dark:bg-gray-800">
               <CardHeader>
-                <CardTitle>Financial Summary</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Pricing Summary
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Subtotal */}
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span className="font-mono">
-                    {formatCurrency(formData.total)}
-                  </span>
-                </div>
-
-                {/* Discount */}
-                <div className="space-y-2">
-                  <Label htmlFor="discount">Discount (%)</Label>
-                  <Input
-                    id="discount"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={formData.discount}
-                    onChange={(e) =>
-                      handleInputChange("discount", Number(e.target.value))
-                    }
-                  />
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Discount Amount:</span>
+                <div className="space-y-3">
+                  {/* Info Diskon Company */}
+                  <div className="flex flex-col gap-1 mb-2">
                     <span>
-                      -
-                      {formatCurrency(
-                        (formData.total * formData.discount) / 100
-                      )}
+                      Company Level Discount 1: <b>{companyLevelDiscount1}%</b>
                     </span>
+                    <span>
+                      Company Level Discount 2: <b>{companyLevelDiscount2}%</b>
+                    </span>
+                    {companyLevelName && <span>Level: {companyLevelName}</span>}
                   </div>
-                </div>
 
-                <Separator />
+                  {/* Pricing summary */}
+                  {formData.customer_id &&
+                    customerDetail &&
+                    !customerLoading && (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            Subtotal
+                          </span>
+                          <span className="font-medium">
+                            {formatCurrency(subtotal)}
+                          </span>
+                        </div>
 
-                {/* After Discount */}
-                <div className="flex justify-between">
-                  <span>After Discount:</span>
-                  <span className="font-mono">
-                    {formatCurrency(
-                      formData.total -
-                        (formData.total * formData.discount) / 100
+                        {/* Company Discounts */}
+                        {companyLevelDiscount1 > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-blue-700">
+                              Discount 1 ({companyLevelDiscount1}%)
+                            </span>
+                            <span className="font-medium text-blue-700">
+                              -{formatCurrency(discount1Amount)}
+                            </span>
+                          </div>
+                        )}
+
+                        {companyLevelDiscount2 > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-purple-700">
+                              Discount 2 ({companyLevelDiscount2}%)
+                            </span>
+                            <span className="font-medium text-purple-700">
+                              -{formatCurrency(discount2Amount)}
+                            </span>
+                          </div>
+                        )}
+
+                        {(companyLevelDiscount1 > 0 ||
+                          companyLevelDiscount2 > 0) && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              After Company Discounts
+                            </span>
+                            <span className="font-medium">
+                              {formatCurrency(afterDiscount2)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Additional Discount */}
+                        <div className="space-y-2">
+                          <Label htmlFor="discount">
+                            Additional Discount (%)
+                          </Label>
+                          <Input
+                            id="discount"
+                            type="number"
+                            value={formData.discount}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "discount",
+                                parseFloat(e.target.value) || 0,
+                              )
+                            }
+                            placeholder="0"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                          />
+                        </div>
+                        {additionalDiscountPercent > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-red-600">
+                              Additional Discount ({additionalDiscountPercent}%)
+                            </span>
+                            <span className="font-medium text-red-600">
+                              -{formatCurrency(additionalDiscountAmount)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* After all discounts */}
+                        {(companyLevelDiscount1 > 0 ||
+                          companyLevelDiscount2 > 0 ||
+                          additionalDiscountPercent > 0) && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              After All Discounts{" "}
+                              <span className="italic">(before tax)</span>
+                            </span>
+                            <span className="font-medium">
+                              {formatCurrency(afterAllDiscount)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Tax 11% */}
+                        <div className="space-y-2">
+                          <Label htmlFor="tax">Tax (11%)</Label>
+                          <Input
+                            id="tax"
+                            type="text"
+                            value={formatCurrency(displayTax)}
+                            disabled
+                            className="bg-gray-100 dark:bg-gray-800/40"
+                          />
+                        </div>
+
+                        <Separator />
+
+                        <div className="flex justify-between items-center pt-2">
+                          <span className="font-semibold">Grand Total</span>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-primary">
+                              {formatCurrency(displayGrandTotal)}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Subtotal: {formatCurrency(subtotal)}
+                            </div>
+                          </div>
+                        </div>
+                      </>
                     )}
-                  </span>
-                </div>
-
-                {/* Tax */}
-                <div className="flex justify-between">
-                  <span>Tax (11%):</span>
-                  <span className="font-mono">
-                    {formatCurrency(formData.tax)}
-                  </span>
-                </div>
-
-                {/* Shipping (Always 0) */}
-                <div className="flex justify-between text-gray-500">
-                  <span>Shipping:</span>
-                  <span className="font-mono">{formatCurrency(0)}</span>
-                </div>
-
-                <Separator />
-
-                {/* Grand Total */}
-                <div className="flex justify-between text-lg font-semibold">
-                  <span>Grand Total:</span>
-                  <span className="font-mono">
-                    {formatCurrency(formData.grand_total)}
-                  </span>
+                  {!formData.customer_id && (
+                    <div className="text-sm text-muted-foreground">
+                      Select customer first to see pricing calculations.
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* File Upload */}
-            <POFileUpload
-              salesOrderId={salesOrder?.id || ""}
-              currentFile={formData.file_po_customer}
-              onUploadSuccess={handlePOUploadSuccess}
-            />
-
-            {/* Action Buttons */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-3">
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={loading}
-                    size="lg"
-                  >
-                    {loading ? (
-                      <>
-                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                        {mode === "add" ? "Creating..." : "Updating..."}
-                      </>
-                    ) : (
-                      `${mode === "add" ? "Create" : "Update"} Sales Order`
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={onClose}
-                    disabled={loading}
-                  >
-                    Cancel
-                  </Button>
-                </div>
+            {/* File Upload Card - KHUSUS SALES ORDER */}
+            <Card className="dark:bg-gray-800">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Upload className="w-5 h-5" />
+                  Customer PO File
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <POFileUpload
+                  salesOrderId={salesOrder?.id || ""}
+                  currentFile={formData.file_po_customer}
+                  onUploadSuccess={handlePOUploadSuccess}
+                />
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Form Actions - sama seperti quotation */}
+        <div className="flex gap-3 justify-end pt-6 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={loading}
+            className="min-w-[100px]"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={loading || generatingNumber || !isFormValid || !isDirty}
+            className="min-w-[150px]"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                {mode === "add" ? "Creating..." : "Updating..."}
+              </span>
+            ) : (
+              `${mode === "add" ? "Create" : "Update"} Sales Order`
+            )}
+          </Button>
         </div>
       </form>
     </div>
