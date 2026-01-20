@@ -22,8 +22,6 @@ import { users } from "@/types/models";
 import {
   getQuotationPermissions,
   QUOTATION_STATUSES,
-  QUOTATION_STAGES,
-  STATUS_STAGE_MAPPING,
 } from "@/utils/quotationPermissions";
 import {
   getAllQuotationsAction,
@@ -33,12 +31,12 @@ import {
 } from "@/app/actions/quotations";
 import { toast } from "react-hot-toast";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { useQuotationsWaitingApproval } from "@/hooks/quotations/useQuotationsWaitingApproval";
 
 type PendingQuotation = {
   id: number;
   quotation_no: string;
   status: string;
-  stage: string;
   total: number;
   shipping: number;
   discount: number;
@@ -62,18 +60,18 @@ type StatusOption = {
 
 export default function ManagerSalesPendingTaskPage() {
   const session = useSession();
-  const [loading, setLoading] = useState(true);
-  const [pendingQuotations, setPendingQuotations] = useState<
-    PendingQuotation[]
-  >([]);
+  const {
+    quotations: pendingQuotations,
+    loading,
+    refetch,
+  } = useQuotationsWaitingApproval();
   const [user, setUser] = useState<users | null>(null);
   const [permissions, setPermissions] = useState<any>(null);
 
-  // State untuk update status/stage
+  // State untuk update status
   const [selectedQuotation, setSelectedQuotation] =
     useState<PendingQuotation | null>(null);
   const [newStatus, setNewStatus] = useState("");
-  const [newStage, setNewStage] = useState("");
   const [updateNote, setUpdateNote] = useState("");
   const [updating, setUpdating] = useState(false);
 
@@ -87,51 +85,8 @@ export default function ManagerSalesPendingTaskPage() {
 
   // Fetch pending quotations
   useEffect(() => {
-    fetchPendingQuotations();
-  }, []);
-
-  const fetchPendingQuotations = async () => {
-    try {
-      setLoading(true);
-      const result = await getAllQuotationsAction();
-
-      // Filter hanya quotations dengan status sq_review yang menunggu approval
-      // Transform the data to match PendingQuotation type
-      const filtered = result
-        .filter((q: any) => q.status === "sq_review")
-        .map(
-          (q: any): PendingQuotation => ({
-            id: q.id,
-            quotation_no: q.quotation_no,
-            status: q.status || "sq_review", // Provide default value
-            stage: q.stage || "review", // Provide default value
-            total: q.total ? Number(q.total) : 0,
-            shipping: q.shipping ? Number(q.shipping) : 0,
-            discount: q.discount ? Number(q.discount) : 0,
-            tax: q.tax ? Number(q.tax) : 0,
-            grand_total: q.grand_total ? Number(q.grand_total) : 0,
-            note: q.note,
-            target_date: q.target_date,
-            created_at: q.created_at,
-            customer: {
-              customer_name: q.customer?.customer_name || "Unknown Customer",
-              company: q.customer?.company
-                ? {
-                    company_name: q.customer.company.company_name,
-                  }
-                : null,
-            },
-          })
-        );
-
-      setPendingQuotations(filtered);
-    } catch (error) {
-      console.error("Error fetching pending quotations:", error);
-      toast.error("Failed to fetch pending quotations");
-    } finally {
-      setLoading(false);
-    }
-  };
+    refetch();
+  }, [refetch]);
 
   // Quick approve function
   const handleQuickApprove = async (quotationId: number) => {
@@ -139,12 +94,12 @@ export default function ManagerSalesPendingTaskPage() {
       setUpdating(true);
       const result = await approveQuotationAction(
         quotationId,
-        "Approved by manager"
+        "Approved by manager",
       );
 
       if (result?.success) {
         toast.success("Quotation approved successfully");
-        fetchPendingQuotations(); // Refresh data
+        refetch(); // Refresh data
       } else {
         toast.error(result?.message || "Failed to approve quotation");
       }
@@ -162,12 +117,12 @@ export default function ManagerSalesPendingTaskPage() {
       setUpdating(true);
       const result = await rejectQuotationAction(
         quotationId,
-        reason || "Rejected by manager"
+        reason || "Rejected by manager",
       );
 
       if (result?.success) {
         toast.success("Quotation rejected successfully");
-        fetchPendingQuotations(); // Refresh data
+        refetch(); // Refresh data
       } else {
         toast.error(result?.message || "Failed to reject quotation");
       }
@@ -179,7 +134,7 @@ export default function ManagerSalesPendingTaskPage() {
     }
   };
 
-  // Custom update status/stage function
+  // Custom update status
   const handleCustomUpdate = async () => {
     if (!selectedQuotation || !newStatus) return;
 
@@ -187,7 +142,6 @@ export default function ManagerSalesPendingTaskPage() {
       setUpdating(true);
       const updateData: any = {
         status: newStatus,
-        stage: newStage || STATUS_STAGE_MAPPING[newStatus]?.[0] || "review",
       };
 
       if (updateNote) {
@@ -196,16 +150,15 @@ export default function ManagerSalesPendingTaskPage() {
 
       const result = await updateQuotationAction(
         selectedQuotation.id,
-        updateData
+        updateData,
       );
 
       if (result?.success) {
         toast.success("Quotation updated successfully");
         setSelectedQuotation(null);
         setNewStatus("");
-        setNewStage("");
         setUpdateNote("");
-        fetchPendingQuotations(); // Refresh data
+        refetch(); // Refresh data
       } else {
         toast.error(result?.message || "Failed to update quotation");
       }
@@ -225,22 +178,36 @@ export default function ManagerSalesPendingTaskPage() {
       (status: string): StatusOption => ({
         value: status,
         label: formatStatusDisplay(status),
-      })
+      }),
     );
   };
 
-  // Get available stage options
-  const getAvailableStageOptions = (): StatusOption[] => {
-    if (!newStatus) return [];
-
-    const validStages = STATUS_STAGE_MAPPING[newStatus] || [];
-    return validStages.map(
-      (stage): StatusOption => ({
-        value: stage,
-        label: formatStatusDisplay(stage),
-      })
-    );
-  };
+  const mappedPendingQuotations: PendingQuotation[] = pendingQuotations.map(
+    (q) => ({
+      id: q.id,
+      quotation_no: q.quotation_no,
+      status: q.status || "",
+      total: Number(q.total ?? 0),
+      shipping: Number(q.shipping ?? 0),
+      discount: Number(q.discount ?? 0),
+      tax: Number(q.tax ?? 0),
+      grand_total: Number(q.grand_total ?? 0),
+      note: q.note,
+      target_date: q.target_date ? new Date(q.target_date) : undefined,
+      created_at: q.created_at ? new Date(q.created_at) : new Date(),
+      customer: q.customer
+        ? {
+            customer_name: q.customer.customer_name || "-",
+            company: q.customer.company
+              ? { company_name: q.customer.company.company_name || "-" }
+              : null,
+          }
+        : {
+            customer_name: "-",
+            company: null,
+          },
+    }),
+  );
 
   if (loading) {
     return (
@@ -248,7 +215,7 @@ export default function ManagerSalesPendingTaskPage() {
         <div className="flex flex-col items-center">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
           <span className="text-sm text-muted-foreground">
-            Loading pending tasks...
+            Loading pending quotations...
           </span>
         </div>
       </div>
@@ -292,8 +259,8 @@ export default function ManagerSalesPendingTaskPage() {
                 {formatCurrency(
                   pendingQuotations.reduce(
                     (sum, q) => sum + (q.grand_total || 0),
-                    0
-                  )
+                    0,
+                  ),
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -314,10 +281,10 @@ export default function ManagerSalesPendingTaskPage() {
                       ...pendingQuotations.map((q) =>
                         Math.floor(
                           (new Date().getTime() -
-                            new Date(q.created_at).getTime()) /
-                            (1000 * 60 * 60 * 24)
-                        )
-                      )
+                            new Date(q.created_at ?? 0).getTime()) /
+                            (1000 * 60 * 60 * 24),
+                        ),
+                      ),
                     )
                   : 0}{" "}
                 days
@@ -361,19 +328,25 @@ export default function ManagerSalesPendingTaskPage() {
                             <Badge variant="secondary">
                               {formatStatusDisplay(quotation.status)}
                             </Badge>
+                            {/* Tambahkan badge jika status review */}
+                            {quotation.status === QUOTATION_STATUSES.REVIEW && (
+                              <Badge variant="destructive" className="ml-2">
+                                Butuh Approval (Review)
+                              </Badge>
+                            )}
                           </div>
 
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div>
                               <span className="font-medium">Customer:</span>
                               <p className="text-muted-foreground">
-                                {quotation.customer.customer_name}
+                                {quotation.customer?.customer_name || "-"}
                               </p>
                             </div>
                             <div>
                               <span className="font-medium">Company:</span>
                               <p className="text-muted-foreground">
-                                {quotation.customer.company?.company_name ||
+                                {quotation.customer?.company?.company_name ||
                                   "-"}
                               </p>
                             </div>
@@ -429,9 +402,10 @@ export default function ManagerSalesPendingTaskPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              setSelectedQuotation(quotation);
-                              setNewStatus(quotation.status);
-                              setNewStage(quotation.stage);
+                              setSelectedQuotation(
+                                quotation as PendingQuotation,
+                              );
+                              setNewStatus(quotation.status || "");
                             }}
                             disabled={updating}
                           >
@@ -473,22 +447,6 @@ export default function ManagerSalesPendingTaskPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="stage">Stage</Label>
-                  <Select value={newStage} onValueChange={setNewStage}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select stage" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableStageOptions().map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
 
               <div className="space-y-2">
@@ -508,7 +466,6 @@ export default function ManagerSalesPendingTaskPage() {
                   onClick={() => {
                     setSelectedQuotation(null);
                     setNewStatus("");
-                    setNewStage("");
                     setUpdateNote("");
                   }}
                   disabled={updating}

@@ -39,7 +39,7 @@ export default function QuotationDetailSkeleton() {
 
         {/* Middle: BOQ Table & Pricing Summary Skeleton */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="dark:bg-gray-800">
+          <Card>
             <CardHeader>
               <CardTitle className="h-6 w-40 bg-gray-200 rounded" />
             </CardHeader>
@@ -55,7 +55,7 @@ export default function QuotationDetailSkeleton() {
               </div>
             </CardContent>
           </Card>
-          <Card className="dark:bg-gray-800">
+          <Card>
             <CardHeader>
               <CardTitle className="h-6 w-40 bg-gray-200 rounded" />
             </CardHeader>

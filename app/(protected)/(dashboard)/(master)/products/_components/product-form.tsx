@@ -88,7 +88,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <Card className="dark:bg-gray-800 w-full">
+        <Card>
           <CardHeader>
             <CardTitle>
               {mode === "create" ? "Add New Product" : "Edit Product"}

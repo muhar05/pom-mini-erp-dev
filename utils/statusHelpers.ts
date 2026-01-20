@@ -3,8 +3,6 @@
  * Handles prefixed status names with clean display formatting
  */
 
-import { QUOTATION_STAGES } from "./quotationPermissions";
-
 // Lead Status Enum
 export const LEAD_STATUSES = {
   NEW: "lead_new",
@@ -23,6 +21,8 @@ export const OPPORTUNITY_STATUSES = {
 
 // Sales Quotation Status Enum
 export const SQ_STATUSES = {
+  WAITING_APPROVAL: "sq_waiting_approval",
+  REVIEW: "sq_review", // Menunggu approval Sales Manager
   DRAFT: "sq_draft", // Menunggu approval Sales Manager & belum dikirim ke customer
   APPROVED: "sq_approved", // Sudah di-approve Sales Manager, bisa dikirim ke customer
   SENT: "sq_sent", // Sudah dikirim ke customer
@@ -288,6 +288,7 @@ export const OPPORTUNITY_STATUS_OPTIONS = [
 ];
 
 export const SQ_STATUS_OPTIONS = [
+  { value: SQ_STATUSES.WAITING_APPROVAL, label: "Waiting Approval" },
   { value: SQ_STATUSES.DRAFT, label: "Draft" },
   { value: SQ_STATUSES.APPROVED, label: "Approved" },
   { value: SQ_STATUSES.SENT, label: "Sent" },

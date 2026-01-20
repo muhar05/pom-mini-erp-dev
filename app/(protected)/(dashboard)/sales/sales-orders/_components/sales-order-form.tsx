@@ -587,7 +587,7 @@ export default function SalesOrderForm({
           {/* Left Column: Basic Information */}
           <div className="lg:col-span-2 space-y-6">
             {/* Sales Order Information Card */}
-            <Card className="dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
@@ -750,7 +750,7 @@ export default function SalesOrderForm({
             </Card>
 
             {/* Bill of Quantity Card - sama seperti quotation */}
-            <Card className="dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
@@ -763,7 +763,7 @@ export default function SalesOrderForm({
             </Card>
 
             {/* Notes Card - sama seperti quotation */}
-            <Card className="dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
@@ -951,7 +951,7 @@ export default function SalesOrderForm({
             </Card>
 
             {/* Pricing Information Card - sama seperti quotation */}
-            <Card className="dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
@@ -1104,7 +1104,7 @@ export default function SalesOrderForm({
             </Card>
 
             {/* File Upload Card - KHUSUS SALES ORDER */}
-            <Card className="dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Upload className="w-5 h-5" />

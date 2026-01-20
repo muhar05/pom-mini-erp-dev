@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import { isSuperuser, isSales, isManagerSales } from "@/utils/leadHelpers";
 import { getAllSalesOrdersDb, createSalesOrderDb } from "@/data/sales-orders";
 
 // GET: Ambil semua sales orders
 export async function GET() {
   const session = await auth();
   const user = session?.user;
-  if (!user || (!isSuperuser(user) && !isSales(user))) {
+  if (!user || (!isSuperuser(user) && !isSales(user) && !isManagerSales(user))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -89,7 +89,7 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = await auth();
   const user = session?.user;
-  if (!user || (!isSuperuser(user) && !isSales(user))) {
+  if (!user || (!isSuperuser(user) && !isSales(user) && !isManagerSales(user))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

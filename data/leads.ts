@@ -1,21 +1,20 @@
 import { prisma } from "@/lib/prisma";
 import { users, leads } from "@/types/models";
-import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import { isSuperuser, isSales, isManagerSales } from "@/utils/leadHelpers";
 
-export interface CreateLeadInput
-  extends Omit<
-    leads,
-    | "id"
-    | "created_at"
-    | "users_leads_assigned_toTousers"
-    | "users_leads_id_userTousers"
-  > {}
+export interface CreateLeadInput extends Omit<
+  leads,
+  | "id"
+  | "created_at"
+  | "users_leads_assigned_toTousers"
+  | "users_leads_id_userTousers"
+> {}
 export interface UpdateLeadInput extends Partial<CreateLeadInput> {}
 
 // CREATE
 export async function createLeadDb(input: CreateLeadInput) {
   const cleanInput = Object.fromEntries(
-    Object.entries(input).filter(([_, value]) => value !== undefined)
+    Object.entries(input).filter(([_, value]) => value !== undefined),
   ) as CreateLeadInput;
 
   return prisma.leads.create({
@@ -26,7 +25,7 @@ export async function createLeadDb(input: CreateLeadInput) {
 // UPDATE
 export async function updateLeadDb(id: number, data: UpdateLeadInput) {
   const cleanData = Object.fromEntries(
-    Object.entries(data).filter(([_, value]) => value !== undefined)
+    Object.entries(data).filter(([_, value]) => value !== undefined),
   );
   return prisma.leads.update({
     where: { id },
@@ -55,9 +54,11 @@ export async function getLeadByIdDb(id: number) {
 }
 
 // GET ALL
-export async function getAllLeadsDb(user?: users | { id: string | number; role_name?: string }) {
+export async function getAllLeadsDb(
+  user?: users | { id: string | number; role_name?: string },
+) {
   if (!user) throw new Error("Unauthorized");
-  if (isSuperuser(user)) {
+  if (isSuperuser(user) || isManagerSales(user)) {
     return prisma.leads.findMany({
       include: {
         users_leads_assigned_toTousers: true,

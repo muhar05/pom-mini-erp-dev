@@ -105,11 +105,11 @@ export interface user_otp {
 
 // users
 export interface users {
-  id: number;
-  name: string;
-  email: string;
+  id: number | string;
+  name?: string | null;
+  email?: string | null;
   password_hash: string;
-  role_id?: number | null;
+  role_id?: number | string | null;
   created_at?: Date | null;
   leads_leads_assigned_toTousers?: leads[];
   leads_leads_id_userTousers?: leads[];

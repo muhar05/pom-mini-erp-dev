@@ -123,18 +123,37 @@ export async function updateQuotationAction(
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
+  // Ambil quotation dan lead terkait
+  const currentQuotation = await getQuotationByIdDb(id);
+  const leadId = currentQuotation.lead_id;
+  let lead = null;
+  if (leadId) {
+    lead = await prisma.leads.findUnique({ where: { id: Number(leadId) } });
+    if (!lead) throw new Error("Lead not found");
+    // Validasi: hanya sales yang sama boleh update
+    if (isSales(user) && Number(lead.id_user) !== Number(user.id)) {
+      throw new Error(
+        "Unauthorized: Only the owner sales can update this quotation.",
+      );
+    }
+  }
+
   try {
     // Get current quotation
     const currentQuotation = await getQuotationByIdDb(id);
 
     // Get permissions
     const permissions = getQuotationPermissions(user);
-    if (!permissions.canEdit) {
-      throw new Error("Insufficient permissions to edit quotation");
+
+    // Tambahkan pengecekan: jika superuser, override semua rules
+    const isSuper = isSuperuser(user);
+
+    if (!isSuper && !permissions.canEdit) {
+      throw new Error("Unauthorized");
     }
 
     // Validate status/stage changes if provided
-    if (data.status) {
+    if (!isSuper && data.status) {
       const newStatus = data.status || currentQuotation.status || "sq_draft";
 
       const validation = validateQuotationChange(
@@ -233,15 +252,30 @@ export async function deleteQuotationAction(formData: FormData) {
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
+  const id = Number(formData.get("id"));
+  if (!id) throw new Error("Quotation ID is required");
+
+  // Ambil quotation dan lead terkait
+  const quotation = await getQuotationByIdDb(id);
+  const leadId = quotation.lead_id;
+  let lead = null;
+  if (leadId) {
+    lead = await prisma.leads.findUnique({ where: { id: Number(leadId) } });
+    if (!lead) throw new Error("Lead not found");
+    // Validasi: hanya sales yang sama boleh delete
+    if (isSales(user) && Number(lead.id_user) !== Number(user.id)) {
+      throw new Error(
+        "Unauthorized: Only the owner sales can delete this quotation.",
+      );
+    }
+  }
+
   // Only superuser can delete
   if (!isSuperuser(user)) {
     throw new Error("Unauthorized");
   }
 
   try {
-    const id = Number(formData.get("id"));
-    if (!id) throw new Error("Quotation ID is required");
-
     // Use direct database call instead of fetch
     await deleteQuotationDb(id);
 
@@ -557,4 +591,136 @@ export async function generateQuotationNumberAction(): Promise<string> {
     console.error("Error generating quotation number:", error);
     throw new Error("Failed to generate quotation number");
   }
+}
+
+// Kirim ke manager sales untuk approval
+export async function submitQuotationForApprovalAction(id: number) {
+  const session = await auth();
+  const user = session?.user;
+  if (!user) throw new Error("Unauthorized");
+
+  // Ambil data quotation
+  const quotation = await getQuotationByIdDb(id);
+  if (!quotation) throw new Error("Quotation not found");
+
+  // Cek permission: hanya sales yang boleh submit approval
+  const permissions = getQuotationPermissions(user);
+  if (!permissions.canEdit) throw new Error("Anda tidak punya akses");
+
+  // Cek status: hanya draft yang bisa dikirim
+  if (!quotation.status || quotation.status.toLowerCase() !== "sq_draft") {
+    throw new Error(
+      "Quotation hanya bisa dikirim ke approval dari status draft",
+    );
+  }
+
+  // Update status ke waiting_approval (atau status lain sesuai sistem Anda)
+  const updateData: any = {
+    status: "sq_waiting_approval",
+  };
+
+  // Tambah revisi jika perlu
+  const oldRevision =
+    typeof quotation.revision_no === "number" ? quotation.revision_no : 0;
+  updateData.revision_no = oldRevision + 1;
+
+  // Update quotation
+  const updated = await updateQuotationDb(id, updateData);
+
+  // Convert Decimal fields to numbers for client compatibility
+  const safeQuotation = {
+    ...updated,
+    total: updated.total ? Number(updated.total) : 0,
+    shipping: updated.shipping ? Number(updated.shipping) : 0,
+    discount: updated.discount ? Number(updated.discount) : 0,
+    tax: updated.tax ? Number(updated.tax) : 0,
+    grand_total: updated.grand_total ? Number(updated.grand_total) : 0,
+  };
+
+  revalidatePath("/sales/quotations");
+  return {
+    success: true,
+    message: "Quotation berhasil dikirim ke manager sales untuk approval",
+    data: safeQuotation, // <--- sudah plain object
+  };
+}
+
+// Approve quotation (manager sales)
+export async function approveQuotationAction(id: number, note?: string) {
+  const session = await auth();
+  const user = session?.user as users | undefined;
+  if (!user) throw new Error("Unauthorized");
+
+  // Ambil quotation
+  const quotation = await getQuotationByIdDb(id);
+  if (!quotation) throw new Error("Quotation not found");
+
+  // Hanya manager sales atau superuser yang boleh approve
+  const permissions = getQuotationPermissions(user);
+  if (!permissions.canApprove) throw new Error("Unauthorized");
+
+  // Update status ke approved
+  const updateData: any = {
+    status: "sq_approved",
+    note: note
+      ? `${quotation.note ? quotation.note + "\n" : ""}${note}`
+      : quotation.note,
+    revision_no: (quotation.revision_no ?? 0) + 1,
+  };
+
+  const updated = await updateQuotationDb(id, updateData);
+
+  revalidatePath("/sales/quotations");
+  return {
+    success: true,
+    message: "Quotation approved successfully",
+    data: {
+      ...updated,
+      total: updated.total ? Number(updated.total) : 0,
+      shipping: updated.shipping ? Number(updated.shipping) : 0,
+      discount: updated.discount ? Number(updated.discount) : 0,
+      tax: updated.tax ? Number(updated.tax) : 0,
+      grand_total: updated.grand_total ? Number(updated.grand_total) : 0,
+    },
+  };
+}
+
+// Reject quotation (manager sales)
+export async function rejectQuotationAction(id: number, note?: string) {
+  const session = await auth();
+  const user = session?.user as users | undefined;
+  if (!user) throw new Error("Unauthorized");
+
+  // Ambil quotation
+  const quotation = await getQuotationByIdDb(id);
+  if (!quotation) throw new Error("Quotation not found");
+
+  // Hanya manager sales atau superuser yang boleh reject
+  const permissions = getQuotationPermissions(user);
+  if (!permissions.canApprove) throw new Error("Unauthorized");
+
+  // Update status ke rejected
+  const updateData: any = {
+    status: "sq_rejected",
+    note: note
+      ? `${quotation.note ? quotation.note + "\n" : ""}${note}`
+      : quotation.note,
+    revision_no: (quotation.revision_no ?? 0) + 1,
+  };
+
+  const updated = await updateQuotationDb(id, updateData);
+
+  revalidatePath("/sales/quotations");
+  return {
+    success: true,
+    message: "Quotation rejected successfully",
+    data: {
+      ...updated,
+      total: updated.total ? Number(updated.total) : 0,
+      shipping: updated.shipping ? Number(updated.shipping) : 0,
+      discount: updated.discount ? Number(updated.discount) : 0,
+      tax: updated.tax ? Number(updated.tax) : 0,
+      grand_total: updated.grand_total ? Number(updated.grand_total) : 0,
+    },
+  };
 }

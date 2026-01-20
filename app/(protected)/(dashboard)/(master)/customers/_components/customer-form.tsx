@@ -133,7 +133,7 @@ export default function CustomerForm({
   };
 
   return (
-    <Card className="w-full mx-auto dark:bg-gray-800">
+    <Card className="mx-auto">
       <CardHeader>
         <CardTitle>
           {mode === "add" ? "Add New Customer" : "Edit Customer"}

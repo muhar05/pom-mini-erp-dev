@@ -19,6 +19,7 @@ import { useCustomerById } from "@/hooks/customers/useCustomerById";
 import { PrintButton } from "@/components/quotations/PrintButton";
 import QuotationDetailSkeleton from "../_components/quotationDetailSkeleton";
 import { usePaymentTermById } from "@/hooks/payment-terms/usePaymentTerms";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 function getStatusBadgeClass(status: string): string {
   switch (status?.toLowerCase()) {
@@ -108,13 +109,6 @@ export default function QuotationDetailPage() {
   const afterAllDiscount = afterDiscount2 - additionalDiscountAmount;
   const tax = afterAllDiscount * 0.11;
   const grandTotal = afterAllDiscount + tax;
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(amount || 0);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";
@@ -362,7 +356,7 @@ export default function QuotationDetailPage() {
 
           {/* Middle: BOQ Table */}
           <div className="lg:col-span-2 space-y-6">
-            <Card className="dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
@@ -407,7 +401,7 @@ export default function QuotationDetailPage() {
             </Card>
 
             {/* Pricing Summary */}
-            <Card className="dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
@@ -435,20 +429,20 @@ export default function QuotationDetailPage() {
                   </div>
                   {companyLevelDiscount1 > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-blue-700">
+                      <span className="text-sm dark:text-white">
                         Diskon 1 ({companyLevelDiscount1}%)
                       </span>
-                      <span className="font-medium text-blue-700">
+                      <span className="font-medium dark:text-white">
                         -{formatCurrency(discount1Amount)}
                       </span>
                     </div>
                   )}
                   {companyLevelDiscount2 > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-purple-700">
+                      <span className="text-sm dark:text-white">
                         Diskon 2 ({companyLevelDiscount2}%)
                       </span>
-                      <span className="font-medium text-purple-700">
+                      <span className="font-medium dark:text-white">
                         -{formatCurrency(discount2Amount)}
                       </span>
                     </div>
@@ -463,14 +457,16 @@ export default function QuotationDetailPage() {
                       </span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Additional Discount ({additionalDiscountPercent}%)
-                    </span>
-                    <span className="font-medium text-red-600">
-                      -{formatCurrency(additionalDiscountAmount)}
-                    </span>
-                  </div>
+                  {additionalDiscountPercent > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        Additional Discount ({additionalDiscountPercent}%)
+                      </span>
+                      <span className="font-medium text-red-600">
+                        -{formatCurrency(additionalDiscountAmount)}
+                      </span>
+                    </div>
+                  )}
                   {(companyLevelDiscount1 > 0 ||
                     companyLevelDiscount2 > 0 ||
                     additionalDiscountPercent > 0) && (

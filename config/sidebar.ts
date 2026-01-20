@@ -193,7 +193,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       title: "Settings",
       icon: Settings,
       items: [
-        { title: "Company", url: "/settings/company", icon: Building2 },
+        { title: "Company", url: "/companies", icon: Building2 },
         {
           title: "Term of Payment",
           url: "/settings/term-of-payment",
@@ -207,9 +207,17 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
     {
       title: "Dashboard",
       icon: LayoutDashboard,
+      items: [{ title: "Manager Sales", url: "/dashboard/manager-sales" }],
+    },
+    {
+      title: "Pending Task",
+      icon: FileText,
       items: [
-        { title: "CRM", url: "/dashboard/crm" },
-        { title: "Sales", url: "/dashboard/sales" },
+        {
+          title: "Pending Task",
+          url: "/manager-sales/pending-task",
+          icon: FileText,
+        },
       ],
     },
     {
@@ -234,18 +242,18 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
           url: "/sales/sales-orders",
           icon: ShoppingCart,
         },
-        {
-          title: "Term of Payment",
-          url: "/sales/term-of-payment",
-          icon: Banknote,
-        },
       ],
     },
     {
-      title: "Pending Task",
-      icon: FileText,
+      title: "Settings",
+      icon: Settings,
       items: [
-        { title: "Pending Task", url: "/sales/pending-task", icon: FileText },
+        { title: "Company", url: "/companies", icon: Building2 },
+        {
+          title: "Term of Payment",
+          url: "/settings/term-of-payment",
+          icon: Banknote,
+        },
       ],
     },
   ],

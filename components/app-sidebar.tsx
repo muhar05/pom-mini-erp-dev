@@ -96,6 +96,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     "3": "warehouse",
     "4": "finance",
     "5": "purchasing",
+    "6": "manager_sales",
   };
 
   const roleName = roleMap[session?.user?.role_id ?? "2"];

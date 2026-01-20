@@ -53,7 +53,7 @@ export default function NewUserPage() {
       </div>
 
       {/* Form Card */}
-      <Card className="max-w-2xl">
+      <Card>
         <CardHeader>
           <CardTitle>User Information</CardTitle>
         </CardHeader>

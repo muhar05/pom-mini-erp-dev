@@ -38,7 +38,7 @@ export default async function ManageRolesPage() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="dark:bg-gray-800">
+          <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -56,7 +56,7 @@ export default async function ManageRolesPage() {
         </div>
 
         {/* Roles Table Card */}
-        <Card className="dark:bg-gray-800">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2 dark:text-gray-100">
               <UserCog className="w-5 h-5" />

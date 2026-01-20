@@ -4,7 +4,7 @@ import { users, leads } from "@/types/models";
 import { prisma } from "@/lib/prisma";
 
 // Re-export client-safe functions
-export { isSuperuser, isSales, type UserLike } from "./userHelpers";
+export { isSuperuser, isSales, isManagerSales, type UserLike } from "./userHelpers";
 
 // Server-side only functions
 export async function logLeadActivity(

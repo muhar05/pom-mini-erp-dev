@@ -85,7 +85,7 @@ export type SaleOrderDetailItem = z.infer<typeof saleOrderDetailItemSchema>;
 // Helper function untuk validasi FormData atau object
 export function validateSalesOrderFormData(
   formData: FormData | Record<string, any>,
-  mode: "create" | "update"
+  mode: "create" | "update",
 ) {
   let data: Record<string, any> = {};
 
@@ -100,7 +100,7 @@ export function validateSalesOrderFormData(
           // Handle numeric fields
           if (
             ["total", "shipping", "discount", "tax", "grand_total"].includes(
-              key
+              key,
             )
           ) {
             const numValue = Number(trimmedValue);
@@ -157,7 +157,6 @@ export async function createSalesOrderDb(input: CreateSalesOrderInput) {
   // Helper to convert Decimal fields
   const convertCompanyLevel = (companyLevel: any) => {
     if (!companyLevel) return null;
-    // JANGAN gunakan ...companyLevel, definisikan eksplisit
     return {
       id_level: companyLevel.id_level,
       level_name: companyLevel.level_name,
@@ -213,7 +212,7 @@ export async function createSalesOrderDb(input: CreateSalesOrderInput) {
 // UPDATE
 export async function updateSalesOrderDb(
   id: string,
-  data: UpdateSalesOrderInput
+  data: UpdateSalesOrderInput,
 ) {
   const salesOrder = await prisma.sales_orders.update({
     where: { id: BigInt(id) },
@@ -231,7 +230,6 @@ export async function updateSalesOrderDb(
   // Helper to convert Decimal fields
   const convertCompanyLevel = (companyLevel: any) => {
     if (!companyLevel) return null;
-    // JANGAN gunakan ...companyLevel, definisikan eksplisit
     return {
       id_level: companyLevel.id_level,
       level_name: companyLevel.level_name,
@@ -294,31 +292,13 @@ export async function deleteSalesOrderDb(id: string) {
 // GET BY ID
 export async function getSalesOrderByIdDb(id: string) {
   const salesOrder = await prisma.sales_orders.findUnique({
-    where: { id: BigInt(id) },
+    where: { id: Number(id) },
     include: {
-      quotation: {
-        include: {
-          customer: {
-            include: {
-              company: {
-                include: {
-                  company_level: true,
-                },
-              },
-            },
-          },
-        },
-      },
-      customers: {
-        include: {
-          company: {
-            include: {
-              company_level: true,
-            },
-          },
-        },
-      },
       sale_order_detail: true,
+      customers: true,
+      quotation: {
+        include: { customer: true },
+      },
       user: true,
     },
   });
@@ -393,7 +373,6 @@ export async function getSalesOrderByIdDb(id: string) {
         status: salesOrder.quotation.status,
         note: salesOrder.quotation.note,
         target_date: salesOrder.quotation.target_date,
-        top: salesOrder.quotation.top,
         created_at: salesOrder.quotation.created_at,
         updated_at: salesOrder.quotation.updated_at,
         customer: convertCustomer(salesOrder.quotation.customer),
@@ -407,7 +386,7 @@ export async function getSalesOrderByIdDb(id: string) {
                 quantity: item.quantity ? Number(item.quantity) : 0,
                 qty: item.qty ? Number(item.qty) : 0,
                 total: item.total ? Number(item.total) : 0,
-              })
+              }),
             )
           : [],
       }
@@ -427,7 +406,6 @@ export async function getSalesOrderByIdDb(id: string) {
       }))
     : [];
 
-  // Convert user to safe format
   const safeUser = salesOrder.user
     ? {
         id: salesOrder.user.id,

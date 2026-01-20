@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import { isSuperuser, isSales, isManagerSales } from "@/utils/leadHelpers";
 import { getAllQuotationsDb, createQuotationDb } from "@/data/quotations";
 
 // GET: Ambil semua quotations
 export async function GET() {
   const session = await auth();
   const user = session?.user;
-  if (!user || (!isSuperuser(user) && !isSales(user))) {
+  if (
+    !user ||
+    (!isSuperuser(user) && !isSales(user) && !isManagerSales(user))
+  ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -29,7 +32,7 @@ export async function GET() {
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch quotations" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -38,7 +41,10 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = await auth();
   const user = session?.user;
-  if (!user || (!isSuperuser(user) && !isSales(user))) {
+  if (
+    !user ||
+    (!isSuperuser(user) && !isSales(user) && !isManagerSales(user))
+  ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -65,7 +71,7 @@ export async function POST(req: Request) {
     console.error("Quotation creation error:", error);
     return NextResponse.json(
       { error: "Failed to create quotation" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 }

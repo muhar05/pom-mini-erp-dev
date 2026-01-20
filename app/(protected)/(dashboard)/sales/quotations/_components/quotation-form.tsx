@@ -18,6 +18,7 @@ import {
   createQuotationAction,
   generateQuotationNumberAction,
   updateQuotationAction,
+  submitQuotationForApprovalAction,
 } from "@/app/actions/quotations";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,14 @@ import {
 import { useCustomerById } from "@/hooks/customers/useCustomerById";
 import { usePaymentTerms } from "@/hooks/payment-terms/usePaymentTerms";
 import { Skeleton } from "@/components/ui/skeleton"; // pastikan ada komponen ini
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 // 1. Ubah type Quotation (atau buat type baru)
 type QuotationFormData = {
@@ -100,7 +109,7 @@ export default function QuotationForm({
   onSuccess,
 }: QuotationFormProps) {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
 
   // Call useSession at the top level (correct hook usage)
   const session = useSession();
@@ -282,9 +291,15 @@ export default function QuotationForm({
     setLoading(true);
 
     try {
+      // Hitung ulang pricing sebelum submit
+      const pricing = calculatePricing();
       const changedFields = getChangedFields();
 
-      // Jika pricing berubah, pastikan tax & grand_total ikut dikirim
+      // Pastikan pricing yang dikirim ke BE adalah hasil kalkulasi terakhir
+      changedFields.total = pricing.total;
+      changedFields.tax = pricing.tax;
+      changedFields.grand_total = pricing.grand_total;
+
       // Pastikan payment_term_id dikirim jika berubah
       if (formData.payment_term_id !== originalData.payment_term_id) {
         changedFields.payment_term_id = formData.payment_term_id;
@@ -306,6 +321,28 @@ export default function QuotationForm({
       toast.error("Error: " + (error as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Tambahkan handler baru:
+  const handleSubmitForApprovalDialog = async () => {
+    setLoading(true);
+    try {
+      const result = await submitQuotationForApprovalAction(
+        Number(quotation.id),
+      );
+      if (result?.success) {
+        toast.success("Quotation dikirim untuk approval Manager Sales");
+        setIsDirty(false);
+        if (onSuccess) onSuccess();
+      } else {
+        toast.error(result?.message || "Gagal mengirim untuk approval");
+      }
+    } catch (error) {
+      toast.error("Error: " + (error as Error).message);
+    } finally {
+      setLoading(false);
+      setShowApprovalDialog(false);
     }
   };
 
@@ -354,14 +391,63 @@ export default function QuotationForm({
     );
   };
 
-  // Validate status change on client side
+  const userRole = user ? getUserRole(user) : "";
+
+  const salesApprovedStatus: string[] = [
+    QUOTATION_STATUSES.SENT,
+    QUOTATION_STATUSES.WIN,
+    QUOTATION_STATUSES.LOST,
+    QUOTATION_STATUSES.CONVERTED,
+  ];
+
+  // Filter status options for sales after approved
+  const getSalesApprovedOptions = () =>
+    SQ_STATUS_OPTIONS.filter((opt) => salesApprovedStatus.includes(opt.value));
+
+  const managerWaitingApprovalStatus = [
+    QUOTATION_STATUSES.REVIEW,
+    QUOTATION_STATUSES.APPROVED,
+  ] as string[];
+
+  const getManagerWaitingApprovalOptions = () =>
+    SQ_STATUS_OPTIONS.filter((opt) =>
+      managerWaitingApprovalStatus.includes(opt.value),
+    );
+
+  // Custom validation for status change
   const handleStatusChange = (newStatus: string) => {
     if (!user) return;
 
-    const statusCheck = canChangeStatus(user, formData.status, newStatus);
-    if (!statusCheck.allowed) {
-      toast.error(statusCheck.message || "Cannot change to this status");
-      return;
+    // SALES VALIDATION
+    if (userRole === "sales") {
+      if (
+        (formData.status === QUOTATION_STATUSES.DRAFT &&
+          newStatus === QUOTATION_STATUSES.APPROVED) ||
+        (formData.status === QUOTATION_STATUSES.WAITING_APPROVAL &&
+          newStatus === QUOTATION_STATUSES.APPROVED) ||
+        (formData.status === QUOTATION_STATUSES.REVIEW &&
+          newStatus === QUOTATION_STATUSES.APPROVED)
+      ) {
+        toast.error(
+          "Sales tidak boleh mengubah status ke Approved dari status ini.",
+        );
+        return;
+      }
+    }
+
+    // MANAGER VALIDATION
+    if (userRole === "manager-sales") {
+      if (
+        (formData.status === QUOTATION_STATUSES.APPROVED &&
+          newStatus === QUOTATION_STATUSES.SENT) ||
+        (formData.status === QUOTATION_STATUSES.SENT &&
+          newStatus === QUOTATION_STATUSES.WIN)
+      ) {
+        toast.error(
+          "Manager Sales tidak boleh mengubah status ke Sent dari Approved atau ke Win dari Sent.",
+        );
+        return;
+      }
     }
 
     handleInputChange("status", newStatus);
@@ -446,6 +532,12 @@ export default function QuotationForm({
     }));
   };
 
+  const isSuper = user && getUserRole(user) === "superuser";
+  const isFormDisabled =
+    !isSuper &&
+    (formData.status?.toLowerCase() === "sq_waiting_approval" ||
+      formData.status?.toLowerCase() === "sq_converted");
+
   return (
     <div className="w-full mx-auto py-4 space-y-6">
       {/* Header */}
@@ -507,7 +599,7 @@ export default function QuotationForm({
           {/* Kolom Kiri: Basic Information */}
           <div className="lg:col-span-2 space-y-6">
             {/* Quotation Information Card */}
-            <Card className="dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
@@ -535,7 +627,7 @@ export default function QuotationForm({
                           ? "Generating..."
                           : "Auto-generated"
                       }
-                      disabled={true}
+                      disabled={true || isFormDisabled}
                       required
                       className="font-mono"
                     />
@@ -548,21 +640,83 @@ export default function QuotationForm({
 
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
-                    <Select
-                      value={formData.status}
-                      onValueChange={handleStatusChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getAvailableStatusOptions().map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {userRole === "sales" ? (
+                      // Jika status sudah approved, tampilkan dropdown terbatas
+                      formData.status === QUOTATION_STATUSES.APPROVED ? (
+                        <Select
+                          value={formData.status}
+                          onValueChange={handleStatusChange}
+                          disabled={isFormDisabled}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getSalesApprovedOptions().map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        // Selain itu, readonly
+                        <Input
+                          id="status"
+                          value={
+                            getAvailableStatusOptions().find(
+                              (opt) => opt.value === formData.status,
+                            )?.label || formData.status
+                          }
+                          disabled={true || isFormDisabled}
+                          className="bg-gray-100 dark:bg-gray-800/40"
+                        />
+                      )
+                    ) : userRole === "manager-sales" &&
+                      [
+                        QUOTATION_STATUSES.WAITING_APPROVAL,
+                        QUOTATION_STATUSES.REVIEW,
+                      ]
+                        .map(String)
+                        .includes(formData.status) ? (
+                      <Select
+                        value={formData.status}
+                        onValueChange={handleStatusChange}
+                        disabled={isFormDisabled}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getManagerWaitingApprovalOptions().map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      // Default: dropdown semua allowedStatuses
+                      <Select
+                        value={formData.status}
+                        onValueChange={handleStatusChange}
+                        disabled={isFormDisabled}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getAvailableStatusOptions().map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 </div>
 
@@ -583,6 +737,7 @@ export default function QuotationForm({
                             "w-full justify-start text-left font-normal",
                             !formData.target_date && "text-muted-foreground",
                           )}
+                          disabled={isFormDisabled}
                         >
                           <Calendar className="mr-2 h-4 w-4" />
                           {formData.target_date ? (
@@ -624,7 +779,7 @@ export default function QuotationForm({
                         }));
                         setIsDirty(true); // <-- Tambahkan ini agar tombol update aktif jika payment term berubah
                       }}
-                      disabled={paymentTermsLoading}
+                      disabled={paymentTermsLoading || isFormDisabled}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih Terms of Payment" />
@@ -643,7 +798,7 @@ export default function QuotationForm({
             </Card>
 
             {/* Bill of Quantity Card */}
-            <Card className="dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
@@ -651,12 +806,16 @@ export default function QuotationForm({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <BoqTable items={boqItems} onChange={handleBoqChange} />
+                <BoqTable
+                  items={boqItems}
+                  onChange={handleBoqChange}
+                  disabled={isFormDisabled}
+                />
               </CardContent>
             </Card>
 
             {/* Notes Card */}
-            <Card className="dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
@@ -670,6 +829,7 @@ export default function QuotationForm({
                   onChange={(e) => handleInputChange("note", e.target.value)}
                   placeholder="Add any additional notes or comments here..."
                   rows={4}
+                  disabled={isFormDisabled}
                 />
               </CardContent>
             </Card>
@@ -703,6 +863,7 @@ export default function QuotationForm({
                           handleCustomerChange(value);
                           setIsCustomerEditMode(false);
                         }}
+                        disabled={isFormDisabled}
                       >
                         <SelectTrigger className="h-11 dark:border-gray-600 dark:bg-gray-900 w-full">
                           <SelectValue placeholder="Pilih customer" />
@@ -839,6 +1000,7 @@ export default function QuotationForm({
                         size="sm"
                         className="mb-2"
                         onClick={() => setIsCustomerEditMode(true)}
+                        disabled={isFormDisabled}
                       >
                         Edit Customer
                       </Button>
@@ -848,7 +1010,7 @@ export default function QuotationForm({
             </Card>
 
             {/* Pricing Information Card */}
-            <Card className="dark:bg-gray-800">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
@@ -938,6 +1100,7 @@ export default function QuotationForm({
                             min="0"
                             max="100"
                             step="0.01"
+                            disabled={isFormDisabled}
                           />
                         </div>
                         {additionalDiscountPercent > 0 && (
@@ -1024,7 +1187,11 @@ export default function QuotationForm({
           <Button
             type="submit"
             disabled={
-              loading || generatingQuotationNo || !isFormValid || !isDirty
+              loading ||
+              generatingQuotationNo ||
+              !isFormValid ||
+              !isDirty ||
+              isFormDisabled
             }
             className="min-w-[150px]"
           >
@@ -1037,6 +1204,63 @@ export default function QuotationForm({
               "Update Quotation"
             )}
           </Button>
+          {/* Tombol Kirim untuk approval, hanya tampil jika sales & status draft */}
+          {user &&
+            getUserRole(user) === "sales" &&
+            formData.status?.toLowerCase() === "sq_draft" && (
+              <>
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => setShowApprovalDialog(true)}
+                  disabled={
+                    loading ||
+                    generatingQuotationNo ||
+                    !isFormValid ||
+                    isFormDisabled
+                  }
+                  className="min-w-[200px] bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {loading
+                    ? "Mengirim..."
+                    : "Kirim untuk di-approve Manager Sales"}
+                </Button>
+                <Dialog
+                  open={showApprovalDialog}
+                  onOpenChange={setShowApprovalDialog}
+                >
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Konfirmasi Kirim Approval</DialogTitle>
+                    </DialogHeader>
+                    <div>
+                      Apakah Anda yakin ingin mengirim quotation ini untuk
+                      di-approve Manager Sales?
+                    </div>
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowApprovalDialog(false)}
+                        >
+                          Batal
+                        </Button>
+                      </DialogClose>
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={handleSubmitForApprovalDialog}
+                        disabled={loading}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {loading ? "Mengirim..." : "Kirim"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </>
+            )}
         </div>
       </form>
     </div>

@@ -106,7 +106,7 @@ export default function TermOfPaymentManager() {
   };
 
   return (
-    <Card className="dark:bg-gray-800">
+    <Card>
       <CardHeader>
         <CardTitle>Manajemen Term of Payment</CardTitle>
       </CardHeader>

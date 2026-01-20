@@ -30,9 +30,10 @@ export type BoqItem = {
 interface BoqTableProps {
   items: BoqItem[];
   onChange: (items: BoqItem[]) => void;
+  disabled?: boolean; // Tambahkan ini
 }
 
-export default function BoqTable({ items, onChange }: BoqTableProps) {
+export default function BoqTable({ items, onChange, disabled }: BoqTableProps) {
   const [editing, setEditing] = useState<null | number>(null);
   const [drafts, setDrafts] = useState<BoqItem[]>([]);
   const [productOptions, setProductOptions] = useState<
@@ -83,7 +84,7 @@ export default function BoqTable({ items, onChange }: BoqTableProps) {
               ...(field === "product_id"
                 ? (() => {
                     const selected = productOptions.find(
-                      (p) => Number(p.value) === value
+                      (p) => Number(p.value) === value,
                     );
                     return {
                       product_name: selected?.label || "",
@@ -94,8 +95,8 @@ export default function BoqTable({ items, onChange }: BoqTableProps) {
                   })()
                 : {}),
             }
-          : item
-      )
+          : item,
+      ),
     );
   };
 
@@ -103,7 +104,7 @@ export default function BoqTable({ items, onChange }: BoqTableProps) {
   const handleSaveAll = () => {
     const validDrafts = drafts.filter(
       (d) =>
-        d.product_id && d.product_name && d.quantity > 0 && d.unit_price >= 0
+        d.product_id && d.product_name && d.quantity > 0 && d.unit_price >= 0,
     );
     onChange([...items, ...validDrafts]);
     setDrafts([]);
@@ -145,14 +146,19 @@ export default function BoqTable({ items, onChange }: BoqTableProps) {
 
   const subtotal = items.reduce(
     (sum, item) => sum + item.unit_price * item.quantity,
-    0
+    0,
   );
 
   return (
     <div>
       <div className="mb-2 flex gap-2">
         <div className="flex w-full justify-end">
-          <Button type="button" onClick={handleAddRow} variant="outline">
+          <Button
+            type="button"
+            onClick={handleAddRow}
+            variant="outline"
+            disabled={disabled}
+          >
             Add
           </Button>
         </div>
@@ -162,11 +168,12 @@ export default function BoqTable({ items, onChange }: BoqTableProps) {
               !d.product_id ||
               !d.product_name ||
               d.quantity <= 0 ||
-              d.unit_price < 0
+              d.unit_price < 0,
           ) && (
             <Button
               type="button"
               onClick={editing === null ? handleSaveAll : handleSaveEdit}
+              disabled={disabled}
             >
               Save
             </Button>
@@ -177,6 +184,7 @@ export default function BoqTable({ items, onChange }: BoqTableProps) {
             variant="outline"
             onClick={handleCancel}
             className="ml-2"
+            disabled={disabled}
           >
             Cancel
           </Button>
@@ -223,6 +231,7 @@ export default function BoqTable({ items, onChange }: BoqTableProps) {
                   onChange={(e) =>
                     handleDraftChange(idx, "quantity", Number(e.target.value))
                   }
+                  disabled={disabled}
                 />
               </TableCell>
               <TableCell>
@@ -254,7 +263,7 @@ export default function BoqTable({ items, onChange }: BoqTableProps) {
                   type="button"
                   size="sm"
                   onClick={() => handleEdit(idx)}
-                  disabled={drafts.length > 0}
+                  disabled={drafts.length > 0 || disabled}
                 >
                   Edit
                 </Button>
@@ -263,7 +272,7 @@ export default function BoqTable({ items, onChange }: BoqTableProps) {
                   size="sm"
                   variant="destructive"
                   onClick={() => handleDelete(idx)}
-                  disabled={drafts.length > 0}
+                  disabled={drafts.length > 0 || disabled}
                 >
                   Delete
                 </Button>

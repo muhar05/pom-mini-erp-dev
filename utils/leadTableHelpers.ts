@@ -73,23 +73,26 @@ export function getStatusBadgeClass(status: string | null | undefined): string {
 
 // Filter function
 export function filterLeads(
-  leads: leads[],
+  leads: leads[] | undefined | null,
   filters?: {
     search?: string;
     status?: string;
     dateFrom?: string;
     dateTo?: string;
-  }
+  },
 ): leads[] {
   const validStatuses = Object.values(LEAD_STATUSES) as string[];
 
+  // Pastikan leads adalah array
+  const leadsArray = Array.isArray(leads) ? leads : [];
+
   if (!filters) {
-    return leads.filter(
-      (lead) => lead.status && validStatuses.includes(lead.status)
+    return leadsArray.filter(
+      (lead) => lead.status && validStatuses.includes(lead.status),
     );
   }
 
-  return leads.filter((lead) => {
+  return leadsArray.filter((lead) => {
     if (!lead.status || !validStatuses.includes(lead.status)) return false;
 
     if (filters.search) {

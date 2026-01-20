@@ -80,7 +80,7 @@ export default function EditCompanyLevelPage({
       </div>
 
       {/* Form Card */}
-      <Card className="dark:bg-gray-800 dark:border-gray-700">
+      <Card className="dark:border-gray-700">
         <CardHeader>
           <CardTitle className="dark:text-gray-100">
             Company Level Information

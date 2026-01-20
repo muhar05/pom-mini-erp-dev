@@ -1,16 +1,21 @@
 "use client";
 
+import CrmStatCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/crm-stat-card";
+import QuotationStatusChart from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/quotation-status-chart";
+import SalesOrderStatusChart from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/sales-order-status-chart";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import { useDashboardSales } from "@/hooks/dashboard/useDashboardSales";
+import { useDashboardManagerSales } from "@/hooks/dashboard/useDashboardManagerSales";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import StatCard, {
   StatCardData,
 } from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/stat-card";
 import { Wallet, FileText, Medal } from "lucide-react";
+import LoadingSkeleton from "@/components/loading-skeleton";
+import { Suspense } from "react";
 
-export default function DashboardSales() {
-  const { data, loading, error, refetch } = useDashboardSales();
+export default function DashboardManagerSales() {
+  const { data, loading, error, refetch } = useDashboardManagerSales();
 
   // Siapkan data untuk StatCard
   const statCards: StatCardData[] = [
@@ -40,7 +45,6 @@ export default function DashboardSales() {
     },
   ];
 
-  // Tambahkan komponen skeleton
   function StatCardSkeleton() {
     return (
       <div className="animate-pulse flex flex-col gap-2">
@@ -100,7 +104,7 @@ export default function DashboardSales() {
       <>
         <Card>
           <CardHeader>
-            <CardTitle>Dashboard Sales</CardTitle>
+            <CardTitle>Dashboard Manager Sales</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -119,7 +123,7 @@ export default function DashboardSales() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Dashboard Sales</CardTitle>
+          <CardTitle>Dashboard Manager Sales</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="py-8 text-center text-red-500">{error}</div>
@@ -135,7 +139,7 @@ export default function DashboardSales() {
 
   return (
     <>
-      <DashboardBreadcrumb title="Dashboard Sales" text="Dashboard" />
+      <DashboardBreadcrumb title="Dashboard Manager Sales" text="Dashboard" />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <StatCard data={statCards} />

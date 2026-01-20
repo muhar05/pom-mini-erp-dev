@@ -49,6 +49,13 @@ export interface SalesOrder {
     total?: number | null;
     status?: string | null;
   }[];
+  user?: {
+    id: number | string;
+    name?: string | null;
+    email?: string | null;
+    role_id?: number | string | null;
+    created_at?: Date | null;
+  } | null;
 }
 
 export function useSalesOrders() {
