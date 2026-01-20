@@ -73,7 +73,7 @@ export default function EditUserForm({ user, roles }: EditUserFormProps) {
                 id="name"
                 name="name"
                 type="text"
-                defaultValue={user.name}
+                defaultValue={user.name ?? ""}
                 placeholder="Enter full name"
                 required
                 disabled={isPending}
@@ -87,7 +87,7 @@ export default function EditUserForm({ user, roles }: EditUserFormProps) {
                 id="email"
                 name="email"
                 type="email"
-                defaultValue={user.email}
+                defaultValue={user.email ?? ""}
                 placeholder="Enter email address"
                 required
                 disabled={isPending}
