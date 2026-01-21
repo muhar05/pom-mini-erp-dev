@@ -1208,7 +1208,7 @@ export default function QuotationForm({
           {user &&
             getUserRole(user) === "sales" &&
             ["sq_draft", "sq_revised"].includes(
-              formData.status?.toLowerCase?.() || "",
+              formData.status?.toLowerCase() || "",
             ) && (
               <>
                 <Button
