@@ -535,8 +535,22 @@ export default function QuotationForm({
   const isSuper = user && getUserRole(user) === "superuser";
   const isFormDisabled =
     !isSuper &&
-    (formData.status?.toLowerCase() === "sq_waiting_approval" ||
-      formData.status?.toLowerCase() === "sq_converted");
+    userRole !== "sales" &&
+    (formData.status === "sq_waiting_approval" ||
+      formData.status === "sq_converted");
+
+  const salesEditableStatuses = [
+    QUOTATION_STATUSES.APPROVED,
+    QUOTATION_STATUSES.SENT,
+    QUOTATION_STATUSES.WIN,
+    QUOTATION_STATUSES.LOST,
+    QUOTATION_STATUSES.CONVERTED,
+  ] as string[];
+
+  const managerEditableStatuses = [
+    QUOTATION_STATUSES.WAITING_APPROVAL,
+    QUOTATION_STATUSES.REVIEW,
+  ] as string[];
 
   return (
     <div className="w-full mx-auto py-4 space-y-6">
@@ -638,11 +652,14 @@ export default function QuotationForm({
                     )}
                   </div>
 
+                  {/* STATUS FIELD */}
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
+
+                    {/* ===== SALES ===== */}
                     {userRole === "sales" ? (
-                      // Jika status sudah approved, tampilkan dropdown terbatas
-                      formData.status === QUOTATION_STATUSES.APPROVED ? (
+                      salesEditableStatuses.includes(formData.status) ? (
+                        /* Sales boleh update setelah approved */
                         <Select
                           value={formData.status}
                           onValueChange={handleStatusChange}
@@ -663,7 +680,7 @@ export default function QuotationForm({
                           </SelectContent>
                         </Select>
                       ) : (
-                        // Selain itu, readonly
+                        /* Selain itu readonly */
                         <Input
                           id="status"
                           value={
@@ -671,17 +688,13 @@ export default function QuotationForm({
                               (opt) => opt.value === formData.status,
                             )?.label || formData.status
                           }
-                          disabled={true || isFormDisabled}
+                          disabled
                           className="bg-gray-100 dark:bg-gray-800/40"
                         />
                       )
-                    ) : userRole === "manager-sales" &&
-                      [
-                        QUOTATION_STATUSES.WAITING_APPROVAL,
-                        QUOTATION_STATUSES.REVIEW,
-                      ]
-                        .map(String)
-                        .includes(formData.status) ? (
+                    ) : /* ===== MANAGER SALES ===== */
+                    userRole === "manager-sales" &&
+                      managerEditableStatuses.includes(formData.status) ? (
                       <Select
                         value={formData.status}
                         onValueChange={handleStatusChange}
@@ -699,7 +712,7 @@ export default function QuotationForm({
                         </SelectContent>
                       </Select>
                     ) : (
-                      // Default: dropdown semua allowedStatuses
+                      /* ===== DEFAULT (SUPERUSER DLL) ===== */
                       <Select
                         value={formData.status}
                         onValueChange={handleStatusChange}

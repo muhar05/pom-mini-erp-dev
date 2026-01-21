@@ -250,7 +250,7 @@ export default function QuotationDetailPage() {
                 <Pencil className="w-4 h-4 mr-1" />
                 Edit
               </Button>
-              {quotation.status === "sq_approved" && (
+              {["sq_approved", "sq_converted"].includes(quotation.status) && (
                 <Button
                   variant="default"
                   disabled={converting}

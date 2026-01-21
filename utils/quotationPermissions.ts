@@ -36,6 +36,7 @@ export const ROLE_PERMISSIONS: Record<string, QuotationPermission> = {
       QUOTATION_STATUSES.LOST,
       QUOTATION_STATUSES.WIN,
       QUOTATION_STATUSES.CANCELLED,
+      QUOTATION_STATUSES.CONVERTED,
     ],
     canEdit: true,
     canDelete: false,
@@ -43,12 +44,12 @@ export const ROLE_PERMISSIONS: Record<string, QuotationPermission> = {
   },
 
   "manager-sales": {
-   allowedStatuses: [
-  QUOTATION_STATUSES.REVIEW,
-  QUOTATION_STATUSES.APPROVED,
-  QUOTATION_STATUSES.REVISED,
-  QUOTATION_STATUSES.REJECTED,
-],
+    allowedStatuses: [
+      QUOTATION_STATUSES.REVIEW,
+      QUOTATION_STATUSES.APPROVED,
+      QUOTATION_STATUSES.REVISED,
+      QUOTATION_STATUSES.REJECTED,
+    ],
     canEdit: true,
     canDelete: false,
     canApprove: true,

@@ -814,7 +814,6 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
           payment_status: "UNPAID",
           note: quotation.note || "",
           file_po_customer: null,
-          payment_term_id: quotation.payment_term_id || null, // <--- tambahkan ini
         },
       });
 

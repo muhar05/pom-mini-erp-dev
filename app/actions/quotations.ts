@@ -608,9 +608,12 @@ export async function submitQuotationForApprovalAction(id: number) {
   if (!permissions.canEdit) throw new Error("Anda tidak punya akses");
 
   // Cek status: hanya draft yang bisa dikirim
-  if (!quotation.status || quotation.status.toLowerCase() !== "sq_draft") {
+  if (
+    !quotation.status ||
+    !["sq_draft", "sq_revised"].includes(quotation.status.toLowerCase())
+  ) {
     throw new Error(
-      "Quotation hanya bisa dikirim ke approval dari status draft",
+      "Quotation hanya bisa dikirim ke approval dari status draft atau revised",
     );
   }
 

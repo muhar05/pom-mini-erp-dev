@@ -136,6 +136,49 @@ export function extractSalesOrderId(formData: FormData): string {
   return id;
 }
 
+// Helper to convert company_level Decimal fields
+const convertCompanyLevel = (companyLevel: any) => {
+  if (!companyLevel) return null;
+  return {
+    id_level: companyLevel.id_level,
+    level_name: companyLevel.level_name,
+    disc1: companyLevel.disc1 ? Number(companyLevel.disc1) : 0,
+    disc2: companyLevel.disc2 ? Number(companyLevel.disc2) : 0,
+  };
+};
+
+// Helper to convert company with company_level
+const convertCompany = (company: any) => {
+  if (!company) return null;
+  return {
+    id: company.id,
+    company_name: company.company_name,
+    address: company.address,
+    npwp: company.npwp,
+    id_level: company.id_level,
+    note: company.note,
+    created_at: company.created_at,
+    company_level: convertCompanyLevel(company.company_level),
+  };
+};
+
+// Helper to convert customer with company
+const convertCustomer = (customer: any) => {
+  if (!customer) return null;
+  return {
+    id: customer.id,
+    customer_name: customer.customer_name,
+    address: customer.address,
+    phone: customer.phone,
+    email: customer.email,
+    type: customer.type,
+    company_id: customer.company_id,
+    note: customer.note,
+    created_at: customer.created_at,
+    company: convertCompany(customer.company),
+  };
+};
+
 // Gunakan tipe yang di-generate Prisma langsung
 export type CreateSalesOrderInput = Prisma.sales_ordersCreateInput;
 export type UpdateSalesOrderInput = Prisma.sales_ordersUpdateInput;
@@ -146,9 +189,13 @@ export async function createSalesOrderDb(input: CreateSalesOrderInput) {
     data: input,
     include: {
       quotation: {
-        include: { customer: true },
+        include: {
+          customer: {
+            include: { company: { include: { company_level: true } } },
+          },
+        },
       },
-      customers: true,
+      customers: { include: { company: { include: { company_level: true } } } }, // <-- Tambahkan ini!
       sale_order_detail: true,
       user: true,
     },
@@ -219,9 +266,13 @@ export async function updateSalesOrderDb(
     data,
     include: {
       quotation: {
-        include: { customer: true },
+        include: {
+          customer: {
+            include: { company: { include: { company_level: true } } },
+          },
+        },
       },
-      customers: true,
+      customers: { include: { company: { include: { company_level: true } } } }, // <-- Tambahkan ini!
       sale_order_detail: true,
       user: true,
     },
@@ -295,57 +346,18 @@ export async function getSalesOrderByIdDb(id: string) {
     where: { id: Number(id) },
     include: {
       sale_order_detail: true,
-      customers: true,
+      customers: { include: { company: { include: { company_level: true } } } }, // <-- Tambahkan ini!
       quotation: {
-        include: { customer: true },
+        include: {
+          customer: {
+            include: { company: { include: { company_level: true } } },
+          },
+        },
       },
       user: true,
     },
   });
   if (!salesOrder) throw new Error("Sales order not found");
-
-  // Helper to convert company_level Decimal fields
-  const convertCompanyLevel = (companyLevel: any) => {
-    if (!companyLevel) return null;
-    return {
-      id_level: companyLevel.id_level,
-      level_name: companyLevel.level_name,
-      disc1: companyLevel.disc1 ? Number(companyLevel.disc1) : 0,
-      disc2: companyLevel.disc2 ? Number(companyLevel.disc2) : 0,
-    };
-  };
-
-  // Helper to convert company with company_level
-  const convertCompany = (company: any) => {
-    if (!company) return null;
-    return {
-      id: company.id,
-      company_name: company.company_name,
-      address: company.address,
-      npwp: company.npwp,
-      id_level: company.id_level,
-      note: company.note,
-      created_at: company.created_at,
-      company_level: convertCompanyLevel(company.company_level),
-    };
-  };
-
-  // Helper to convert customer with company
-  const convertCustomer = (customer: any) => {
-    if (!customer) return null;
-    return {
-      id: customer.id,
-      customer_name: customer.customer_name,
-      address: customer.address,
-      phone: customer.phone,
-      email: customer.email,
-      type: customer.type,
-      company_id: customer.company_id,
-      note: customer.note,
-      created_at: customer.created_at,
-      company: convertCompany(customer.company),
-    };
-  };
 
   // Convert quotation - tanpa spread operator
   const safeQuotation = salesOrder.quotation
@@ -449,9 +461,13 @@ export async function getAllSalesOrdersDb() {
     orderBy: { created_at: "desc" },
     include: {
       quotation: {
-        include: { customer: true },
+        include: {
+          customer: {
+            include: { company: { include: { company_level: true } } },
+          },
+        },
       },
-      customers: true, // Include direct customer relation
+      customers: { include: { company: { include: { company_level: true } } } }, // <-- Tambahkan ini!
       sale_order_detail: true,
     },
   });
@@ -466,14 +482,13 @@ export async function getAllSalesOrdersDb() {
     shipping: so.shipping ? Number(so.shipping) : 0,
     tax: so.tax ? Number(so.tax) : 0,
     grand_total: so.grand_total ? Number(so.grand_total) : 0,
-    // Include full relations
     quotation: so.quotation
       ? {
           ...so.quotation,
-          customer: so.quotation.customer,
+          customer: convertCustomer(so.quotation.customer),
         }
       : null,
-    customers: so.customers,
+    customers: convertCustomer(so.customers), // <-- Ganti ini!
     sale_order_detail: so.sale_order_detail
       ? so.sale_order_detail.map((detail) => ({
           id: detail.id.toString(),
