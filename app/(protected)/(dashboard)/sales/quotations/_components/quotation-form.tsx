@@ -1207,7 +1207,9 @@ export default function QuotationForm({
           {/* Tombol Kirim untuk approval, hanya tampil jika sales & status draft */}
           {user &&
             getUserRole(user) === "sales" &&
-            formData.status?.toLowerCase() === "sq_draft" && (
+            ["sq_draft", "sq_revised"].includes(
+              formData.status?.toLowerCase?.() || "",
+            ) && (
               <>
                 <Button
                   type="button"
