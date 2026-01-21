@@ -323,24 +323,20 @@ export async function getAllQuotationsAction() {
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
-  try {
-    const quotations = await getAllQuotationsDb();
+  // Pass user ke getAllQuotationsDb
+  const quotations = await getAllQuotationsDb(user);
 
-    // Convert Decimal fields to numbers for client compatibility
-    const safeQuotations = quotations.map((quotation) => ({
-      ...quotation,
-      total: quotation.total ? Number(quotation.total) : 0,
-      shipping: quotation.shipping ? Number(quotation.shipping) : 0,
-      discount: quotation.discount ? Number(quotation.discount) : 0,
-      tax: quotation.tax ? Number(quotation.tax) : 0,
-      grand_total: quotation.grand_total ? Number(quotation.grand_total) : 0,
-    }));
+  // Convert Decimal fields to numbers for client compatibility
+  const safeQuotations = quotations.map((quotation) => ({
+    ...quotation,
+    total: quotation.total ? Number(quotation.total) : 0,
+    shipping: quotation.shipping ? Number(quotation.shipping) : 0,
+    discount: quotation.discount ? Number(quotation.discount) : 0,
+    tax: quotation.tax ? Number(quotation.tax) : 0,
+    grand_total: quotation.grand_total ? Number(quotation.grand_total) : 0,
+  }));
 
-    return safeQuotations;
-  } catch (error) {
-    console.error("Error fetching quotations:", error);
-    throw new Error("Failed to fetch quotations");
-  }
+  return safeQuotations;
 }
 
 // GET OPPORTUNITY QUALIFIED LEADS

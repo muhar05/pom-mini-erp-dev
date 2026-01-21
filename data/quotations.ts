@@ -15,7 +15,7 @@ export async function createQuotationDb(input: CreateQuotationInput) {
 // UPDATE
 export async function updateQuotationDb(
   id: number,
-  data: UpdateQuotationInput
+  data: UpdateQuotationInput,
 ) {
   return prisma.quotations.update({
     where: { id },
@@ -53,21 +53,22 @@ export async function getQuotationByIdDb(id: number) {
 }
 
 // GET ALL
-export async function getAllQuotationsDb() {
+export async function getAllQuotationsDb(user?: any) {
+  const isSalesRole = user && user.role_name === "sales";
   return prisma.quotations.findMany({
     orderBy: { created_at: "desc" },
+    where: isSalesRole ? { user_id: user.id } : undefined,
     include: {
       customer: {
         include: {
           company: {
             include: {
-              company_level: true, // Include company level
+              company_level: true,
             },
           },
         },
       },
-      user: true, // <-- Include user/sales
-      // lead: true, // <-- Include lead jika ada relasi di schema
+      user: true,
     },
   });
 }
