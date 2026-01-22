@@ -15,6 +15,7 @@ export const LEAD_STATUSES = {
 // Opportunity Status Enum
 export const OPPORTUNITY_STATUSES = {
   QUALIFIED: "opp_qualified",
+  PROSPECTING: "opp_prospecting",
   LOST: "opp_lost",
   SQ: "opp_sq",
 } as const;

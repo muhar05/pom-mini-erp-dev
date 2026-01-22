@@ -10,7 +10,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { getUserByIdDb } from "@/data/users";
 import { users } from "@/types/models";
-// import { isSuperuser } from "@/utils/leadHelpers"; // Uncomment if you want superuser bypass
+import { isSuperuser } from "@/utils/userHelpers"; // Pastikan ini di-uncomment
 
 // UPDATE OPPORTUNITY
 export async function updateOpportunityAction(
@@ -44,11 +44,9 @@ export async function deleteOpportunityAction(id: number) {
   const opportunity = await getOpportunityByIdDb(id);
   if (!opportunity) throw new Error("Opportunity not found");
 
-  // Perbandingan id_user, hanya owner yang boleh delete
-  if (Number(opportunity.id_user) !== Number(user.id)) {
+  // Superuser bisa delete semua, selain itu hanya owner
+  if (!isSuperuser(user) && Number(opportunity.id_user) !== Number(user.id)) {
     throw new Error("Unauthorized");
-    // Jika ingin superuser bisa delete semua, tambahkan:
-    // if (!isSuperuser(user) && Number(opportunity.id_user) !== Number(user.id)) { ... }
   }
 
   try {

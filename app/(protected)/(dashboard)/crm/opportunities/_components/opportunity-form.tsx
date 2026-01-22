@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +10,7 @@ import {
   formatStatusDisplay,
 } from "@/utils/statusHelpers";
 import { formatDate } from "@/utils/formatDate";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -22,12 +23,27 @@ import type { OpportunityFormType, OpportunityFormProps } from "@/types/models";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import toast from "react-hot-toast";
+import { selectStyles } from "@/utils/leadFormHelpers";
+import { formatCurrency } from "@/utils/formatCurrency";
+
+const WindowedSelect = dynamic(() => import("react-windowed-select"), {
+  ssr: false,
+});
 
 export default function OpportunityForm({
   mode,
   opportunity,
   onSuccess,
-}: OpportunityFormProps) {
+  products = [],
+}: OpportunityFormProps & { products?: Array<{ id: number; name: string }> }) {
+  if (!opportunity) {
+    return (
+      <div className="p-6 text-center text-red-500">
+        Opportunity data not found.
+      </div>
+    );
+  }
+
   const [formData, setFormData] = useState<OpportunityFormType>({
     id: opportunity?.id || "",
     opportunity_no: opportunity?.opportunity_no || "",
@@ -59,12 +75,74 @@ export default function OpportunityForm({
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [productInterest, setProductInterest] = useState<
+    Array<{ label: string; value: string }>
+  >(
+    opportunity.product_interest
+      ? opportunity.product_interest
+          .split(",")
+          .map((name: string) => ({ label: name, value: name }))
+      : [],
+  );
   const isEdit = mode === "edit";
   const router = useRouter();
 
-  // Fungsi onClose lokal
-  const handleClose = () => {
-    router.push("/crm/opportunities");
+  // Simpan initial value untuk deteksi perubahan
+  const initialProductInterest = useRef(
+    opportunity.product_interest
+      ? opportunity.product_interest
+          .split(",")
+          .map((name: string) => ({ label: name, value: name }))
+      : [],
+  );
+  const initialPotentialValue = useRef(
+    Number(opportunity.potential_value || 0),
+  );
+  const initialNote = useRef(opportunity.note || opportunity.notes || "");
+
+  // Cek perubahan
+  const isProductInterestChanged =
+    JSON.stringify(productInterest) !==
+    JSON.stringify(initialProductInterest.current);
+  const isPotentialValueChanged =
+    Number(formData.potential_value) !== Number(initialPotentialValue.current);
+  const isNoteChanged =
+    (formData.note || formData.notes || "") !== initialNote.current;
+
+  const isChanged =
+    isProductInterestChanged || isPotentialValueChanged || isNoteChanged;
+
+  // Handler update
+  const handleUpdate = async () => {
+    setLoading(true);
+    try {
+      // Kirim data ke backend sesuai kebutuhan
+      // Contoh: PATCH ke /api/opportunities/{id}
+      const res = await fetch(`/api/opportunities/${formData.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_interest: productInterest.map((p) => p.value).join(","),
+          potential_value: formData.potential_value,
+          note: formData.note || formData.notes || "",
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data?.message || "Gagal update data");
+        return;
+      }
+      toast.success("Opportunity updated!");
+      onSuccess?.();
+      // Update initial value agar tombol update hilang setelah sukses
+      initialProductInterest.current = [...productInterest];
+      initialPotentialValue.current = Number(formData.potential_value);
+      initialNote.current = formData.note || formData.notes || "";
+    } catch (err) {
+      toast.error("Terjadi kesalahan saat update data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handler untuk konfirmasi status
@@ -73,6 +151,9 @@ export default function OpportunityForm({
     setDialogOpen(true);
   };
 
+  const handleClose = () => {
+    router.push("/crm/opportunities");
+  };
 
   // Handler untuk submit perubahan status
   const handleConfirmStatus = async () => {
@@ -106,6 +187,12 @@ export default function OpportunityForm({
     }
   };
 
+  // Ubah products menjadi array nama produk
+  const productOptions = products.map((p) => ({
+    label: p.name,
+    value: p.name,
+  }));
+
   return (
     <Card className="w-full mx-auto dark:bg-gray-800">
       <CardContent className="pt-6">
@@ -119,8 +206,8 @@ export default function OpportunityForm({
               <p>
                 Are you sure you want to change status to{" "}
                 <span className="font-semibold">
-                  {pendingStatus === OPPORTUNITY_STATUSES.QUALIFIED
-                    ? "Qualified"
+                  {pendingStatus === OPPORTUNITY_STATUSES.PROSPECTING
+                    ? "Prospecting"
                     : pendingStatus === OPPORTUNITY_STATUSES.SQ
                       ? "SQ"
                       : pendingStatus === OPPORTUNITY_STATUSES.LOST
@@ -174,17 +261,17 @@ export default function OpportunityForm({
           </div>
           {isEdit && (
             <div className="flex flex-wrap gap-2">
-              {formData.status !== OPPORTUNITY_STATUSES.QUALIFIED && (
+              {formData.status !== OPPORTUNITY_STATUSES.PROSPECTING && (
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="default"
                   size="sm"
                   onClick={() =>
-                    handleStatusChange(OPPORTUNITY_STATUSES.QUALIFIED)
+                    handleStatusChange(OPPORTUNITY_STATUSES.PROSPECTING)
                   }
                   disabled={loading}
                 >
-                  Set Qualified
+                  Set Prospecting
                 </Button>
               )}
               {formData.status !== OPPORTUNITY_STATUSES.SQ && (
@@ -351,22 +438,54 @@ export default function OpportunityForm({
                 <label className="block text-sm font-medium mb-1.5">
                   Product Interest
                 </label>
-                <Textarea
-                  value={formData.product_interest || ""}
-                  disabled
-                  rows={4}
-                  className="bg-muted/50 resize-none"
+                <WindowedSelect
+                  windowThreshold={100}
+                  isMulti
+                  name="product_interest"
+                  options={productOptions}
+                  value={productInterest}
+                  onChange={(newValue) =>
+                    setProductInterest(Array.isArray(newValue) ? newValue : [])
+                  }
+                  placeholder="Select products"
+                  classNamePrefix="react-select"
+                  styles={{
+                    ...selectStyles,
+                    container: (provided) => ({
+                      ...provided,
+                      width: "100%",
+                    }),
+                    control: (provided) => ({
+                      ...provided,
+                      width: "100%",
+                      minWidth: "100%",
+                    }),
+                  }}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">
                   Potential Value
                 </label>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-primary">
-                    IDR {formData.potential_value.toLocaleString()}
-                  </span>
-                </div>
+                <Input
+                  type="text"
+                  value={
+                    formData.potential_value
+                      ? formatCurrency(Number(formData.potential_value))
+                      : ""
+                  }
+                  onChange={(e) => {
+                    // Ambil angka saja dari input
+                    const raw = e.target.value.replace(/[^0-9]/g, "");
+                    setFormData((prev) => ({
+                      ...prev,
+                      potential_value: raw ? Number(raw) : 0,
+                    }));
+                  }}
+                  className="font-bold"
+                  placeholder="Masukkan nilai potensial"
+                  disabled={loading}
+                />
               </div>
             </section>
 
@@ -381,9 +500,16 @@ export default function OpportunityForm({
                 </label>
                 <Textarea
                   value={formData.note || formData.notes || ""}
-                  disabled
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      note: e.target.value,
+                    }))
+                  }
                   rows={5}
-                  className="bg-muted/50 resize-none"
+                  className="resize-none"
+                  disabled={loading}
+                  placeholder="Catatan tambahan (opsional)"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -411,6 +537,17 @@ export default function OpportunityForm({
         {/* Form Actions */}
         <Separator />
         <div className="flex justify-end gap-3 pt-2">
+          {isChanged && (
+            <Button
+              type="button"
+              variant="default"
+              onClick={handleUpdate}
+              disabled={loading}
+              className="min-w-[100px]"
+            >
+              {loading ? "Updating..." : "Update"}
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"

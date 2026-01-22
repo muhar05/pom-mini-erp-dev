@@ -2,16 +2,18 @@ import React from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { getOpportunityByIdAction } from "@/app/actions/opportunities";
 import OpportunityForm from "../../_components/opportunity-form";
+import { getAllProductsAction } from "@/app/actions/products";
 
 interface EditOpportunityPageProps {
   params: { id: string };
 }
 
 export default async function EditOpportunityPage(
-  props: EditOpportunityPageProps
+  props: EditOpportunityPageProps,
 ) {
   const { params } = await props;
   const opportunity = await getOpportunityByIdAction(Number(params.id));
+  const products = await getAllProductsAction(); // Ambil data produk
 
   return (
     <>
@@ -25,7 +27,7 @@ export default async function EditOpportunityPage(
             Edit Opportunity Information
           </h2>
           {/* Do not pass onClose or onSuccess from here */}
-          <OpportunityForm mode="edit" opportunity={opportunity} />
+          <OpportunityForm mode="edit" opportunity={opportunity} products={products} />
         </div>
       </div>
     </>

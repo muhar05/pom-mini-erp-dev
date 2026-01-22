@@ -110,6 +110,7 @@ export default function DashboardSales() {
             </div>
           </CardContent>
         </Card>
+        <div className="mb-6"></div>
         <SummarySkeleton />
       </>
     );

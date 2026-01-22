@@ -60,7 +60,7 @@ export default function OpportunitiesTable({
   // Filter hanya status dengan prefix "opp"
   const filteredData = data.filter(
     (item) =>
-      item.status === "opp_qualified" ||
+      item.status === "opp_prospecting" ||
       item.status === "opp_lost" ||
       item.status === "opp_sq",
   );

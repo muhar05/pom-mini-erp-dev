@@ -361,7 +361,7 @@ export default function OpportunityDetailClient({
                     ? "SQ"
                     : opportunity.status === "opp_lost"
                     ? "Lost"
-                    : opportunity.status === "prospecting"
+                    : opportunity.status === "opp_prospecting"
                     ? "Prospecting"
                     : opportunity.status}
                 </Badge>
