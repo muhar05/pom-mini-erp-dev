@@ -257,4 +257,50 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       ],
     },
   ],
+  purchasing: [
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      items: [{ title: "Purchasing", url: "/dashboard/purchasing" }],
+    },
+    {
+      title: "Purchasing",
+      icon: FileBox,
+      items: [
+        { title: "Purchase Order", url: "/purchasing/purchase-orders" },
+        { title: "Purchase Request", url: "/purchasing/requests" },
+      ],
+    },
+    {
+      title: "Master",
+      icon: Settings,
+      items: [
+        { title: "Vendor List", url: "/purchasing/vendors", icon: Building2 },
+        { title: "Product List", url: "/products", icon: Package },
+      ],
+    },
+  ],
+  manager_purchasing: [
+    {
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      items: [{ title: "Purchasing", url: "/dashboard/manager-purchasing" }],
+    },
+    {
+      title: "Purchasing",
+      icon: FileBox,
+      items: [
+        { title: "Purchase Order", url: "/purchasing/purchase-orders" },
+        { title: "Purchase Request", url: "/purchasing/requests" },
+      ],
+    },
+    {
+      title: "Master",
+      icon: Settings,
+      items: [
+        { title: "Vendor List", url: "/purchasing/vendors", icon: Building2 },
+        { title: "Product List", url: "/products", icon: Package },
+      ],
+    },
+  ],
 };
