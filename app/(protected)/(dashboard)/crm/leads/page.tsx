@@ -6,6 +6,7 @@ import LeadsTable from "./_components/leads-table";
 import AddLeadButton from "./_components/add-lead-button";
 import LeadsFilter from "./_components/leads-filter";
 import { useLeads } from "@/hooks/leads/useLeads";
+import { useSession } from "@/contexts/session-context";
 
 export default function LeadPage() {
   const { leads, loading } = useLeads();
@@ -15,6 +16,9 @@ export default function LeadPage() {
     dateFrom?: string;
     dateTo?: string;
   }>({});
+
+  const session = useSession();
+  const currentUser = session?.user;
 
   const handleFilterChange = (newFilters: {
     search?: string;
@@ -53,7 +57,11 @@ export default function LeadPage() {
       <div className="grid grid-cols-1 gap-6 mt-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">List Leads</h2>
-          <LeadsTable leads={leads} filters={filters} />
+          <LeadsTable
+            leads={leads}
+            filters={filters}
+            currentUser={currentUser}
+          />
         </div>
       </div>
     </>

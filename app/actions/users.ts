@@ -12,6 +12,7 @@ import {
 } from "@/data/users";
 import { getAllRolesDb } from "@/data/roles";
 import { logUserActivity } from "@/lib/user-logger";
+import { auth } from "@/auth";
 
 export async function createUserAction(formData: FormData) {
   const name = formData.get("name") as string;

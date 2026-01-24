@@ -332,6 +332,7 @@ export type Opportunity = {
   note?: string | null;
   id_user_name?: string;
   assigned_to_name?: string;
+  id_user?: string | number | null;
 };
 
 export interface Product {
@@ -416,4 +417,12 @@ export interface payment_terms {
   is_active: boolean;
   quotations?: quotations[];
   sales_orders?: sales_orders[];
+}
+
+export interface SessionUser {
+  name: string;
+  email: string;
+  id: string | number;
+  role_id: string | number;
+  role_name: string;
 }

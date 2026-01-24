@@ -52,7 +52,7 @@ function getStatusBadgeClass(status: string): string {
     case "prospecting":
       return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
     case "opp_qualified":
-      return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800"; 
+      return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800";
     default:
       return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
   }
@@ -65,7 +65,11 @@ export default function OpportunityDetailClient({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Pakai custom hook
-  const { convert, loading, error, result } = useConvertOpportunityToSQ();
+  const {
+    convert,
+    loading: convertLoading,
+    error: convertError,
+  } = useConvertOpportunityToSQ();
 
   // Handler untuk buka dialog konfirmasi convert SQ
   const handleOpenConvertSQDialog = () => {
@@ -75,12 +79,30 @@ export default function OpportunityDetailClient({
   // Handler untuk konfirmasi convert SQ
   const handleConfirmConvertSQ = async () => {
     const success = await convert(opportunity.id, null);
-    if (success && result && result.id) {
+    if (success) {
       toast.success("Berhasil convert ke SQ!");
       setDialogOpen(false);
-      router.push(`/sales/quotations/${result.id}/edit`);
+      router.push(`/sales/quotations/${opportunity.id}/edit`);
     } else {
-      toast.error(error || "Gagal convert ke SQ");
+      toast.error(convertError || "Gagal convert ke SQ");
+    }
+  };
+
+  const handleStatusChange = async (item: Opportunity, newStatus: string) => {
+    if (newStatus === "opp_sq") {
+      // Panggil convert jika status diubah ke SQ
+      const success = await convert(item.id, null);
+      if (success) {
+        toast.success("Berhasil convert ke SQ!");
+        // onDelete?.(); // refresh data
+      } else {
+        toast.error(convertError || "Gagal convert ke SQ");
+      }
+    } else {
+      // Lakukan update status biasa
+      // setSelectedId(item.id);
+      // setPendingStatus(newStatus);
+      // setDialogOpen(true);
     }
   };
 
@@ -103,7 +125,7 @@ export default function OpportunityDetailClient({
           size="sm"
           className="flex items-center gap-2"
           onClick={handleOpenConvertSQDialog}
-          disabled={loading || opportunity.status === "opp_sq"}
+          disabled={convertLoading || opportunity.status === "opp_sq"}
         >
           <Repeat className="w-4 h-4" />
           Convert SQ
@@ -354,16 +376,16 @@ export default function OpportunityDetailClient({
                 </p>
                 <Badge
                   className={`${getStatusBadgeClass(
-                    opportunity.status
+                    opportunity.status,
                   )} px-3 py-1.5 text-base font-medium w-full justify-center`}
                 >
                   {opportunity.status === "opp_sq"
                     ? "SQ"
                     : opportunity.status === "opp_lost"
-                    ? "Lost"
-                    : opportunity.status === "opp_prospecting"
-                    ? "Prospecting"
-                    : opportunity.status}
+                      ? "Lost"
+                      : opportunity.status === "opp_prospecting"
+                        ? "Prospecting"
+                        : opportunity.status}
                 </Badge>
               </div>
 
@@ -400,10 +422,10 @@ export default function OpportunityDetailClient({
           <DialogFooter>
             <Button
               onClick={handleConfirmConvertSQ}
-              disabled={loading}
+              disabled={convertLoading}
               className="gap-2"
             >
-              {loading ? (
+              {convertLoading ? (
                 <>
                   <Clock className="w-4 h-4 animate-spin" />
                   Processing...
@@ -418,7 +440,7 @@ export default function OpportunityDetailClient({
             <DialogClose asChild>
               <Button
                 variant="outline"
-                disabled={loading}
+                disabled={convertLoading}
                 className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 Batal

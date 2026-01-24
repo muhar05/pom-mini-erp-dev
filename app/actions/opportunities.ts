@@ -10,7 +10,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { getUserByIdDb } from "@/data/users";
 import { users } from "@/types/models";
-import { isSuperuser } from "@/utils/userHelpers"; // Pastikan ini di-uncomment
+import { isSuperuser, isSales } from "@/utils/userHelpers"; // pastikan import
 
 // UPDATE OPPORTUNITY
 export async function updateOpportunityAction(
@@ -24,11 +24,12 @@ export async function updateOpportunityAction(
   const opportunity = await getOpportunityByIdDb(id);
   if (!opportunity) throw new Error("Opportunity not found");
 
-  // Perbandingan id_user, hanya owner yang boleh update
-  if (Number(opportunity.id_user) !== Number(user.id)) {
+  // Hanya sales (pemilik) atau superuser yang boleh update
+  if (
+    !isSuperuser(user) &&
+    (!isSales(user) || Number(opportunity.id_user) !== Number(user.id))
+  ) {
     throw new Error("Unauthorized");
-    // Jika ingin superuser bisa update semua, tambahkan:
-    // if (!isSuperuser(user) && Number(opportunity.id_user) !== Number(user.id)) { ... }
   }
 
   const updated = await updateOpportunityDb(id, data);
@@ -183,11 +184,13 @@ export async function convertOpportunityToSQ(
   const opportunity = await getOpportunityByIdDb(opportunityId);
   if (!opportunity) throw new Error("Opportunity not found");
 
-  // Perbandingan id_user, hanya owner yang boleh convert
-  if (Number(opportunity.id_user) !== Number(session.user.id)) {
+  // Hanya sales (pemilik) atau superuser yang boleh convert
+  if (
+    !isSuperuser(session.user) &&
+    (!isSales(session.user) ||
+      Number(opportunity.id_user) !== Number(session.user.id))
+  ) {
     throw new Error("Unauthorized");
-    // Jika ingin superuser bisa convert semua, tambahkan:
-    // if (!isSuperuser(session.user) && Number(opportunity.id_user) !== Number(session.user.id)) { ... }
   }
 
   // Ambil user_id dari session
@@ -255,7 +258,14 @@ export async function convertOpportunityToSQ(
   }
 
   await updateOpportunityDb(opportunityId, { status: "opp_sq" });
-  return newQuotation;
+
+  // Pastikan newQuotation.id tersedia
+  return {
+    success: true,
+    message: "Opportunity converted to SQ",
+    data: newQuotation,
+    redirect: `/sales/quotations/${newQuotation.id}/edit`,
+  };
 }
 
 function generateQuotationNo(): string {

@@ -10,6 +10,7 @@ import { convertLeadAction } from "@/app/actions/leads";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
+import { isSales, isSuperuser } from "@/utils/userHelpers";
 
 // Helper function to get status badge styling
 function getStatusBadgeClass(status: string | null | undefined): string {
@@ -35,7 +36,13 @@ function getStatusBadgeClass(status: string | null | undefined): string {
   }
 }
 
-export default function LeadDetailClient({ lead }: { lead: any }) {
+export default function LeadDetailClient({
+  lead,
+  currentUser,
+}: {
+  lead: any;
+  currentUser: any;
+}) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -56,6 +63,11 @@ export default function LeadDetailClient({ lead }: { lead: any }) {
     }
   }
 
+  // Validasi: hanya sales pemilik lead atau superuser
+  const canEditOrConvert =
+    isSuperuser(currentUser) ||
+    (isSales(currentUser) && Number(lead.id_user) === Number(currentUser.id));
+
   return (
     <>
       <DashboardBreadcrumb
@@ -70,22 +82,27 @@ export default function LeadDetailClient({ lead }: { lead: any }) {
             Back to Leads
           </Button>
         </Link>
-        <Link href={`/crm/leads/${lead.id}/edit`}>
-          <Button size="sm">
-            <Edit className="w-4 h-4 mr-2" />
-            Edit Lead
-          </Button>
-        </Link>
-        {["lead_interested", "lead_contacted", "lead_new"].includes(lead.status) && (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={handleConvert}
-            disabled={loading}
-          >
-            Convert to Opportunity
-          </Button>
+        {canEditOrConvert && (
+          <Link href={`/crm/leads/${lead.id}/edit`}>
+            <Button size="sm">
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Lead
+            </Button>
+          </Link>
         )}
+        {canEditOrConvert &&
+          ["lead_interested", "lead_contacted", "lead_new"].includes(
+            lead.status,
+          ) && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleConvert}
+              disabled={loading}
+            >
+              Convert to Opportunity
+            </Button>
+          )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

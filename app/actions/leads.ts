@@ -109,11 +109,14 @@ export async function updateLeadAction(formData: FormData) {
     const id = Number(extractLeadId(formData));
     const oldLead = await getLeadByIdDb(id);
 
-    // Perbaiki perbandingan id
-    if (isSales(user) && Number(oldLead.id_user) !== Number(user.id)) {
-      throw new Error("Unauthorized");
+    // Hanya sales (pemilik) atau superuser yang boleh update
+    if (
+      !isSuperuser(user) &&
+      (!isSales(user) || Number(oldLead.id_user) !== Number(user.id))
+    ) {
+      throw new Error("You are not allowed to update this lead.");
     }
-    if (isSales(user) && oldLead.status === "prospecting") {
+    if (oldLead.status === "prospecting") {
       throw new Error("Lead cannot be edited after conversion.");
     }
 
@@ -219,9 +222,12 @@ export async function deleteLeadAction(formData: FormData) {
     if (!id) throw new Error("Lead ID is required");
     const lead = await getLeadByIdDb(id);
 
-    // Perbaiki perbandingan id
-    if (isSales(user) && Number(lead.id_user) !== Number(user.id)) {
-      throw new Error("Unauthorized");
+    // Hanya sales (pemilik) atau superuser yang boleh delete
+    if (
+      !isSuperuser(user) &&
+      (!isSales(user) || Number(lead.id_user) !== Number(user.id))
+    ) {
+      throw new Error("You are not allowed to delete this lead.");
     }
 
     const normalizedStatus = normalizeStatusToNewFormat(lead.status || "");
@@ -257,10 +263,6 @@ export async function getLeadByIdAction(id: number) {
   const user = session?.user as users | undefined;
   const lead = await getLeadByIdDb(id);
   if (!user) throw new Error("Unauthorized");
-  // Perbaiki perbandingan id
-  if (isSales(user) && Number(lead.id_user) !== Number(user.id)) {
-    throw new Error("Unauthorized");
-  }
   return lead;
 }
 
@@ -290,12 +292,21 @@ export async function convertLeadAction(id: number) {
 
   const normalizedStatus = normalizeStatusToNewFormat(lead.status || "");
 
-  if (isSales(user)) {
-    if (lead.id_user !== user.id) throw new Error("Unauthorized");
-    if (normalizedStatus !== LEAD_STATUSES.QUALIFIED)
-      throw new Error("Only qualified leads can be converted.");
+  // Hanya sales (pemilik) atau superuser yang boleh convert
+  if (
+    !isSuperuser(user) &&
+    (!isSales(user) || Number(lead.id_user) !== Number(user.id))
+  ) {
+    throw new Error("Unauthorized");
   }
-  // Superuser boleh convert kapan saja
+  const normalizedStatus2 = normalizeStatusToNewFormat(lead.status || "");
+  if (
+    !isSuperuser(user) &&
+    isSales(user) &&
+    normalizedStatus2 !== LEAD_STATUSES.QUALIFIED
+  ) {
+    throw new Error("Only qualified leads can be converted.");
+  }
 
   // Generate nomor opportunity baru
   const opportunityNo = generateOpportunityNo();

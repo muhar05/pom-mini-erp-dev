@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isSuperuser, isSales } from "@/utils/leadHelpers";
+import { isSuperuser, isSales, isManagerSales } from "@/utils/userHelpers";
 import {
   validateQuotationFormData,
   CreateQuotationData,
@@ -130,11 +130,12 @@ export async function updateQuotationAction(
   if (leadId) {
     lead = await prisma.leads.findUnique({ where: { id: Number(leadId) } });
     if (!lead) throw new Error("Lead not found");
-    // Validasi: hanya sales yang sama boleh update
-    if (isSales(user) && Number(lead.id_user) !== Number(user.id)) {
-      throw new Error(
-        "Unauthorized: Only the owner sales can update this quotation.",
-      );
+    // Hanya superuser atau sales pemilik yang boleh update
+    if (
+      !isSuperuser(user) &&
+      (!isSales(user) || Number(lead.id_user) !== Number(user.id))
+    ) {
+      throw new Error("You are not allowed to update this quotation.");
     }
   }
 
@@ -262,17 +263,13 @@ export async function deleteQuotationAction(formData: FormData) {
   if (leadId) {
     lead = await prisma.leads.findUnique({ where: { id: Number(leadId) } });
     if (!lead) throw new Error("Lead not found");
-    // Validasi: hanya sales yang sama boleh delete
-    if (isSales(user) && Number(lead.id_user) !== Number(user.id)) {
-      throw new Error(
-        "Unauthorized: Only the owner sales can delete this quotation.",
-      );
+    // Hanya superuser atau sales pemilik yang boleh delete
+    if (
+      !isSuperuser(user) &&
+      (!isSales(user) || Number(lead.id_user) !== Number(user.id))
+    ) {
+      throw new Error("You are not allowed to delete this quotation.");
     }
-  }
-
-  // Only superuser can delete
-  if (!isSuperuser(user)) {
-    throw new Error("Unauthorized");
   }
 
   try {

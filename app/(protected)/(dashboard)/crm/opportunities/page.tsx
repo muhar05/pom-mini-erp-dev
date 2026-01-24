@@ -5,6 +5,7 @@ import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import OpportunitiesTable from "./_components/opportunities-table";
 import OpportunitiesFilter from "./_components/opportunity-filter";
 import { useOpportunities } from "@/hooks/opportunities/useOpportunities";
+import { useSession } from "@/contexts/session-context";
 
 export default function OpportunitiesPage() {
   const { opportunities, loading, setOpportunities } = useOpportunities();
@@ -15,6 +16,9 @@ export default function OpportunitiesPage() {
     const data = await response.json();
     setOpportunities(data);
   };
+
+  const session = useSession();
+  const currentUser = session?.user;
 
   return (
     <>
@@ -39,6 +43,7 @@ export default function OpportunitiesPage() {
             <OpportunitiesTable
               data={opportunities}
               onDelete={handleRefreshData}
+              currentUser={currentUser}
             />
           )}
         </div>

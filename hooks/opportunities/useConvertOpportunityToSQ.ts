@@ -32,7 +32,9 @@ export function useConvertOpportunityToSQ() {
       setResult(data.data);
       setLoading(false);
       // Redirect otomatis ke halaman edit SQ
-      if (data.data && data.data.id) {
+      if (data.redirect) {
+        router.push(data.redirect);
+      } else if (data.data && data.data.id) {
         router.push(`/sales/quotations/${data.data.id}/edit`);
       }
       return true;

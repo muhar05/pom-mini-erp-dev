@@ -22,7 +22,7 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { getStatusVariant } from "@/utils/opportunityTableHelpers";
-import { Opportunity } from "@/types/models";
+import { Opportunity, SessionUser } from "@/types/models";
 import { useUpdateOpportunityStatus } from "@/hooks/opportunities/useUpdateOpportunitiesStatus";
 import {
   Dialog,
@@ -39,6 +39,7 @@ import OpportunityDeleteDialog from "@/app/(protected)/(dashboard)/crm/opportuni
 import { useConvertOpportunityToSQ } from "@/hooks/opportunities/useConvertOpportunityToSQ";
 import { toast } from "react-hot-toast";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { isSuperuser, isSales } from "@/utils/userHelpers";
 
 type OpportunitiesTableProps = {
   isSuperadmin?: boolean;
@@ -46,6 +47,7 @@ type OpportunitiesTableProps = {
   onRowClick?: (item: Opportunity) => void;
   onEdit?: (item: Opportunity) => void;
   onDelete?: () => void; // callback untuk refresh data
+  currentUser: SessionUser;
 };
 
 type TableOpportunity = Opportunity & { stage: string };
@@ -54,6 +56,7 @@ export default function OpportunitiesTable({
   isSuperadmin,
   data = [],
   onRowClick,
+  currentUser,
   onEdit,
   onDelete,
 }: OpportunitiesTableProps) {
@@ -107,6 +110,13 @@ export default function OpportunitiesTable({
     }
   };
 
+  function canEditDeleteConvert(item: Opportunity, currentUser: SessionUser) {
+    if (isSuperuser(currentUser)) return true;
+    if (isSales(currentUser) && Number(item.id_user) === Number(currentUser.id))
+      return true;
+    return false;
+  }
+
   return (
     <>
       <Table>
@@ -116,7 +126,7 @@ export default function OpportunitiesTable({
             <TableHead>Tanggal Input</TableHead>
             <TableHead>Nama Customer</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Type</TableHead>
+            <TableHead>Sales PIC</TableHead>
             <TableHead>Perusahaan</TableHead>
             <TableHead>Potensi Nilai</TableHead>
             <TableHead>Status</TableHead>
@@ -135,7 +145,7 @@ export default function OpportunitiesTable({
                   <TableCell>{item.created_at}</TableCell>
                   <TableCell>{item.customer_name}</TableCell>
                   <TableCell>{item.customer_email}</TableCell>
-                  <TableCell>{item.type}</TableCell>
+                  <TableCell>{item.sales_pic}</TableCell>
                   <TableCell>{item.company}</TableCell>
                   <TableCell>{formatCurrency(item.potential_value)}</TableCell>
                   <TableCell>
@@ -161,33 +171,37 @@ export default function OpportunitiesTable({
                             View Detail
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/crm/opportunities/${item.id}/edit`}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleConvertSQ(item.id)}
-                          disabled={item.status === "opp_sq"}
-                          className="cursor-pointer"
-                        >
-                          <Repeat className="mr-2 h-4 w-4" />
-                          Convert SQ
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSelectedOpportunity({
-                              ...item,
-                              stage: (item as any).stage ?? "",
-                            });
-                            setDeleteDialogOpen(true);
-                          }}
-                          className="text-red-600 cursor-pointer"
-                        >
-                          <Trash className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        {canEditDeleteConvert(item, currentUser) && (
+                          <>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/crm/opportunities/${item.id}/edit`}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleConvertSQ(item.id)}
+                              disabled={item.status === "opp_sq"}
+                              className="cursor-pointer"
+                            >
+                              <Repeat className="mr-2 h-4 w-4" />
+                              Convert SQ
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedOpportunity({
+                                  ...item,
+                                  stage: (item as any).stage ?? "",
+                                });
+                                setDeleteDialogOpen(true);
+                              }}
+                              className="text-red-600 cursor-pointer"
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

@@ -13,7 +13,8 @@ export async function GET() {
       opportunity_no: opportunity.reference_no ?? `OPP-${opportunity.id}`,
       customer_name: opportunity.lead_name,
       customer_email: opportunity.email ?? "",
-      sales_pic: "",
+      id_user: opportunity.id_user ?? null,
+      sales_pic: opportunity.users_leads_id_userTousers?.name ?? "",
       type: opportunity.type ?? "",
       company: opportunity.company ?? "",
       potential_value: opportunity.potential_value

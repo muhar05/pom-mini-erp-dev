@@ -58,7 +58,7 @@ export async function getAllLeadsDb(
   user?: users | { id: string | number; role_name?: string },
 ) {
   if (!user) throw new Error("Unauthorized");
-  if (isSuperuser(user) || isManagerSales(user)) {
+  if (isSuperuser(user) || isManagerSales(user) || isSales(user)) {
     return prisma.leads.findMany({
       include: {
         users_leads_assigned_toTousers: true,

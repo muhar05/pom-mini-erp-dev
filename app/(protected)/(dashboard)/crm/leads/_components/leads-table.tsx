@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { leads } from "@/types/models";
+import { leads, SessionUser } from "@/types/models";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -28,8 +28,9 @@ import Link from "next/link";
 import { filterLeads, getStatusBadgeClass } from "@/utils/leadTableHelpers";
 import LeadDeleteDialog from "./lead-delete-dialog";
 import { deleteLeadAction } from "@/app/actions/leads";
-import { useRouter } from "next/navigation";
+import { isSales, isSuperuser } from "@/utils/userHelpers";
 
+// Tambahkan ke props
 interface LeadsTableProps {
   leads: leads[];
   filters?: {
@@ -38,9 +39,14 @@ interface LeadsTableProps {
     dateFrom?: string;
     dateTo?: string;
   };
+  currentUser: SessionUser; // sesuaikan tipe user Anda
 }
 
-export default function LeadsTable({ leads, filters }: LeadsTableProps) {
+export default function LeadsTable({
+  leads,
+  filters,
+  currentUser,
+}: LeadsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [localLeads, setLocalLeads] = useState<leads[]>(leads);
@@ -72,6 +78,14 @@ export default function LeadsTable({ leads, filters }: LeadsTableProps) {
       setLocalLeads((prev) => prev.filter((l) => l.id !== deletedId));
     }
     return result;
+  }
+
+  // Helper: cek apakah user boleh edit/delete lead
+  function canEditOrDelete(lead: leads) {
+    if (isSuperuser(currentUser)) return true;
+    if (isSales(currentUser) && Number(lead.id_user) === Number(currentUser.id))
+      return true;
+    return false;
   }
 
   return (
@@ -156,26 +170,30 @@ export default function LeadsTable({ leads, filters }: LeadsTableProps) {
                             View details
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/crm/leads/${lead.id}/edit`}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit lead
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <LeadDeleteDialog
-                            leadId={lead.id}
-                            leadName={lead.lead_name}
-                            onDelete={handleDeleteLead}
-                            trigger={
-                              <span className="flex ml-2 items-center text-red-600 cursor-pointer">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete lead
-                              </span>
-                            }
-                          />
-                        </DropdownMenuItem>
+                        {canEditOrDelete(lead) && (
+                          <>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/crm/leads/${lead.id}/edit`}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit lead
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem asChild>
+                              <LeadDeleteDialog
+                                leadId={lead.id}
+                                leadName={lead.lead_name}
+                                onDelete={handleDeleteLead}
+                                trigger={
+                                  <span className="flex ml-2 items-center text-red-600 cursor-pointer">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete lead
+                                  </span>
+                                }
+                              />
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
