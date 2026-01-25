@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { isSuperuser, isManagerSales, isSales } from "@/utils/leadHelpers";
 
 export async function GET() {
   const session = await auth();
@@ -10,21 +11,37 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = Number(user.id);
+  const isManager = isSuperuser(user) || isManagerSales(user);
+
+  // Define where clauses
+  const leadWhere: any = !isManager && isSales(user) ? {
+    OR: [
+      { id_user: userId },
+      { assigned_to: userId }
+    ]
+  } : {};
+
+  const quotationWhere: any = !isManager && isSales(user) ? { user_id: userId } : {};
+  const soWhere: any = !isManager && isSales(user) ? { user_id: userId } : {};
+
   try {
     // Get total counts
     const [totalLeads, totalQuotations, totalSalesOrders] = await Promise.all([
-      prisma.leads.count(),
-      prisma.quotations.count(),
-      prisma.sales_orders.count(),
+      prisma.leads.count({ where: leadWhere }),
+      prisma.quotations.count({ where: quotationWhere }),
+      prisma.sales_orders.count({ where: soWhere }),
     ]);
 
     // Get quotations by status
     const quotationsByStatus = await prisma.quotations.groupBy({
       by: ["status"],
+      where: quotationWhere,
       _count: {
         id: true,
       },
     });
+
 
     const quotationsStatusMap = {
       draft: 0,
@@ -45,6 +62,7 @@ export async function GET() {
     // Get sales orders by status
     const salesOrdersByStatus = await prisma.sales_orders.groupBy({
       by: ["sale_status"],
+      where: soWhere,
       _count: {
         id: true,
       },
@@ -69,6 +87,7 @@ export async function GET() {
     // Get leads by status
     const leadsByStatus = await prisma.leads.groupBy({
       by: ["status"],
+      where: leadWhere,
       _count: {
         id: true,
       },

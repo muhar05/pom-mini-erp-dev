@@ -333,6 +333,7 @@ export type Opportunity = {
   id_user_name?: string;
   assigned_to_name?: string;
   id_user?: string | number | null;
+  assigned_to?: string | number | null;
 };
 
 export interface Product {

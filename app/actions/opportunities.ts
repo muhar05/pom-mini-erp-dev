@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import {
   createOpportunityDb,
@@ -10,7 +11,9 @@ import {
 import { prisma } from "@/lib/prisma";
 import { getUserByIdDb } from "@/data/users";
 import { users } from "@/types/models";
-import { isSuperuser, isSales } from "@/utils/userHelpers"; // pastikan import
+import { isSuperuser, isManagerSales } from "@/utils/userHelpers";
+import { checkOpportunityOwnership } from "@/utils/auth-utils";
+import { canUpdateOpportunityField, canConvertOpportunityToSQ } from "@/utils/opportunityAccess";
 
 // UPDATE OPPORTUNITY
 export async function updateOpportunityAction(
@@ -24,13 +27,18 @@ export async function updateOpportunityAction(
   const opportunity = await getOpportunityByIdDb(id);
   if (!opportunity) throw new Error("Opportunity not found");
 
-  // Hanya sales (pemilik) atau superuser yang boleh update
-  if (
-    !isSuperuser(user) &&
-    (!isSales(user) || Number(opportunity.id_user) !== Number(user.id))
-  ) {
-    throw new Error("Unauthorized");
+  const incomingFields = Object.keys(data);
+
+  // Validate each field using helper
+  for (const field of incomingFields) {
+    const validation = canUpdateOpportunityField(user, opportunity as any, field, data[field]);
+    if (!validation.can) {
+      throw new Error(validation.reason);
+    }
   }
+
+  // Ownership check
+  checkOpportunityOwnership(opportunity, user);
 
   const updated = await updateOpportunityDb(id, data);
   return updated;
@@ -45,10 +53,8 @@ export async function deleteOpportunityAction(id: number) {
   const opportunity = await getOpportunityByIdDb(id);
   if (!opportunity) throw new Error("Opportunity not found");
 
-  // Superuser bisa delete semua, selain itu hanya owner
-  if (!isSuperuser(user) && Number(opportunity.id_user) !== Number(user.id)) {
-    throw new Error("Unauthorized");
-  }
+  // Ownership check
+  checkOpportunityOwnership(opportunity, user);
 
   try {
     const deleted = await deleteOpportunityDb(id);
@@ -64,8 +70,15 @@ export async function deleteOpportunityAction(id: number) {
 
 // GET BY ID
 export async function getOpportunityByIdAction(id: number) {
+  const session = await auth();
+  const user = session?.user as users | undefined;
+  if (!user) throw new Error("Unauthorized");
+
   const opportunity = await getOpportunityByIdDb(id);
   if (!opportunity) throw new Error("Opportunity not found");
+
+  // Ownership check
+  checkOpportunityOwnership(opportunity, user);
 
   // Ambil user dari id_user dan assigned_to
   const idUser = opportunity.id_user
@@ -75,13 +88,16 @@ export async function getOpportunityByIdAction(id: number) {
     ? await getUserByIdDb(opportunity.assigned_to)
     : null;
 
+  // PIC adalah Assigned User jika ada, jika tidak maka Owner
+  const salesPic = assignedToUser?.name || idUser?.name || "";
+
   return {
     id: opportunity.id.toString(),
     opportunity_no: opportunity.reference_no ?? `OPP-${opportunity.id}`,
     lead_name: opportunity.lead_name ?? "",
     customer_name: opportunity.lead_name,
     customer_email: opportunity.email ?? "",
-    sales_pic: opportunity.users_leads_id_userTousers?.name ?? "",
+    sales_pic: salesPic,
     type: opportunity.type ?? "",
     company: opportunity.company ?? "",
     potential_value: opportunity.potential_value
@@ -109,35 +125,46 @@ export async function getOpportunityByIdAction(id: number) {
 }
 
 export async function getAllOpportunitiesAction() {
-  const opportunities = await getAllOpportunitiesDb();
+  const session = await auth();
+  const user = session?.user as users | undefined;
+  const opportunities = await getAllOpportunitiesDb(user);
 
   const data = await Promise.all(
-    opportunities.map(async (opportunity) => ({
-      id: opportunity.id.toString(),
-      opportunity_no: opportunity.reference_no ?? `OPP-${opportunity.id}`,
-      customer_name: opportunity.lead_name,
-      customer_email: opportunity.email ?? "",
-      sales_pic: opportunity.users_leads_id_userTousers?.name ?? "",
-      type: opportunity.type ?? "",
-      company: opportunity.company ?? "",
-      potential_value: Number(opportunity.potential_value ?? 0),
-      expected_close_date: "",
-      notes: opportunity.note ?? "",
-      status: opportunity.status ?? "",
-      created_at: opportunity.created_at
-        ? opportunity.created_at.toISOString().split("T")[0]
-        : "",
-      updated_at: opportunity.created_at
-        ? opportunity.created_at.toISOString().split("T")[0]
-        : "",
-      contact: opportunity.contact ?? "",
-      phone: opportunity.phone ?? "",
-      location: opportunity.location ?? "",
-      product_interest: opportunity.product_interest ?? "",
-      source: opportunity.source ?? "",
-      id_user: opportunity.id_user ?? null,
-      assigned_to: opportunity.assigned_to ?? null,
-    })),
+    opportunities.map(async (opportunity) => {
+      // Perkaya data dengan relasi assigned_to
+      const assignedToUser = opportunity.assigned_to
+        ? await getUserByIdDb(opportunity.assigned_to)
+        : null;
+
+      const salesPic = assignedToUser?.name || opportunity.users_leads_id_userTousers?.name || "";
+
+      return {
+        id: opportunity.id.toString(),
+        opportunity_no: opportunity.reference_no ?? `OPP-${opportunity.id}`,
+        customer_name: opportunity.lead_name,
+        customer_email: opportunity.email ?? "",
+        sales_pic: salesPic,
+        type: opportunity.type ?? "",
+        company: opportunity.company ?? "",
+        potential_value: Number(opportunity.potential_value ?? 0),
+        expected_close_date: "",
+        notes: opportunity.note ?? "",
+        status: opportunity.status ?? "",
+        created_at: opportunity.created_at
+          ? opportunity.created_at.toISOString().split("T")[0]
+          : "",
+        updated_at: opportunity.created_at
+          ? opportunity.created_at.toISOString().split("T")[0]
+          : "",
+        contact: opportunity.contact ?? "",
+        phone: opportunity.phone ?? "",
+        location: opportunity.location ?? "",
+        product_interest: opportunity.product_interest ?? "",
+        source: opportunity.source ?? "",
+        id_user: opportunity.id_user ?? null,
+        assigned_to: opportunity.assigned_to ?? null,
+      };
+    }),
   );
 
   return data;
@@ -173,6 +200,8 @@ export async function GET() {
   return NextResponse.json(data);
 }
 
+
+
 // Convert Opportunity to Sales Quotation
 export async function convertOpportunityToSQ(
   opportunityId: number,
@@ -184,16 +213,15 @@ export async function convertOpportunityToSQ(
   const opportunity = await getOpportunityByIdDb(opportunityId);
   if (!opportunity) throw new Error("Opportunity not found");
 
-  // Hanya sales (pemilik) atau superuser yang boleh convert
-  if (
-    !isSuperuser(session.user) &&
-    (!isSales(session.user) ||
-      Number(opportunity.id_user) !== Number(session.user.id))
-  ) {
-    throw new Error("Unauthorized");
+  // Ownership check
+  checkOpportunityOwnership(opportunity, session.user);
+
+  const validation = canConvertOpportunityToSQ(session.user, opportunity as any);
+  if (!validation.can) {
+    throw new Error(validation.reason);
   }
 
-  // Ambil user_id dari session
+  // Sumber kebenaran ownership Quotation adalah user yang melakukan convert
   const userId = Number(session.user.id);
 
   // Ambil lead_id dari opportunity

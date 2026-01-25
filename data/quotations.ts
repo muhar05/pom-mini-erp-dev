@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { isSuperuser, isManagerSales, isSales } from "@/utils/userHelpers";
 
 // Gunakan tipe yang di-generate Prisma langsung
 export type CreateQuotationInput = Prisma.quotationsCreateInput;
@@ -52,12 +53,25 @@ export async function getQuotationByIdDb(id: number) {
   return quotation;
 }
 
+
 // GET ALL
 export async function getAllQuotationsDb(user?: any) {
-  const isSalesRole = user && user.role_name === "sales";
+  if (!user) throw new Error("Unauthorized");
+
+  const userId = typeof user.id === "string" ? Number(user.id) : user.id;
+  const isManager = isSuperuser(user) || isManagerSales(user);
+
+  let where: any = undefined;
+
+  if (!isManager && isSales(user)) {
+    where = { user_id: userId };
+  } else if (!isManager) {
+    throw new Error("Forbidden access");
+  }
+
   return prisma.quotations.findMany({
     orderBy: { created_at: "desc" },
-    where: isSalesRole ? { user_id: user.id } : undefined,
+    where,
     include: {
       customer: {
         include: {

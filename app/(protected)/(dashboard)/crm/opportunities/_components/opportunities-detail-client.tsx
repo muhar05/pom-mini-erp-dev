@@ -23,7 +23,10 @@ import {
   Info,
   Clock,
   Repeat,
+  Edit,
+  Trash,
 } from "lucide-react";
+import { formatStatusDisplay } from "@/utils/statusHelpers";
 import { Opportunity } from "@/types/models";
 import {
   Dialog,
@@ -38,6 +41,10 @@ import { Separator } from "@/components/ui/separator";
 import { useUpdateOpportunityStatus } from "@/hooks/opportunities/useUpdateOpportunitiesStatus";
 import { useConvertOpportunityToSQ } from "@/hooks/opportunities/useConvertOpportunityToSQ";
 import { toast } from "react-hot-toast";
+import { isSuperuser, isSales, isManagerSales } from "@/utils/userHelpers";
+import { useSession } from "@/contexts/session-context";
+import OpportunityDeleteDialog from "./opportunity-delete-dialog";
+import Link from "next/link";
 
 interface OpportunityDetailClientProps {
   opportunity: Opportunity;
@@ -50,7 +57,8 @@ function getStatusBadgeClass(status: string): string {
     case "opp_lost":
       return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
     case "prospecting":
-      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
+    case "opp_prospecting":
+      return "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800";
     case "opp_qualified":
       return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800";
     default:
@@ -63,6 +71,14 @@ export default function OpportunityDetailClient({
 }: OpportunityDetailClientProps) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const session = useSession();
+  const currentUser = session?.user;
+
+  const isManager = isSuperuser(currentUser) || isManagerSales(currentUser);
+  const isOwner = Number(opportunity.id_user) === Number(currentUser?.id) ||
+    Number(opportunity.assigned_to) === Number(currentUser?.id);
+  const canModify = isManager || isOwner;
 
   // Pakai custom hook
   const {
@@ -119,17 +135,45 @@ export default function OpportunityDetailClient({
           <ArrowLeft className="w-4 h-4" />
           Back
         </Button>
-        {/* Button Convert SQ */}
-        <Button
-          variant="default"
-          size="sm"
-          className="flex items-center gap-2"
-          onClick={handleOpenConvertSQDialog}
-          disabled={convertLoading || opportunity.status === "opp_sq"}
-        >
-          <Repeat className="w-4 h-4" />
-          Convert SQ
-        </Button>
+        <div className="flex items-center gap-2">
+          {canModify && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="flex items-center gap-2 dark:border-gray-700 dark:hover:bg-gray-800"
+              >
+                <Link href={`/crm/opportunities/${opportunity.id}/edit`}>
+                  <Edit className="w-4 h-4" />
+                  Edit
+                </Link>
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash className="w-4 h-4" />
+                Delete
+              </Button>
+            </>
+          )}
+          {/* Button Convert SQ - Only for Sales and Prospecting */}
+          {isSales(currentUser) && (
+            <Button
+              variant="default"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={handleOpenConvertSQDialog}
+              disabled={convertLoading || opportunity.status !== "opp_prospecting"}
+            >
+              <Repeat className="w-4 h-4" />
+              Convert SQ
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Main Content Grid */}
@@ -381,11 +425,7 @@ export default function OpportunityDetailClient({
                 >
                   {opportunity.status === "opp_sq"
                     ? "SQ"
-                    : opportunity.status === "opp_lost"
-                      ? "Lost"
-                      : opportunity.status === "opp_prospecting"
-                        ? "Prospecting"
-                        : opportunity.status}
+                    : formatStatusDisplay(opportunity.status)}
                 </Badge>
               </div>
 
@@ -449,6 +489,20 @@ export default function OpportunityDetailClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {canModify && (
+        <OpportunityDeleteDialog
+          opportunity={{
+            ...opportunity,
+            stage: (opportunity as any).stage || "",
+          }}
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onDelete={() => {
+            router.push("/crm/opportunities");
+          }}
+        />
+      )}
     </div>
   );
 }

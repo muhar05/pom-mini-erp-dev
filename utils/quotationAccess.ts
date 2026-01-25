@@ -1,49 +1,53 @@
-import { users } from "@/types/models";
+import { isSuperuser, isManagerSales, isSales } from "./userHelpers";
 
 export function canEditQuotation(
-  user: users,
+  user: any,
   quotation: { user_id?: number | null },
 ) {
   if (!user) return false;
-  const role = getRole(user);
-  if (role === "superuser" || role === "manager-sales") return true;
+  const userData = user.user ? user.user : user;
+  if (isSuperuser(userData) || isManagerSales(userData)) return true;
+  if (isSales(userData)) {
+    return Number(quotation.user_id) === Number(userData.id);
+  }
   return false;
 }
 
 export function canDeleteQuotation(
-  user: users,
+  user: any,
   quotation: { user_id?: number | null },
 ) {
   if (!user) return false;
-  const role = getRole(user);
-  if (role === "superuser" || role === "manager-sales") return true;
+  const userData = user.user ? user.user : user;
+  if (isSuperuser(userData) || isManagerSales(userData)) return true;
+  if (isSales(userData)) {
+    return Number(quotation.user_id) === Number(userData.id);
+  }
   return false;
 }
 
 export function canViewQuotation(
-  user: users,
+  user: any,
   quotation: { user_id?: number | null },
 ) {
   if (!user) return false;
-  const role = getRole(user);
-  if (role === "superuser" || role === "manager-sales") return true;
-  return quotation.user_id === user.id;
+  const userData = user.user ? user.user : user;
+  if (isSuperuser(userData) || isManagerSales(userData)) return true;
+  if (isSales(userData)) {
+    return Number(quotation.user_id) === Number(userData.id);
+  }
+  return false;
 }
 
-export function getRole(user: users): string {
-  if (typeof user.role_id === "string" && user.role_id)
-    return user.role_id.toString().toLowerCase();
-  if (
-    "role_name" in user &&
-    typeof user.role_name === "string" &&
-    user.role_name
-  )
-    return user.role_name.toLowerCase();
-  if (
-    user.roles &&
-    typeof user.roles.role_name === "string" &&
-    user.roles.role_name
-  )
-    return user.roles.role_name.toLowerCase();
-  return "";
+export function canAccessQuotation(user: any, quotation: any): boolean {
+  if (!user || !quotation) return false;
+
+  // Handle if session object is passed instead of user object
+  const userData = user.user ? user.user : user;
+
+  if (isSuperuser(userData) || isManagerSales(userData)) return true;
+  if (isSales(userData)) {
+    return Number(quotation.user_id) === Number(userData.id);
+  }
+  return false;
 }

@@ -103,7 +103,6 @@ export default function QuotationsTable({
           <TableHead>Company</TableHead>
           <TableHead>Total</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Created At</TableHead>
           {hasIncomplete && <TableHead>Status Info</TableHead>}
           <TableHead>Action</TableHead>
         </TableRow>
@@ -115,11 +114,10 @@ export default function QuotationsTable({
             onClick={() => {
               if (user && canViewQuotation(user, q)) onRowClick?.(q.id);
             }}
-            className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
-              user && !canViewQuotation(user, q)
+            className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${user && !canViewQuotation(user, q)
                 ? "pointer-events-none opacity-50"
                 : ""
-            }`}
+              }`}
           >
             <TableCell>{idx + 1}</TableCell>
             <TableCell className="font-medium">{q.quotation_no}</TableCell>
@@ -136,7 +134,6 @@ export default function QuotationsTable({
                 {formatStatusDisplay(q.status)}
               </span>
             </TableCell>
-            <TableCell>{formatDate(q.created_at)}</TableCell>
             {hasIncomplete && (
               <TableCell>
                 {isQuotationIncomplete(q) && (

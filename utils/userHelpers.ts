@@ -49,3 +49,4 @@ export function isManagerSales(user: UserLike): boolean {
     return user.roles.role_name.toLowerCase() === "manager-sales";
   return false;
 }
+

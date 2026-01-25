@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import { isSuperuser, isManagerSales, isSales } from "@/utils/leadHelpers";
 
 function parseDate(dateStr?: string) {
   if (!dateStr) return undefined;
@@ -10,9 +12,18 @@ function parseDate(dateStr?: string) {
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await auth();
+    const user = session?.user;
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { searchParams } = new URL(req.url);
 
-    const userId = searchParams.get("user_id");
+    let userId = searchParams.get("user_id");
+
+    // Force Sales to only see their own data
+    if (isSales(user)) {
+      userId = user.id?.toString() || null;
+    }
     const start = parseDate(searchParams.get("start") || undefined);
     const end = parseDate(searchParams.get("end") || undefined);
 

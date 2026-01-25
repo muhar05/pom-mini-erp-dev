@@ -20,21 +20,44 @@ import { PrintButton } from "@/components/quotations/PrintButton";
 import QuotationDetailSkeleton from "../_components/quotationDetailSkeleton";
 import { usePaymentTermById } from "@/hooks/payment-terms/usePaymentTerms";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { useSession } from "@/contexts/session-context";
+import { canAccessQuotation, canEditQuotation } from "@/utils/quotationAccess";
+import { isSales } from "@/utils/userHelpers";
+import { QUOTATION_STATUSES } from "@/utils/quotationPermissions";
 
 function getStatusBadgeClass(status: string): string {
   switch (status?.toLowerCase()) {
-    case "open":
-      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
-    case "confirmed":
-      return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
-    case "rejected":
-      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
-    case "expired":
+    case "sq_draft":
+    case "draft":
       return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
-    case "converted to so":
-      return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800";
-    default:
+    case "sq_waiting_approval":
+    case "waiting approval":
       return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800";
+    case "sq_review":
+    case "review":
+      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
+    case "sq_approved":
+    case "approved":
+      return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
+    case "sq_sent":
+    case "sent":
+      return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800";
+    case "sq_revised":
+    case "revised":
+    case "negotiation":
+      return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800";
+    case "sq_lost":
+    case "lost":
+      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
+    case "sq_win":
+    case "win":
+      return "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800";
+    case "sq_converted":
+    case "converted":
+    case "converted to so":
+      return "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800";
+    default:
+      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
   }
 }
 
@@ -54,10 +77,11 @@ function getStageBadgeClass(stage: string): string {
 }
 
 export default function QuotationDetailPage() {
-  const params = useParams();
-  const idParam = Array.isArray(params.id) ? params.id[0] : params.id;
+  const { id } = useParams();
+  const idParam = Array.isArray(id) ? id[0] : id;
   const router = useRouter();
-  const { quotation, loading } = useQuotationDetail(idParam);
+  const { quotation, loading, error } = useQuotationDetail(idParam);
+  const user = useSession();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [copied, setCopied] = useState(false);
   const [converting, setConverting] = useState(false);
@@ -173,6 +197,21 @@ export default function QuotationDetailPage() {
     return <QuotationDetailSkeleton />;
   }
 
+  // Handle Forbidden Access
+  if (error?.includes("403") || (quotation && user && !canAccessQuotation(user, quotation))) {
+    return (
+      <div className="flex flex-col items-center justify-center p-16 text-center">
+        <FileText className="w-16 h-16 text-red-300 mb-4" />
+        <h2 className="text-2xl font-bold text-red-600 mb-2">Access Forbidden</h2>
+        <p className="text-muted-foreground mb-6">You don't have permission to view this quotation.</p>
+        <Button onClick={() => router.push("/sales/quotations")}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Quotations
+        </Button>
+      </div>
+    );
+  }
+
   if (!quotation) {
     return (
       <div className="flex flex-col items-center justify-center h-96">
@@ -194,6 +233,15 @@ export default function QuotationDetailPage() {
       </div>
     );
   }
+
+  const userData = user?.user ? user.user : user;
+  const isSalesUser = isSales(userData);
+  const showManagerNote = isSalesUser &&
+    [
+      QUOTATION_STATUSES.APPROVED,
+      QUOTATION_STATUSES.REVISED,
+      QUOTATION_STATUSES.REVIEW
+    ].includes(quotation.status?.toLowerCase());
 
   return (
     <>
@@ -239,17 +287,19 @@ export default function QuotationDetailPage() {
                 <span className="text-xs text-green-600 ml-2">Copied!</span>
               )}
               {/* Tambahkan button Convert to SO */}
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  router.push(`/sales/quotations/${quotation.id}/edit`)
-                }
-                className="ml-2"
-                title="Edit Quotation"
-              >
-                <Pencil className="w-4 h-4 mr-1" />
-                Edit
-              </Button>
+              {user && canEditQuotation(user, quotation) && (
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    router.push(`/sales/quotations/${quotation.id}/edit`)
+                  }
+                  className="ml-2"
+                  title="Edit Quotation"
+                >
+                  <Pencil className="w-4 h-4 mr-1" />
+                  Edit
+                </Button>
+              )}
               {["sq_approved", "sq_converted"].includes(quotation.status) && (
                 <>
                   <Button
@@ -270,6 +320,24 @@ export default function QuotationDetailPage() {
             </div>
           </div>
         </div>
+        {/* Manager/Status Note Information */}
+        {showManagerNote && quotation.note && (
+          <Card className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-900/20">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-blue-900 dark:text-blue-300 text-sm">
+                    Manager Note / Revision Note
+                  </h3>
+                  <p className="text-sm text-blue-800 dark:text-blue-400 mt-1 whitespace-pre-wrap">
+                    {quotation.note}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Customer Information */}
@@ -343,11 +411,10 @@ export default function QuotationDetailPage() {
                     <span className="text-xs text-gray-500">Payment Term</span>
                     <div className="font-medium">
                       {paymentTerm
-                        ? `${paymentTerm.name}${
-                            paymentTerm.days
-                              ? ` (${paymentTerm.days} hari)`
-                              : ""
-                          }`
+                        ? `${paymentTerm.name}${paymentTerm.days
+                          ? ` (${paymentTerm.days} hari)`
+                          : ""
+                        }`
                         : "-"}
                     </div>
                   </div>
@@ -391,7 +458,7 @@ export default function QuotationDetailPage() {
                           <td className="px-2 py-1 text-right">
                             {formatCurrency(
                               (Number(item.unit_price) || 0) *
-                                (Number(item.quantity) || 0),
+                              (Number(item.quantity) || 0),
                             )}
                           </td>
                         </tr>
@@ -472,16 +539,16 @@ export default function QuotationDetailPage() {
                   {(companyLevelDiscount1 > 0 ||
                     companyLevelDiscount2 > 0 ||
                     additionalDiscountPercent > 0) && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        Setelah Semua Diskon{" "}
-                        <span className="italic">(belum termasuk pajak)</span>
-                      </span>
-                      <span className="font-medium">
-                        {formatCurrency(afterAllDiscount)}
-                      </span>
-                    </div>
-                  )}
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Setelah Semua Diskon{" "}
+                          <span className="italic">(belum termasuk pajak)</span>
+                        </span>
+                        <span className="font-medium">
+                          {formatCurrency(afterAllDiscount)}
+                        </span>
+                      </div>
+                    )}
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">
                       Tax (11%)

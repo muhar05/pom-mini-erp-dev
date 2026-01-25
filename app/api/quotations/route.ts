@@ -15,7 +15,7 @@ export async function GET() {
   }
 
   try {
-    const quotations = await getAllQuotationsDb();
+    const quotations = await getAllQuotationsDb(user);
 
     // Konversi Decimal ke number
     const safeQuotations = quotations.map((q) => ({

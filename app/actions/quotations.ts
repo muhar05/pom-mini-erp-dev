@@ -1,9 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isSuperuser, isSales, isManagerSales } from "@/utils/userHelpers";
+import { canAccessQuotation } from "@/utils/quotationAccess";
+import { SQ_STATUSES } from "@/utils/statusHelpers";
 import {
   validateQuotationFormData,
   CreateQuotationData,
@@ -18,11 +21,14 @@ import {
   CreateQuotationInput,
 } from "@/data/quotations";
 import { users, QuotationFormData } from "@/types/models";
+import { checkQuotationOwnership } from "@/utils/auth-utils";
 import { ZodError } from "zod";
 import {
   getQuotationPermissions,
   validateQuotationChange,
   getUserRole,
+  canEditQuotationByStatus,
+  QUOTATION_STATUSES,
 } from "@/utils/quotationPermissions";
 
 // Helper to generate quotation number following pattern: SQ2515020001R0
@@ -79,6 +85,7 @@ export async function createQuotationAction(data: QuotationFormData) {
       ...rest,
       quotation_no: quotation_no ?? (await generateQuotationNo()),
       quotation_detail: quotation_detail ?? [],
+      user: { connect: { id: Number(user.id) } },
       customer: { connect: { id: customer_id } },
     };
     const quotation = await createQuotationDb(prismaData);
@@ -123,25 +130,40 @@ export async function updateQuotationAction(
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
-  // Ambil quotation dan lead terkait
   const currentQuotation = await getQuotationByIdDb(id);
+
+  // Ownership check
+  checkQuotationOwnership(currentQuotation, user);
+
+  // Konsekuensi: Jika Sales edit saat Waiting Approval atau Review, revert ke Draft
+  const currentStatus = currentQuotation.status;
+  if (
+    isSales(user) &&
+    (currentStatus === SQ_STATUSES.WAITING_APPROVAL ||
+      currentStatus === SQ_STATUSES.REVIEW)
+  ) {
+    data.status = SQ_STATUSES.DRAFT;
+  }
+
+  // Handle lead ownership if tied to a lead
   const leadId = currentQuotation.lead_id;
-  let lead = null;
   if (leadId) {
-    lead = await prisma.leads.findUnique({ where: { id: Number(leadId) } });
-    if (!lead) throw new Error("Lead not found");
-    // Hanya superuser atau sales pemilik yang boleh update
-    if (
-      !isSuperuser(user) &&
-      (!isSales(user) || Number(lead.id_user) !== Number(user.id))
-    ) {
-      throw new Error("You are not allowed to update this quotation.");
+    const lead = await prisma.leads.findUnique({ where: { id: Number(leadId) } });
+    if (lead) {
+      // Kita sudah memanggil checkQuotationOwnership di atas, 
+      // yang mencakup pengecekan apakah user adalah owner SQ.
+      // Jika ingin detail tambahan untuk Lead:
+      const isOwner = Number(currentQuotation.user_id) === Number(user.id);
+      const isLeadOwner = Number(lead.id_user) === Number(user.id) || Number(lead.assigned_to) === Number(user.id);
+
+      if (!isSuperuser(user) && !isManagerSales(user) && !isLeadOwner && !isOwner) {
+        throw new Error("You are not allowed to update this quotation (Lead mismatch).");
+      }
     }
   }
 
   try {
-    // Get current quotation
-    const currentQuotation = await getQuotationByIdDb(id);
+    // Get current quotation (already fetched above)
 
     // Get permissions
     const permissions = getQuotationPermissions(user);
@@ -149,8 +171,19 @@ export async function updateQuotationAction(
     // Tambahkan pengecekan: jika superuser, override semua rules
     const isSuper = isSuperuser(user);
 
-    if (!isSuper && !permissions.canEdit) {
-      throw new Error("Unauthorized");
+    if (!isSuper) {
+      if (!permissions.canEdit) {
+        throw new Error("Unauthorized");
+      }
+
+      // Check if current status allows editing
+      if (!canEditQuotationByStatus(user, currentQuotation.status || "sq_draft")) {
+        // Jika hanya mau update status, boleh. Jika ada field lain, dilarang.
+        const otherFields = Object.keys(data).filter(f => f !== "status" && f !== "stage" && f !== "note");
+        if (otherFields.length > 0) {
+          throw new Error(`Status ${currentQuotation.status} tidak mengizinkan pengubahan data.`);
+        }
+      }
     }
 
     // Validate status/stage changes if provided
@@ -256,21 +289,10 @@ export async function deleteQuotationAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Quotation ID is required");
 
-  // Ambil quotation dan lead terkait
   const quotation = await getQuotationByIdDb(id);
-  const leadId = quotation.lead_id;
-  let lead = null;
-  if (leadId) {
-    lead = await prisma.leads.findUnique({ where: { id: Number(leadId) } });
-    if (!lead) throw new Error("Lead not found");
-    // Hanya superuser atau sales pemilik yang boleh delete
-    if (
-      !isSuperuser(user) &&
-      (!isSales(user) || Number(lead.id_user) !== Number(user.id))
-    ) {
-      throw new Error("You are not allowed to delete this quotation.");
-    }
-  }
+
+  // Ownership check
+  checkQuotationOwnership(quotation, user);
 
   try {
     // Use direct database call instead of fetch
@@ -311,7 +333,12 @@ export async function getQuotationByIdAction(id: number) {
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
-  return getQuotationByIdDb(id);
+  const quotation = await getQuotationByIdDb(id);
+
+  // Ownership check
+  checkQuotationOwnership(quotation, user);
+
+  return quotation;
 }
 
 // GET ALL
@@ -462,9 +489,8 @@ export async function createQuotationFromLeadAction(
       where: { id: leadId },
       data: {
         status: "Quotation Created",
-        note: `${lead.note || ""}\nQuotation ${
-          quotation.quotation_no
-        } created on ${new Date().toISOString()}`,
+        note: `${lead.note || ""}\nQuotation ${quotation.quotation_no
+          } created on ${new Date().toISOString()}`,
       },
     });
 
@@ -554,9 +580,8 @@ export async function createQuotationFromLeadObjectAction(
       where: { id: leadId },
       data: {
         status: "Quotation Created",
-        note: `${lead.note || ""}\nQuotation ${
-          quotation.quotation_no
-        } created on ${new Date().toISOString()}`,
+        note: `${lead.note || ""}\nQuotation ${quotation.quotation_no
+          } created on ${new Date().toISOString()}`,
       },
     });
 
@@ -596,9 +621,8 @@ export async function submitQuotationForApprovalAction(id: number) {
   const quotation = await getQuotationByIdDb(id);
   if (!quotation) throw new Error("Quotation not found");
 
-  // Cek permission: hanya sales yang boleh submit approval
-  const permissions = getQuotationPermissions(user);
-  if (!permissions.canEdit) throw new Error("Anda tidak punya akses");
+  // Ownership check
+  checkQuotationOwnership(quotation, user);
 
   // Cek status: hanya draft yang bisa dikirim
   if (
@@ -695,11 +719,11 @@ export async function rejectQuotationAction(id: number, note?: string) {
   const permissions = getQuotationPermissions(user);
   if (!permissions.canApprove) throw new Error("Unauthorized");
 
-  // Update status ke rejected
+  // Update status ke Draft (Kembali ke Draft jika direject)
   const updateData: any = {
-    status: "sq_rejected",
+    status: QUOTATION_STATUSES.DRAFT,
     note: note
-      ? `${quotation.note ? quotation.note + "\n" : ""}${note}`
+      ? `${quotation.note ? quotation.note + "\n" : ""}[REJECT REASON]: ${note}`
       : quotation.note,
     revision_no: (quotation.revision_no ?? 0) + 1,
   };

@@ -2,12 +2,11 @@
 
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { users } from "@/types/models";
-import {
-  isSuperuser,
-  getSalesOrderPermissions,
-} from "@/utils/salesOrderPermissions";
+import { getSalesOrderPermissions } from "@/utils/salesOrderPermissions";
+import { isSuperuser, isManagerSales, isSales } from "@/utils/userHelpers";
 import {
   CreateSalesOrderData,
   UpdateSalesOrderData,
@@ -21,6 +20,7 @@ import {
   getSalesOrderByIdDb,
   getAllSalesOrdersDb,
 } from "@/data/sales-orders";
+import { checkSalesOrderOwnership } from "@/utils/auth-utils";
 import { ZodError } from "zod";
 
 // Helper to generate sale order number following pattern: SO2515020001
@@ -57,6 +57,113 @@ async function generateSaleOrderNo(): Promise<string> {
   const sequence = String(sequentialNumber).padStart(4, "0");
 
   return `${prefix}${sequence}`;
+}
+
+// Robust recursive conversion to ensure NO Decimals or BigInts reach the client
+function safeSalesOrder(result: any): any {
+  if (!result) return null;
+
+  const toNum = (val: any) => (val ? Number(val) : 0);
+  const toStr = (val: any) => (val?.toString() || null);
+
+  const convertCompanyLevel = (cl: any) => {
+    if (!cl) return null;
+    return {
+      id_level: cl.id_level,
+      level_name: cl.level_name,
+      disc1: toNum(cl.disc1),
+      disc2: toNum(cl.disc2),
+    };
+  };
+
+  const convertCompany = (c: any) => {
+    if (!c) return null;
+    return {
+      id: c.id,
+      company_name: c.company_name,
+      address: c.address,
+      npwp: c.npwp,
+      id_level: c.id_level,
+      note: c.note,
+      created_at: c.created_at,
+      company_level: convertCompanyLevel(c.company_level),
+    };
+  };
+
+  const convertCustomer = (cust: any) => {
+    if (!cust) return null;
+    return {
+      id: cust.id,
+      customer_name: cust.customer_name,
+      address: cust.address,
+      phone: cust.phone,
+      email: cust.email,
+      type: cust.type,
+      company_id: cust.company_id,
+      note: cust.note,
+      created_at: cust.created_at,
+      company: convertCompany(cust.company),
+    };
+  };
+
+  const convertQuotation = (q: any) => {
+    if (!q) return null;
+    return {
+      id: q.id,
+      quotation_no: q.quotation_no,
+      customer_id: q.customer_id,
+      user_id: q.user_id,
+      lead_id: q.lead_id,
+      total: toNum(q.total),
+      discount: toNum(q.discount),
+      shipping: toNum(q.shipping),
+      tax: toNum(q.tax),
+      grand_total: toNum(q.grand_total),
+      status: q.status,
+      note: q.note,
+      target_date: q.target_date,
+      created_at: q.created_at,
+      customer: convertCustomer(q.customer),
+    };
+  };
+
+  // Build clean object without spreading the original 'result' to avoid proxy/hidden field leaks
+  return {
+    id: toStr(result.id),
+    sale_no: result.sale_no,
+    quotation_id: toStr(result.quotation_id),
+    customer_id: toStr(result.customer_id),
+    user_id: result.user_id,
+    total: toNum(result.total),
+    discount: toNum(result.discount),
+    shipping: toNum(result.shipping),
+    tax: toNum(result.tax),
+    grand_total: toNum(result.grand_total),
+    status: result.status,
+    note: result.note,
+    sale_status: result.sale_status,
+    payment_status: result.payment_status,
+    file_po_customer: result.file_po_customer,
+    created_at: result.created_at,
+    sale_order_detail: (result.sale_order_detail || []).map((detail: any) => ({
+      id: toStr(detail.id),
+      sale_id: toStr(detail.sale_id),
+      product_id: toStr(detail.product_id),
+      product_name: detail.product_name,
+      price: toNum(detail.price),
+      qty: toNum(detail.qty),
+      total: toNum(detail.total),
+      status: detail.status,
+    })),
+    quotation: convertQuotation(result.quotation),
+    customers: convertCustomer(result.customers),
+    user: result.user ? {
+      id: result.user.id,
+      name: result.user.name,
+      email: result.user.email,
+      role_id: result.user.role_id,
+    } : null,
+  };
 }
 
 // CREATE
@@ -120,54 +227,11 @@ export async function createSalesOrderAction(data: CreateSalesOrderData) {
       });
     }
 
-    // Helper function to convert Decimal objects safely
-    const convertSalesOrderForClient = (salesOrder: any) => ({
-      ...salesOrder,
-      id: salesOrder.id.toString(),
-      quotation_id: salesOrder.quotation_id?.toString() || null,
-      customer_id: salesOrder.customer_id?.toString() || null,
-      total: salesOrder.total ? Number(salesOrder.total) : 0,
-      shipping: salesOrder.shipping ? Number(salesOrder.shipping) : 0,
-      discount: salesOrder.discount ? Number(salesOrder.discount) : 0,
-      tax: salesOrder.tax ? Number(salesOrder.tax) : 0,
-      grand_total: salesOrder.grand_total ? Number(salesOrder.grand_total) : 0,
-      // Convert sale_order_detail
-      sale_order_detail: salesOrder.sale_order_detail
-        ? salesOrder.sale_order_detail.map((detail: any) => ({
-            id: detail.id.toString(),
-            sale_id: detail.sale_id.toString(),
-            product_id: detail.product_id ? detail.product_id.toString() : null,
-            product_name: detail.product_name,
-            price: Number(detail.price), // Convert Decimal
-            qty: Number(detail.qty),
-            total: detail.total ? Number(detail.total) : 0, // Convert Decimal
-            status: detail.status,
-          }))
-        : [],
-      // Convert quotation relation
-      quotation: salesOrder.quotation
-        ? {
-            ...salesOrder.quotation,
-            id: salesOrder.quotation.id,
-            customer_id: salesOrder.quotation.customer_id,
-            total: Number(salesOrder.quotation.total || 0),
-            discount: Number(salesOrder.quotation.discount || 0),
-            shipping: Number(salesOrder.quotation.shipping || 0),
-            tax: Number(salesOrder.quotation.tax || 0),
-            grand_total: Number(salesOrder.quotation.grand_total || 0),
-            top: Number(salesOrder.quotation.top || 0),
-          }
-        : null,
-      customers: salesOrder.customers,
-    });
-
-    const safeSalesOrder = convertSalesOrderForClient(salesOrder);
-
     revalidatePath("/sales/sales-orders");
     return {
       success: true,
       message: "Sales order created successfully",
-      data: safeSalesOrder,
+      data: safeSalesOrder(salesOrder),
     };
   } catch (error) {
     console.error("Error creating sales order:", error);
@@ -203,13 +267,17 @@ export async function updateSalesOrderAction(
   try {
     const validatedData = validateSalesOrderFormData(data, "update");
 
+    const currentSO = await getSalesOrderByIdDb(id);
+
+    // Ownership check
+    checkSalesOrderOwnership(currentSO, user);
+
     // Recalculate totals if financial fields are being updated
     if (
       validatedData.total !== undefined ||
       validatedData.discount !== undefined ||
       validatedData.shipping !== undefined
     ) {
-      const currentSO = await getSalesOrderByIdDb(id);
 
       const total = validatedData.total ?? Number(currentSO.total || 0);
       const shipping =
@@ -274,54 +342,11 @@ export async function updateSalesOrderAction(
       }
     }
 
-    // Helper function to convert Decimal objects safely
-    const convertSalesOrderForClient = (salesOrder: any) => ({
-      ...salesOrder,
-      id: salesOrder.id.toString(),
-      quotation_id: salesOrder.quotation_id?.toString() || null,
-      customer_id: salesOrder.customer_id?.toString() || null,
-      total: salesOrder.total ? Number(salesOrder.total) : 0,
-      shipping: salesOrder.shipping ? Number(salesOrder.shipping) : 0,
-      discount: salesOrder.discount ? Number(salesOrder.discount) : 0,
-      tax: salesOrder.tax ? Number(salesOrder.tax) : 0,
-      grand_total: salesOrder.grand_total ? Number(salesOrder.grand_total) : 0,
-      // Convert sale_order_detail
-      sale_order_detail: salesOrder.sale_order_detail
-        ? salesOrder.sale_order_detail.map((detail: any) => ({
-            id: detail.id.toString(),
-            sale_id: detail.sale_id.toString(),
-            product_id: detail.product_id ? detail.product_id.toString() : null,
-            product_name: detail.product_name,
-            price: Number(detail.price), // Convert Decimal
-            qty: Number(detail.qty),
-            total: detail.total ? Number(detail.total) : 0, // Convert Decimal
-            status: detail.status,
-          }))
-        : [],
-      // Convert quotation relation
-      quotation: salesOrder.quotation
-        ? {
-            ...salesOrder.quotation,
-            id: salesOrder.quotation.id,
-            customer_id: salesOrder.quotation.customer_id,
-            total: Number(salesOrder.quotation.total || 0),
-            discount: Number(salesOrder.quotation.discount || 0),
-            shipping: Number(salesOrder.quotation.shipping || 0),
-            tax: Number(salesOrder.quotation.tax || 0),
-            grand_total: Number(salesOrder.quotation.grand_total || 0),
-            top: Number(salesOrder.quotation.top || 0),
-          }
-        : null,
-      customers: salesOrder.customers,
-    });
-
-    const safeSalesOrder = convertSalesOrderForClient(salesOrder);
-
     revalidatePath("/sales/sales-orders");
     return {
       success: true,
       message: "Sales order updated successfully",
-      data: safeSalesOrder,
+      data: safeSalesOrder(salesOrder),
     };
   } catch (error) {
     console.error("Error updating sales order:", error);
@@ -358,6 +383,12 @@ export async function deleteSalesOrderAction(formData: FormData) {
 
   try {
     const id = formData.get("id") as string;
+    if (!id) throw new Error("Sales order ID is required");
+
+    const currentSO = await getSalesOrderByIdDb(id);
+
+    // Ownership check
+    checkSalesOrderOwnership(currentSO, user);
 
     // Delete sale order details first (if needed, though CASCADE should handle it)
     await prisma.sale_order_detail.deleteMany({
@@ -387,7 +418,12 @@ export async function getSalesOrderByIdAction(id: string) {
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
-  return getSalesOrderByIdDb(id);
+  const salesOrder = await getSalesOrderByIdDb(id);
+
+  // Ownership check
+  checkSalesOrderOwnership(salesOrder, user);
+
+  return safeSalesOrder(salesOrder);
 }
 
 // GET ALL
@@ -397,7 +433,8 @@ export async function getAllSalesOrdersAction() {
   if (!user) throw new Error("Unauthorized");
 
   try {
-    return await getAllSalesOrdersDb();
+    const salesOrders = await getAllSalesOrdersDb(user);
+    return salesOrders.map((so: any) => safeSalesOrder(so));
   } catch (error) {
     console.error("Error fetching sales orders:", error);
     throw error;
@@ -452,8 +489,8 @@ export async function createSalesOrderFromQuotationAction(quotationId: number) {
           qty: Number(item.quantity || item.qty || 1),
           total: Number(
             item.total ||
-              (item.unit_price || item.price || 0) *
-                (item.quantity || item.qty || 1),
+            (item.unit_price || item.price || 0) *
+            (item.quantity || item.qty || 1),
           ),
           status: "ACTIVE",
         }));
@@ -781,8 +818,8 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
           qty: Number(item.quantity || item.qty || 1),
           total: Number(
             item.total ||
-              (item.unit_price || item.price || 0) *
-                (item.quantity || item.qty || 1),
+            (item.unit_price || item.price || 0) *
+            (item.quantity || item.qty || 1),
           ),
           status: "ACTIVE",
         }));
@@ -866,48 +903,7 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
     }
 
     // 7. Convert BigInt and Decimal to safe types for client
-    const safeSalesOrder = {
-      id: result.id.toString(),
-      sale_no: result.sale_no,
-      quotation_id: result.quotation_id?.toString() || null,
-      customer_id: result.customer_id?.toString() || null,
-      user_id: result.user_id || null, // <--- Tambahkan baris ini
-      total: result.total ? Number(result.total) : 0,
-      shipping: result.shipping ? Number(result.shipping) : 0,
-      discount: result.discount ? Number(result.discount) : 0,
-      tax: result.tax ? Number(result.tax) : 0,
-      grand_total: result.grand_total ? Number(result.grand_total) : 0,
-      status: result.status,
-      sale_status: result.sale_status,
-      payment_status: result.payment_status,
-      note: result.note,
-      file_po_customer: result.file_po_customer,
-      created_at: result.created_at,
-      sale_order_detail:
-        result.sale_order_detail?.map((detail) => ({
-          id: detail.id.toString(),
-          sale_id: detail.sale_id.toString(),
-          product_id: detail.product_id?.toString() || null,
-          product_name: detail.product_name,
-          price: Number(detail.price),
-          qty: detail.qty,
-          total: detail.total ? Number(detail.total) : 0,
-          status: detail.status,
-        })) || [],
-      quotation: result.quotation
-        ? {
-            id: result.quotation.id,
-            quotation_no: result.quotation.quotation_no,
-            customer_id: result.quotation.customer_id,
-            total: Number(result.quotation.total || 0),
-            discount: Number(result.quotation.discount || 0),
-            shipping: Number(result.quotation.shipping || 0),
-            tax: Number(result.quotation.tax || 0),
-            grand_total: Number(result.quotation.grand_total || 0),
-          }
-        : null,
-      customers: result.customers,
-    };
+    const safeResult = safeSalesOrder(result);
 
     revalidatePath("/sales/sales-orders");
     revalidatePath("/sales/quotations");
@@ -915,7 +911,7 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
     return {
       success: true,
       message: `Successfully converted to Sales Order: ${saleNo}`,
-      data: safeSalesOrder,
+      data: safeSalesOrder(result),
     };
   } catch (error) {
     console.error("Error converting quotation to sales order:", error);

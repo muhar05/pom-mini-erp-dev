@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { notFound } from "next/navigation";
 import {
   createLeadDb,
   updateLeadDb,
@@ -9,11 +10,12 @@ import {
   getAllLeadsDb,
   CreateLeadInput,
 } from "@/data/leads";
+import { checkLeadOwnership } from "@/utils/auth-utils";
 import { validateLeadFormData, extractLeadId } from "@/lib/schemas";
 import { ZodError } from "zod";
 import { auth } from "@/auth";
 import { users, leads } from "@/types/models";
-import { isSuperuser, isSales, logLeadActivity } from "@/utils/leadHelpers";
+import { isSuperuser, isSales, isManagerSales, logLeadActivity } from "@/utils/leadHelpers";
 import {
   LEAD_STATUSES,
   OPPORTUNITY_STATUSES,
@@ -109,13 +111,8 @@ export async function updateLeadAction(formData: FormData) {
     const id = Number(extractLeadId(formData));
     const oldLead = await getLeadByIdDb(id);
 
-    // Hanya sales (pemilik) atau superuser yang boleh update
-    if (
-      !isSuperuser(user) &&
-      (!isSales(user) || Number(oldLead.id_user) !== Number(user.id))
-    ) {
-      throw new Error("You are not allowed to update this lead.");
-    }
+    // Ownership check
+    checkLeadOwnership(oldLead, user);
     if (oldLead.status === "prospecting") {
       throw new Error("Lead cannot be edited after conversion.");
     }
@@ -222,13 +219,8 @@ export async function deleteLeadAction(formData: FormData) {
     if (!id) throw new Error("Lead ID is required");
     const lead = await getLeadByIdDb(id);
 
-    // Hanya sales (pemilik) atau superuser yang boleh delete
-    if (
-      !isSuperuser(user) &&
-      (!isSales(user) || Number(lead.id_user) !== Number(user.id))
-    ) {
-      throw new Error("You are not allowed to delete this lead.");
-    }
+    // Ownership check
+    checkLeadOwnership(lead, user);
 
     const normalizedStatus = normalizeStatusToNewFormat(lead.status || "");
     if (normalizedStatus === "prospecting") {
@@ -261,8 +253,13 @@ export async function deleteLeadAction(formData: FormData) {
 export async function getLeadByIdAction(id: number) {
   const session = await auth();
   const user = session?.user as users | undefined;
-  const lead = await getLeadByIdDb(id);
   if (!user) throw new Error("Unauthorized");
+
+  const lead = await getLeadByIdDb(id);
+
+  // Ownership check
+  checkLeadOwnership(lead, user);
+
   return lead;
 }
 
@@ -285,28 +282,8 @@ export async function convertLeadAction(id: number) {
   if (!user) throw new Error("Unauthorized");
   const lead = await getLeadByIdDb(id);
 
-  // Perbaiki perbandingan id
-  if (isSales(user) && Number(lead.id_user) !== Number(user.id)) {
-    throw new Error("Unauthorized");
-  }
-
-  const normalizedStatus = normalizeStatusToNewFormat(lead.status || "");
-
-  // Hanya sales (pemilik) atau superuser yang boleh convert
-  if (
-    !isSuperuser(user) &&
-    (!isSales(user) || Number(lead.id_user) !== Number(user.id))
-  ) {
-    throw new Error("Unauthorized");
-  }
-  const normalizedStatus2 = normalizeStatusToNewFormat(lead.status || "");
-  if (
-    !isSuperuser(user) &&
-    isSales(user) &&
-    normalizedStatus2 !== LEAD_STATUSES.QUALIFIED
-  ) {
-    throw new Error("Only qualified leads can be converted.");
-  }
+  // Ownership check
+  checkLeadOwnership(lead, user);
 
   // Generate nomor opportunity baru
   const opportunityNo = generateOpportunityNo();

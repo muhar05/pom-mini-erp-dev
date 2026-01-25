@@ -39,7 +39,7 @@ import OpportunityDeleteDialog from "@/app/(protected)/(dashboard)/crm/opportuni
 import { useConvertOpportunityToSQ } from "@/hooks/opportunities/useConvertOpportunityToSQ";
 import { toast } from "react-hot-toast";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { isSuperuser, isSales } from "@/utils/userHelpers";
+import { isSuperuser, isSales, isManagerSales } from "@/utils/userHelpers";
 
 type OpportunitiesTableProps = {
   isSuperadmin?: boolean;
@@ -110,9 +110,12 @@ export default function OpportunitiesTable({
   };
 
   function canEditDeleteConvert(item: Opportunity, currentUser: SessionUser) {
-    if (isSuperuser(currentUser)) return true;
-    if (isSales(currentUser) && Number(item.id_user) === Number(currentUser.id))
-      return true;
+    if (isSuperuser(currentUser) || isManagerSales(currentUser)) return true;
+    if (isSales(currentUser)) {
+      const isOwner = Number(item.id_user) === Number(currentUser.id);
+      const isAssigned = Number(item.assigned_to) === Number(currentUser.id);
+      return isOwner || isAssigned;
+    }
     return false;
   }
 
@@ -178,14 +181,16 @@ export default function OpportunitiesTable({
                                 Edit
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleConvertSQ(item.id)}
-                              disabled={item.status === "opp_sq"}
-                              className="cursor-pointer"
-                            >
-                              <Repeat className="mr-2 h-4 w-4" />
-                              Convert SQ
-                            </DropdownMenuItem>
+                            {isSales(currentUser) && (
+                              <DropdownMenuItem
+                                onClick={() => handleConvertSQ(item.id)}
+                                disabled={item.status !== "opp_prospecting"}
+                                className="cursor-pointer"
+                              >
+                                <Repeat className="mr-2 h-4 w-4" />
+                                Convert SQ
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               onClick={() => {
                                 setSelectedOpportunity({

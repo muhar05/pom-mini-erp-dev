@@ -8,7 +8,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   OPPORTUNITY_STATUSES,
   formatStatusDisplay,
+  canEditOpportunity,
+  canConvertToSQ,
+  isFieldEditableForStatus,
 } from "@/utils/statusHelpers";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { isSuperuser, isManagerSales, isSales } from "@/utils/userHelpers";
+import { useSession } from "@/contexts/session-context";
 import { formatDate } from "@/utils/formatDate";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -36,7 +48,11 @@ export default function OpportunityForm({
   opportunity,
   onSuccess,
   products = [],
-}: OpportunityFormProps & { products?: Array<{ id: number; name: string }> }) {
+  salesUsers = [],
+}: OpportunityFormProps & {
+  products?: Array<{ id: number; name: string }>;
+  salesUsers?: Array<{ id: number; name: string }>;
+}) {
   if (!opportunity) {
     return (
       <div className="p-6 text-center text-red-500">
@@ -81,8 +97,8 @@ export default function OpportunityForm({
   >(
     opportunity.product_interest
       ? opportunity.product_interest
-          .split(",")
-          .map((name: string) => ({ label: name, value: name }))
+        .split(",")
+        .map((name: string) => ({ label: name, value: name }))
       : [],
   );
   const [convertDialogOpen, setConvertDialogOpen] = useState(false);
@@ -99,14 +115,20 @@ export default function OpportunityForm({
   const initialProductInterest = useRef(
     opportunity.product_interest
       ? opportunity.product_interest
-          .split(",")
-          .map((name: string) => ({ label: name, value: name }))
+        .split(",")
+        .map((name: string) => ({ label: name, value: name }))
       : [],
   );
   const initialPotentialValue = useRef(
     Number(opportunity.potential_value || 0),
   );
   const initialNote = useRef(opportunity.note || opportunity.notes || "");
+
+  const session = useSession();
+  const currentUser = session?.user;
+  const isManager = isManagerSales(currentUser);
+  const isSuper = isSuperuser(currentUser);
+  const isSalesRole = isSales(currentUser);
 
   // Cek perubahan
   const isProductInterestChanged =
@@ -117,23 +139,48 @@ export default function OpportunityForm({
   const isNoteChanged =
     (formData.note || formData.notes || "") !== initialNote.current;
 
+  const isAssignmentChanged = Number(formData.assigned_to) !== Number(opportunity.assigned_to);
   const isChanged =
-    isProductInterestChanged || isPotentialValueChanged || isNoteChanged;
+    isProductInterestChanged || isPotentialValueChanged || isNoteChanged || (isManager && isAssignmentChanged);
 
+  const isEditable = !isManager && canEditOpportunity(formData.status);
+  const isProspecting = formData.status === OPPORTUNITY_STATUSES.PROSPECTING;
+
+  // Rule: Sales hanya bisa convert jika status Prospecting DAN dia adalah owner/assigned
+  const isOwnerOrAssigned = Number(formData.id_user) === Number(currentUser?.id) || Number(formData.assigned_to) === Number(currentUser?.id);
+  const showConvertButton = isSalesRole && canConvertToSQ(formData.status) && (isSuper || isOwnerOrAssigned);
+
+  const isLost = formData.status === OPPORTUNITY_STATUSES.LOST;
+  const isSQ = formData.status === OPPORTUNITY_STATUSES.SQ;
+
+  // Rule: Tombol Save aktif hanya saat Prospecting (untuk Sales) ATAU jika Manager ada perubahan (status/assign)
+  const canSave = (isChanged && (isProspecting && !isManager)) || (isManager && isChanged);
   // Handler update
   const handleUpdate = async () => {
     setLoading(true);
     try {
-      // Kirim data ke backend sesuai kebutuhan
-      // Contoh: PATCH ke /api/opportunities/{id}
+      // Build payload dynamically based on role/permissions
+      const payload: any = {};
+
+      if (isManager && !isSuper) {
+        // Manager hanya boleh update assignment
+        payload.assigned_to = formData.assigned_to;
+      } else {
+        // Sales/Super boleh update data utama
+        payload.product_interest = productInterest.map((p) => p.value).join(",");
+        payload.potential_value = formData.potential_value;
+        payload.note = formData.note || formData.notes || "";
+
+        // Superuser juga boleh update assignment jika diubah
+        if (isSuper) {
+          payload.assigned_to = formData.assigned_to;
+        }
+      }
+
       const res = await fetch(`/api/opportunities/${formData.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_interest: productInterest.map((p) => p.value).join(","),
-          potential_value: formData.potential_value,
-          note: formData.note || formData.notes || "",
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -446,12 +493,35 @@ export default function OpportunityForm({
                   Sales PIC
                 </label>
                 <Input
-                  value={formData.id_user_name || formData.sales_pic || ""}
+                  value={formData.sales_pic || formData.id_user_name || ""}
                   disabled
                   className="bg-muted/50"
                 />
               </div>
-              {formData.assigned_to_name && (
+              {isManager ? (
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Assigned To
+                  </label>
+                  <Select
+                    value={formData.assigned_to?.toString() || ""}
+                    onValueChange={(val) =>
+                      setFormData(prev => ({ ...prev, assigned_to: val ? Number(val) : null }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select Sales" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {salesUsers.map(u => (
+                        <SelectItem key={u.id} value={u.id.toString()}>
+                          {u.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : formData.assigned_to_name ? (
                 <div>
                   <label className="block text-sm font-medium mb-1.5">
                     Assigned To
@@ -462,7 +532,7 @@ export default function OpportunityForm({
                     className="bg-muted/50"
                   />
                 </div>
-              )}
+              ) : null}
             </section>
           </div>
 
@@ -483,6 +553,7 @@ export default function OpportunityForm({
                   name="product_interest"
                   options={productOptions}
                   value={productInterest}
+                  isDisabled={(isManager && !isSuper) || !isFieldEditableForStatus("product_interest", formData.status) || loading}
                   onChange={(newValue) =>
                     setProductInterest(Array.isArray(newValue) ? newValue : [])
                   }
@@ -523,7 +594,7 @@ export default function OpportunityForm({
                   }}
                   className="font-bold"
                   placeholder="Masukkan nilai potensial"
-                  disabled={loading}
+                  disabled={(isManager && !isSuper) || !isFieldEditableForStatus("potential_value", formData.status) || loading}
                 />
               </div>
             </section>
@@ -547,7 +618,7 @@ export default function OpportunityForm({
                   }
                   rows={5}
                   className="resize-none"
-                  disabled={loading}
+                  disabled={(isManager && !isSuper) || !isFieldEditableForStatus("note", formData.status) || loading}
                   placeholder="Catatan tambahan (opsional)"
                 />
               </div>
@@ -576,7 +647,7 @@ export default function OpportunityForm({
         {/* Form Actions */}
         <Separator />
         <div className="flex justify-end gap-3 pt-2">
-          {isChanged && (
+          {canSave && (
             <Button
               type="button"
               variant="default"
@@ -596,14 +667,16 @@ export default function OpportunityForm({
           >
             Close
           </Button>
-          <Button
-            type="button"
-            variant="default"
-            onClick={() => setConvertDialogOpen(true)}
-            disabled={convertLoading}
-          >
-            Convert to SQ
-          </Button>
+          {showConvertButton && (
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => setConvertDialogOpen(true)}
+              disabled={convertLoading}
+            >
+              Convert to SQ
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

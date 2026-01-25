@@ -4,6 +4,7 @@ export function getStatusColor(status: string) {
     return "green";
   if (status.includes("lost") || status === "opp_lost") return "red";
   if (status === "opp_sq") return "blue";
+  if (status.includes("prospecting")) return "indigo";
   if (status.includes("new")) return "yellow";
   return "gray";
 }
@@ -14,6 +15,7 @@ export function getStatusVariant(status: string) {
     return "success";
   if (status.includes("lost") || status === "opp_lost") return "danger";
   if (status === "opp_sq") return "info";
+  if (status.includes("prospecting")) return "default";
   if (status.includes("new")) return "warning";
-  return "default";
+  return "secondary";
 }

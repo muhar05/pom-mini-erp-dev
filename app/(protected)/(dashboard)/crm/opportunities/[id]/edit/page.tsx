@@ -3,6 +3,9 @@ import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { getOpportunityByIdAction } from "@/app/actions/opportunities";
 import OpportunityForm from "../../_components/opportunity-form";
 import { getAllProductsAction } from "@/app/actions/products";
+import { getAllUsersAction } from "@/app/actions/users";
+import { auth } from "@/auth";
+import { isSales, isManagerSales, isSuperuser } from "@/utils/userHelpers";
 
 interface EditOpportunityPageProps {
   params: { id: string };
@@ -12,8 +15,18 @@ export default async function EditOpportunityPage(
   props: EditOpportunityPageProps,
 ) {
   const { params } = await props;
+  const session = await auth();
   const opportunity = await getOpportunityByIdAction(Number(params.id));
-  const products = await getAllProductsAction(); // Ambil data produk
+  const products = await getAllProductsAction();
+  const allUsers = await getAllUsersAction();
+
+  // Filter users yang bisa di-assign (Hanya Sales)
+  const salesUsers = allUsers.filter((u: any) =>
+    isSales(u)
+  ).map((u: any) => ({
+    id: Number(u.id),
+    name: u.name || "Unknown User",
+  }));
 
   return (
     <>
@@ -26,8 +39,12 @@ export default async function EditOpportunityPage(
           <h2 className="text-lg font-semibold mb-4">
             Edit Opportunity Information
           </h2>
-          {/* Do not pass onClose or onSuccess from here */}
-          <OpportunityForm mode="edit" opportunity={opportunity} products={products} />
+          <OpportunityForm
+            mode="edit"
+            opportunity={opportunity}
+            products={products}
+            salesUsers={salesUsers}
+          />
         </div>
       </div>
     </>

@@ -8,8 +8,8 @@ export interface CreateLeadInput extends Omit<
   | "created_at"
   | "users_leads_assigned_toTousers"
   | "users_leads_id_userTousers"
-> {}
-export interface UpdateLeadInput extends Partial<CreateLeadInput> {}
+> { }
+export interface UpdateLeadInput extends Partial<CreateLeadInput> { }
 
 // CREATE
 export async function createLeadDb(input: CreateLeadInput) {
@@ -58,7 +58,11 @@ export async function getAllLeadsDb(
   user?: users | { id: string | number; role_name?: string },
 ) {
   if (!user) throw new Error("Unauthorized");
-  if (isSuperuser(user) || isManagerSales(user) || isSales(user)) {
+
+  const userId = typeof user.id === "string" ? Number(user.id) : user.id;
+
+  // Manager dan Admin bisa melihat semua data
+  if (isSuperuser(user) || isManagerSales(user)) {
     return prisma.leads.findMany({
       include: {
         users_leads_assigned_toTousers: true,
@@ -67,11 +71,16 @@ export async function getAllLeadsDb(
       orderBy: { created_at: "desc" },
     });
   }
+
+  // Sales hanya boleh melihat data milik sendiri (id_user atau assigned_to)
   if (isSales(user)) {
-    // Konversi id ke number jika perlu
-    const userId = typeof user.id === "string" ? Number(user.id) : user.id;
     return prisma.leads.findMany({
-      where: { id_user: userId },
+      where: {
+        OR: [
+          { id_user: userId },
+          { assigned_to: userId }
+        ]
+      },
       include: {
         users_leads_assigned_toTousers: true,
         users_leads_id_userTousers: true,
@@ -79,5 +88,6 @@ export async function getAllLeadsDb(
       orderBy: { created_at: "desc" },
     });
   }
-  throw new Error("Unauthorized");
+
+  throw new Error("Forbidden access");
 }

@@ -11,6 +11,7 @@ import {
   getQuotationPermissions,
   validateQuotationChange,
 } from "@/utils/quotationPermissions";
+import { canAccessQuotation } from "@/utils/quotationAccess";
 
 // GET: Ambil quotation by ID
 export async function GET(
@@ -37,6 +38,11 @@ export async function GET(
     }
 
     const quotation = await getQuotationByIdDb(quotationId);
+
+    // Ownership check
+    if (!canAccessQuotation(user, quotation)) {
+      return NextResponse.json({ error: "Forbidden: You do not own this quotation" }, { status: 403 });
+    }
 
     // Konversi Decimal ke number
     const safeQuotation = {
@@ -91,6 +97,11 @@ export async function PUT(
 
     // Get current quotation
     const currentQuotation = await getQuotationByIdDb(id);
+
+    // Ownership check
+    if (!canAccessQuotation(user, currentQuotation)) {
+      return NextResponse.json({ error: "Forbidden: You do not own this quotation" }, { status: 403 });
+    }
 
     // Validate permissions
     const permissions = getQuotationPermissions(user);
@@ -163,6 +174,13 @@ export async function DELETE(
         { error: "Invalid quotation ID" },
         { status: 400 },
       );
+    }
+
+    const quotation = await getQuotationByIdDb(quotationId);
+
+    // Ownership check
+    if (!canAccessQuotation(user, quotation)) {
+      return NextResponse.json({ error: "Forbidden: You do not own this quotation" }, { status: 403 });
     }
 
     // Directly try to delete - Prisma will throw P2025 if not found

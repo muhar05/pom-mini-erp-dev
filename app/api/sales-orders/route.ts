@@ -12,7 +12,7 @@ export async function GET() {
   }
 
   try {
-    const salesOrders = await getAllSalesOrdersDb();
+    const salesOrders = await getAllSalesOrdersDb(user);
 
     // Konversi BigInt dan Decimal ke format yang aman, termasuk nested relations
     const safeSalesOrders = salesOrders.map((so: any) => ({
@@ -27,51 +27,51 @@ export async function GET() {
       // Convert quotation relation
       quotation: so.quotation
         ? {
-            id: so.quotation.id,
-            quotation_no: so.quotation.quotation_no,
-            customer_id: so.quotation.customer_id,
-            total: so.quotation.total ? Number(so.quotation.total) : 0,
-            shipping: so.quotation.shipping ? Number(so.quotation.shipping) : 0,
-            discount: so.quotation.discount ? Number(so.quotation.discount) : 0,
-            tax: so.quotation.tax ? Number(so.quotation.tax) : 0,
-            grand_total: so.quotation.grand_total
-              ? Number(so.quotation.grand_total)
-              : 0,
-            status: so.quotation.status,
-            stage: so.quotation.stage,
-            note: so.quotation.note,
-            target_date: so.quotation.target_date,
-            top: so.quotation.top,
-            created_at: so.quotation.created_at,
-            updated_at: so.quotation.updated_at,
-            // Convert customer relation if it exists
-            customer: so.quotation.customer
-              ? {
-                  id: so.quotation.customer.id,
-                  customer_name: so.quotation.customer.customer_name,
-                  email: so.quotation.customer.email,
-                  phone: so.quotation.customer.phone,
-                  address: so.quotation.customer.address,
-                  type: so.quotation.customer.type,
-                  company_id: so.quotation.customer.company_id,
-                  note: so.quotation.customer.note,
-                  created_at: so.quotation.customer.created_at,
-                }
-              : null,
-          }
+          id: so.quotation.id,
+          quotation_no: so.quotation.quotation_no,
+          customer_id: so.quotation.customer_id,
+          total: so.quotation.total ? Number(so.quotation.total) : 0,
+          shipping: so.quotation.shipping ? Number(so.quotation.shipping) : 0,
+          discount: so.quotation.discount ? Number(so.quotation.discount) : 0,
+          tax: so.quotation.tax ? Number(so.quotation.tax) : 0,
+          grand_total: so.quotation.grand_total
+            ? Number(so.quotation.grand_total)
+            : 0,
+          status: so.quotation.status,
+          stage: so.quotation.stage,
+          note: so.quotation.note,
+          target_date: so.quotation.target_date,
+          top: so.quotation.top,
+          created_at: so.quotation.created_at,
+          updated_at: so.quotation.updated_at,
+          // Convert customer relation if it exists
+          customer: so.quotation.customer
+            ? {
+              id: so.quotation.customer.id,
+              customer_name: so.quotation.customer.customer_name,
+              email: so.quotation.customer.email,
+              phone: so.quotation.customer.phone,
+              address: so.quotation.customer.address,
+              type: so.quotation.customer.type,
+              company_id: so.quotation.customer.company_id,
+              note: so.quotation.customer.note,
+              created_at: so.quotation.customer.created_at,
+            }
+            : null,
+        }
         : null,
       // Convert sale_order_detail relation
       sale_order_detail: so.sale_order_detail
         ? so.sale_order_detail.map((detail: any) => ({
-            id: detail.id.toString(),
-            sale_id: detail.sale_id.toString(),
-            product_id: detail.product_id?.toString() || null,
-            product_name: detail.product_name,
-            price: Number(detail.price),
-            qty: detail.qty,
-            total: detail.total ? Number(detail.total) : null,
-            status: detail.status,
-          }))
+          id: detail.id.toString(),
+          sale_id: detail.sale_id.toString(),
+          product_id: detail.product_id?.toString() || null,
+          product_name: detail.product_name,
+          price: Number(detail.price),
+          qty: detail.qty,
+          total: detail.total ? Number(detail.total) : null,
+          status: detail.status,
+        }))
         : [],
     }));
 

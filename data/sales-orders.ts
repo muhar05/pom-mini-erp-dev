@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { isSuperuser, isManagerSales, isSales } from "@/utils/userHelpers";
 
 // Base field schemas
 const saleNoSchema = z
@@ -201,58 +202,37 @@ export async function createSalesOrderDb(input: CreateSalesOrderInput) {
     },
   });
 
-  // Helper to convert Decimal fields
-  const convertCompanyLevel = (companyLevel: any) => {
-    if (!companyLevel) return null;
-    return {
-      id_level: companyLevel.id_level,
-      level_name: companyLevel.level_name,
-      disc1: companyLevel.disc1 ? Number(companyLevel.disc1) : 0,
-      disc2: companyLevel.disc2 ? Number(companyLevel.disc2) : 0,
-    };
-  };
-
-  const convertCompany = (company: any) => {
-    if (!company) return null;
-    // JANGAN gunakan ...company, definisikan eksplisit
-    return {
-      id: company.id,
-      company_name: company.company_name,
-      address: company.address,
-      npwp: company.npwp,
-      id_level: company.id_level,
-      note: company.note,
-      created_at: company.created_at,
-      company_level: convertCompanyLevel(company.company_level),
-    };
-  };
-
-  const convertCustomer = (customer: any) => {
-    if (!customer) return null;
-    // JANGAN gunakan ...customer, definisikan eksplisit
-    return {
-      id: customer.id,
-      customer_name: customer.customer_name,
-      address: customer.address,
-      phone: customer.phone,
-      email: customer.email,
-      type: customer.type,
-      company_id: customer.company_id,
-      note: customer.note,
-      created_at: customer.created_at,
-      company: convertCompany(customer.company),
-    };
-  };
-
   return {
-    ...salesOrder,
+    id: salesOrder.id.toString(),
+    sale_no: salesOrder.sale_no,
+    quotation_id: salesOrder.quotation_id ? Number(salesOrder.quotation_id) : null,
+    customer_id: salesOrder.customer_id ? Number(salesOrder.customer_id) : null,
+    user_id: salesOrder.user_id,
+    total: salesOrder.total ? Number(salesOrder.total) : 0,
+    discount: salesOrder.discount ? Number(salesOrder.discount) : 0,
+    shipping: salesOrder.shipping ? Number(salesOrder.shipping) : 0,
+    tax: salesOrder.tax ? Number(salesOrder.tax) : 0,
+    grand_total: salesOrder.grand_total ? Number(salesOrder.grand_total) : 0,
+    status: salesOrder.status,
+    note: salesOrder.note,
+    sale_status: salesOrder.sale_status,
+    payment_status: salesOrder.payment_status,
+    file_po_customer: salesOrder.file_po_customer,
+    created_at: salesOrder.created_at,
     customers: convertCustomer(salesOrder.customers),
     quotation: salesOrder.quotation
       ? {
-          ...salesOrder.quotation,
-          customer: convertCustomer(salesOrder.quotation.customer),
-        }
+        ...salesOrder.quotation,
+        total: salesOrder.quotation.total ? Number(salesOrder.quotation.total) : 0,
+        discount: salesOrder.quotation.discount ? Number(salesOrder.quotation.discount) : 0,
+        shipping: salesOrder.quotation.shipping ? Number(salesOrder.quotation.shipping) : 0,
+        tax: salesOrder.quotation.tax ? Number(salesOrder.quotation.tax) : 0,
+        grand_total: salesOrder.quotation.grand_total ? Number(salesOrder.quotation.grand_total) : 0,
+        customer: convertCustomer(salesOrder.quotation.customer),
+      }
       : null,
+    sale_order_detail: salesOrder.sale_order_detail,
+    user: salesOrder.user,
   };
 }
 
@@ -278,58 +258,37 @@ export async function updateSalesOrderDb(
     },
   });
 
-  // Helper to convert Decimal fields
-  const convertCompanyLevel = (companyLevel: any) => {
-    if (!companyLevel) return null;
-    return {
-      id_level: companyLevel.id_level,
-      level_name: companyLevel.level_name,
-      disc1: companyLevel.disc1 ? Number(companyLevel.disc1) : 0,
-      disc2: companyLevel.disc2 ? Number(companyLevel.disc2) : 0,
-    };
-  };
-
-  const convertCompany = (company: any) => {
-    if (!company) return null;
-    // JANGAN gunakan ...company, definisikan eksplisit
-    return {
-      id: company.id,
-      company_name: company.company_name,
-      address: company.address,
-      npwp: company.npwp,
-      id_level: company.id_level,
-      note: company.note,
-      created_at: company.created_at,
-      company_level: convertCompanyLevel(company.company_level),
-    };
-  };
-
-  const convertCustomer = (customer: any) => {
-    if (!customer) return null;
-    // JANGAN gunakan ...customer, definisikan eksplisit
-    return {
-      id: customer.id,
-      customer_name: customer.customer_name,
-      address: customer.address,
-      phone: customer.phone,
-      email: customer.email,
-      type: customer.type,
-      company_id: customer.company_id,
-      note: customer.note,
-      created_at: customer.created_at,
-      company: convertCompany(customer.company),
-    };
-  };
-
   return {
-    ...salesOrder,
+    id: salesOrder.id.toString(),
+    sale_no: salesOrder.sale_no,
+    quotation_id: salesOrder.quotation_id ? Number(salesOrder.quotation_id) : null,
+    customer_id: salesOrder.customer_id ? Number(salesOrder.customer_id) : null,
+    user_id: salesOrder.user_id,
+    total: salesOrder.total ? Number(salesOrder.total) : 0,
+    discount: salesOrder.discount ? Number(salesOrder.discount) : 0,
+    shipping: salesOrder.shipping ? Number(salesOrder.shipping) : 0,
+    tax: salesOrder.tax ? Number(salesOrder.tax) : 0,
+    grand_total: salesOrder.grand_total ? Number(salesOrder.grand_total) : 0,
+    status: salesOrder.status,
+    note: salesOrder.note,
+    sale_status: salesOrder.sale_status,
+    payment_status: salesOrder.payment_status,
+    file_po_customer: salesOrder.file_po_customer,
+    created_at: salesOrder.created_at,
     customers: convertCustomer(salesOrder.customers),
     quotation: salesOrder.quotation
       ? {
-          ...salesOrder.quotation,
-          customer: convertCustomer(salesOrder.quotation.customer),
-        }
+        ...salesOrder.quotation,
+        total: salesOrder.quotation.total ? Number(salesOrder.quotation.total) : 0,
+        discount: salesOrder.quotation.discount ? Number(salesOrder.quotation.discount) : 0,
+        shipping: salesOrder.quotation.shipping ? Number(salesOrder.quotation.shipping) : 0,
+        tax: salesOrder.quotation.tax ? Number(salesOrder.quotation.tax) : 0,
+        grand_total: salesOrder.quotation.grand_total ? Number(salesOrder.quotation.grand_total) : 0,
+        customer: convertCustomer(salesOrder.quotation.customer),
+      }
       : null,
+    sale_order_detail: salesOrder.sale_order_detail,
+    user: salesOrder.user,
   };
 }
 
@@ -362,70 +321,70 @@ export async function getSalesOrderByIdDb(id: string) {
   // Convert quotation - tanpa spread operator
   const safeQuotation = salesOrder.quotation
     ? {
-        id: salesOrder.quotation.id,
-        quotation_no: salesOrder.quotation.quotation_no,
-        customer_id: salesOrder.quotation.customer_id
-          ? Number(salesOrder.quotation.customer_id)
-          : null,
-        user_id: salesOrder.quotation.user_id,
-        lead_id: salesOrder.quotation.lead_id,
-        total: salesOrder.quotation.total
-          ? Number(salesOrder.quotation.total)
-          : 0,
-        discount: salesOrder.quotation.discount
-          ? Number(salesOrder.quotation.discount)
-          : 0,
-        shipping: salesOrder.quotation.shipping
-          ? Number(salesOrder.quotation.shipping)
-          : 0,
-        tax: salesOrder.quotation.tax ? Number(salesOrder.quotation.tax) : 0,
-        grand_total: salesOrder.quotation.grand_total
-          ? Number(salesOrder.quotation.grand_total)
-          : 0,
-        status: salesOrder.quotation.status,
-        note: salesOrder.quotation.note,
-        target_date: salesOrder.quotation.target_date,
-        created_at: salesOrder.quotation.created_at,
-        updated_at: salesOrder.quotation.updated_at,
-        customer: convertCustomer(salesOrder.quotation.customer),
-        quotation_detail: salesOrder.quotation.quotation_detail
-          ? (salesOrder.quotation.quotation_detail as any[]).map(
-              (item: any) => ({
-                ...item,
-                product_id: item.product_id ? Number(item.product_id) : null,
-                unit_price: item.unit_price ? Number(item.unit_price) : 0,
-                price: item.price ? Number(item.price) : 0,
-                quantity: item.quantity ? Number(item.quantity) : 0,
-                qty: item.qty ? Number(item.qty) : 0,
-                total: item.total ? Number(item.total) : 0,
-              }),
-            )
-          : [],
-      }
+      id: salesOrder.quotation.id,
+      quotation_no: salesOrder.quotation.quotation_no,
+      customer_id: salesOrder.quotation.customer_id
+        ? Number(salesOrder.quotation.customer_id)
+        : null,
+      user_id: salesOrder.quotation.user_id,
+      lead_id: salesOrder.quotation.lead_id,
+      total: salesOrder.quotation.total
+        ? Number(salesOrder.quotation.total)
+        : 0,
+      discount: salesOrder.quotation.discount
+        ? Number(salesOrder.quotation.discount)
+        : 0,
+      shipping: salesOrder.quotation.shipping
+        ? Number(salesOrder.quotation.shipping)
+        : 0,
+      tax: salesOrder.quotation.tax ? Number(salesOrder.quotation.tax) : 0,
+      grand_total: salesOrder.quotation.grand_total
+        ? Number(salesOrder.quotation.grand_total)
+        : 0,
+      status: salesOrder.quotation.status,
+      note: salesOrder.quotation.note,
+      target_date: salesOrder.quotation.target_date,
+      created_at: salesOrder.quotation.created_at,
+      updated_at: salesOrder.quotation.updated_at,
+      customer: convertCustomer(salesOrder.quotation.customer),
+      quotation_detail: salesOrder.quotation.quotation_detail
+        ? (salesOrder.quotation.quotation_detail as any[]).map(
+          (item: any) => ({
+            ...item,
+            product_id: item.product_id ? Number(item.product_id) : null,
+            unit_price: item.unit_price ? Number(item.unit_price) : 0,
+            price: item.price ? Number(item.price) : 0,
+            quantity: item.quantity ? Number(item.quantity) : 0,
+            qty: item.qty ? Number(item.qty) : 0,
+            total: item.total ? Number(item.total) : 0,
+          }),
+        )
+        : [],
+    }
     : null;
 
   // Convert sale order details
   const safeSaleOrderDetails = salesOrder.sale_order_detail
     ? salesOrder.sale_order_detail.map((detail) => ({
-        id: detail.id.toString(),
-        sale_id: detail.sale_id.toString(),
-        product_id: detail.product_id ? detail.product_id.toString() : null,
-        product_name: detail.product_name,
-        price: Number(detail.price),
-        qty: Number(detail.qty),
-        total: detail.total ? Number(detail.total) : 0,
-        status: detail.status,
-      }))
+      id: detail.id.toString(),
+      sale_id: detail.sale_id.toString(),
+      product_id: detail.product_id ? detail.product_id.toString() : null,
+      product_name: detail.product_name,
+      price: Number(detail.price),
+      qty: Number(detail.qty),
+      total: detail.total ? Number(detail.total) : 0,
+      status: detail.status,
+    }))
     : [];
 
   const safeUser = salesOrder.user
     ? {
-        id: salesOrder.user.id,
-        name: salesOrder.user.name,
-        email: salesOrder.user.email,
-        role_id: salesOrder.user.role_id,
-        created_at: salesOrder.user.created_at,
-      }
+      id: salesOrder.user.id,
+      name: salesOrder.user.name,
+      email: salesOrder.user.email,
+      role_id: salesOrder.user.role_id,
+      created_at: salesOrder.user.created_at,
+    }
     : null;
 
   // Return clean object tanpa spread
@@ -456,9 +415,23 @@ export async function getSalesOrderByIdDb(id: string) {
 }
 
 // GET ALL
-export async function getAllSalesOrdersDb() {
+export async function getAllSalesOrdersDb(user?: any) {
+  if (!user) throw new Error("Unauthorized");
+
+  const userId = typeof user.id === "string" ? Number(user.id) : user.id;
+  const isManager = isSuperuser(user) || isManagerSales(user);
+
+  let where: any = undefined;
+
+  if (!isManager && isSales(user)) {
+    where = { user_id: userId };
+  } else if (!isManager) {
+    throw new Error("Forbidden access");
+  }
+
   const salesOrders = await prisma.sales_orders.findMany({
     orderBy: { created_at: "desc" },
+    where,
     include: {
       quotation: {
         include: {
@@ -484,22 +457,22 @@ export async function getAllSalesOrdersDb() {
     grand_total: so.grand_total ? Number(so.grand_total) : 0,
     quotation: so.quotation
       ? {
-          ...so.quotation,
-          customer: convertCustomer(so.quotation.customer),
-        }
+        ...so.quotation,
+        customer: convertCustomer(so.quotation.customer),
+      }
       : null,
-    customers: convertCustomer(so.customers), // <-- Ganti ini!
+    customers: convertCustomer(so.customers),
     sale_order_detail: so.sale_order_detail
       ? so.sale_order_detail.map((detail) => ({
-          id: detail.id.toString(),
-          sale_id: detail.sale_id.toString(),
-          product_id: detail.product_id ? detail.product_id.toString() : null,
-          product_name: detail.product_name,
-          price: Number(detail.price), // Convert Decimal to number
-          qty: Number(detail.qty), // Ensure qty is number
-          total: detail.total ? Number(detail.total) : 0, // Convert Decimal to number
-          status: detail.status,
-        }))
+        id: detail.id.toString(),
+        sale_id: detail.sale_id.toString(),
+        product_id: detail.product_id ? detail.product_id.toString() : null,
+        product_name: detail.product_name,
+        price: Number(detail.price), // Convert Decimal to number
+        qty: Number(detail.qty), // Ensure qty is number
+        total: detail.total ? Number(detail.total) : 0, // Convert Decimal to number
+        status: detail.status,
+      }))
       : [],
   }));
 }

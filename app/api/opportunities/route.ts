@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import { formatStatusDisplay } from "@/utils/statusHelpers";
 import { getAllOpportunitiesDb } from "@/data/opportunities";
+import { auth } from "@/auth";
 
 export async function GET() {
+  const session = await auth();
+  const user = session?.user;
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   // Ambil data dari data layer
-  const opportunities = await getAllOpportunitiesDb();
+  const opportunities = await getAllOpportunitiesDb(user);
 
   // Mapping ke struktur frontend, hitung total harga
   const data = await Promise.all(

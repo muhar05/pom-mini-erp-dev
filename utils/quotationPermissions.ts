@@ -13,16 +13,14 @@ export interface QuotationPermission {
 // Status enum
 export const QUOTATION_STATUSES = {
   DRAFT: "sq_draft",
+  WAITING_APPROVAL: "sq_waiting_approval",
   REVIEW: "sq_review",
   APPROVED: "sq_approved",
   SENT: "sq_sent",
   REVISED: "sq_revised",
   LOST: "sq_lost",
   WIN: "sq_win",
-  REJECTED: "sq_rejected",
-  CANCELLED: "sq_cancelled",
   CONVERTED: "sq_converted",
-  WAITING_APPROVAL: "sq_waiting_approval",
 } as const;
 
 // Permission mapping (SUDAH FIX ROLE NAME)
@@ -30,25 +28,26 @@ export const ROLE_PERMISSIONS: Record<string, QuotationPermission> = {
   sales: {
     allowedStatuses: [
       QUOTATION_STATUSES.DRAFT,
+      QUOTATION_STATUSES.WAITING_APPROVAL,
       QUOTATION_STATUSES.REVIEW,
+      QUOTATION_STATUSES.APPROVED,
       QUOTATION_STATUSES.SENT,
       QUOTATION_STATUSES.REVISED,
       QUOTATION_STATUSES.LOST,
       QUOTATION_STATUSES.WIN,
-      QUOTATION_STATUSES.CANCELLED,
       QUOTATION_STATUSES.CONVERTED,
     ],
-    canEdit: true,
+    canEdit: true, // Akan divalidasi lebih lanjut di canEditQuotationByStatus
     canDelete: false,
     canApprove: false,
   },
 
   "manager-sales": {
     allowedStatuses: [
+      QUOTATION_STATUSES.WAITING_APPROVAL,
       QUOTATION_STATUSES.REVIEW,
       QUOTATION_STATUSES.APPROVED,
       QUOTATION_STATUSES.REVISED,
-      QUOTATION_STATUSES.REJECTED,
     ],
     canEdit: true,
     canDelete: false,
@@ -62,6 +61,31 @@ export const ROLE_PERMISSIONS: Record<string, QuotationPermission> = {
     canApprove: true,
   },
 };
+
+/**
+ * Validasi apakah data Quotation boleh diedit berdasarkan status saat ini
+ */
+export function canEditQuotationByStatus(user: any, status: string): boolean {
+  if (isSuperuser(user)) return true;
+
+  const currentStatus = status.toLowerCase();
+
+  // Sales hanya bisa edit Draft, Waiting Approval, atau Review (tapi WA/Review akan revert ke Draft)
+  if (isSales(user)) {
+    return [
+      QUOTATION_STATUSES.DRAFT,
+      QUOTATION_STATUSES.WAITING_APPROVAL,
+      QUOTATION_STATUSES.REVIEW,
+    ].includes(currentStatus as any);
+  }
+
+  // Manager Sales tidak boleh edit jika sudah Approved
+  if (isManagerSales(user)) {
+    return currentStatus !== QUOTATION_STATUSES.APPROVED;
+  }
+
+  return false;
+}
 
 // Helper get role
 export function getUserRole(user: Partial<users>): string {
@@ -98,6 +122,24 @@ export function canChangeStatus(
         user,
       )} tidak diizinkan mengubah status ke ${toStatus}`,
     };
+  }
+
+  // Khusus Sales setelah Approved: Hanya boleh status tertentu
+  if (isSales(user) && fromStatus === QUOTATION_STATUSES.APPROVED) {
+    const allowedAfterApproved = [
+      QUOTATION_STATUSES.APPROVED,
+      QUOTATION_STATUSES.SENT,
+      QUOTATION_STATUSES.REVISED,
+      QUOTATION_STATUSES.LOST,
+      QUOTATION_STATUSES.WIN,
+      QUOTATION_STATUSES.CONVERTED,
+    ];
+    if (!allowedAfterApproved.includes(toStatus as any)) {
+      return {
+        allowed: false,
+        message: "Setelah Approved, Anda hanya boleh mengubah status ke Sent, Revised, Lost, Win, atau Converted.",
+      };
+    }
   }
 
   return { allowed: true };

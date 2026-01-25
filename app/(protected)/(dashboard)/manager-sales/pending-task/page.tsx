@@ -197,15 +197,15 @@ export default function ManagerSalesPendingTaskPage() {
       created_at: q.created_at ? new Date(q.created_at) : new Date(),
       customer: q.customer
         ? {
-            customer_name: q.customer.customer_name || "-",
-            company: q.customer.company
-              ? { company_name: q.customer.company.company_name || "-" }
-              : null,
-          }
+          customer_name: q.customer.customer_name || "-",
+          company: q.customer.company
+            ? { company_name: q.customer.company.company_name || "-" }
+            : null,
+        }
         : {
-            customer_name: "-",
-            company: null,
-          },
+          customer_name: "-",
+          company: null,
+        },
     }),
   );
 
@@ -278,14 +278,14 @@ export default function ManagerSalesPendingTaskPage() {
               <div className="text-2xl font-bold">
                 {pendingQuotations.length > 0
                   ? Math.max(
-                      ...pendingQuotations.map((q) =>
-                        Math.floor(
-                          (new Date().getTime() -
-                            new Date(q.created_at ?? 0).getTime()) /
-                            (1000 * 60 * 60 * 24),
-                        ),
+                    ...pendingQuotations.map((q) =>
+                      Math.floor(
+                        (new Date().getTime() -
+                          new Date(q.created_at ?? 0).getTime()) /
+                        (1000 * 60 * 60 * 24),
                       ),
-                    )
+                    ),
+                  )
                   : 0}{" "}
                 days
               </div>

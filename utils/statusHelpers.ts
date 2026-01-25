@@ -319,3 +319,35 @@ export const BOQ_STATUS_OPTIONS = (Object.values(BOQ_STATUSES) as string[]).map(
     label: formatStatusDisplay(status),
   }),
 );
+/**
+ * Opportunity Form Behavior Helpers
+ */
+export function canEditOpportunity(status: string | null | undefined): boolean {
+  return status === OPPORTUNITY_STATUSES.PROSPECTING;
+}
+
+export function canConvertToSQ(status: string | null | undefined): boolean {
+  return status === OPPORTUNITY_STATUSES.PROSPECTING;
+}
+
+const CUSTOMER_INFO_FIELDS = [
+  "customer_name",
+  "lead_name",
+  "contact",
+  "email",
+  "phone",
+  "type",
+  "company",
+  "location",
+  "source",
+];
+
+export function isFieldEditableForStatus(
+  field: string,
+  status: string | null | undefined,
+): boolean {
+  if (field === "status") return true;
+  if (CUSTOMER_INFO_FIELDS.includes(field)) return false;
+
+  return status === OPPORTUNITY_STATUSES.PROSPECTING;
+}
