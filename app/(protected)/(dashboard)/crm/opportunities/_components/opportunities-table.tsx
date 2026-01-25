@@ -91,7 +91,6 @@ export default function OpportunitiesTable({
     if (!convertId) return;
     const success = await convert(convertId, null);
     if (success) {
-      toast.success("Berhasil convert ke SQ!");
       setConvertDialogOpen(false);
       setConvertId(null);
       onDelete?.();

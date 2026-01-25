@@ -12,6 +12,8 @@ import QuotationActions from "./quotation-actions";
 import { formatDate } from "@/utils/formatDate";
 import { formatStatusDisplay } from "@/utils/statusHelpers";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { useSession } from "@/contexts/session-context";
+import { canViewQuotation } from "@/utils/quotationAccess";
 
 type Quotation = {
   id: string;
@@ -86,6 +88,8 @@ export default function QuotationsTable({
   onRowClick,
   onRefresh,
 }: QuotationsTableProps) {
+  const session = useSession();
+  const user = session?.user;
   const hasIncomplete = quotations.some(isQuotationIncomplete);
 
   return (
@@ -108,8 +112,14 @@ export default function QuotationsTable({
         {quotations.map((q, idx) => (
           <TableRow
             key={q.id}
-            onClick={() => onRowClick?.(q.id)}
-            className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+            onClick={() => {
+              if (user && canViewQuotation(user, q)) onRowClick?.(q.id);
+            }}
+            className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+              user && !canViewQuotation(user, q)
+                ? "pointer-events-none opacity-50"
+                : ""
+            }`}
           >
             <TableCell>{idx + 1}</TableCell>
             <TableCell className="font-medium">{q.quotation_no}</TableCell>

@@ -25,6 +25,7 @@ import { Separator } from "@/components/ui/separator";
 import toast from "react-hot-toast";
 import { selectStyles } from "@/utils/leadFormHelpers";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { useConvertOpportunityToSQ } from "@/hooks/opportunities/useConvertOpportunityToSQ";
 
 const WindowedSelect = dynamic(() => import("react-windowed-select"), {
   ssr: false,
@@ -84,8 +85,15 @@ export default function OpportunityForm({
           .map((name: string) => ({ label: name, value: name }))
       : [],
   );
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
   const isEdit = mode === "edit";
   const router = useRouter();
+
+  const {
+    convert,
+    loading: convertLoading,
+    error: convertError,
+  } = useConvertOpportunityToSQ();
 
   // Simpan initial value untuk deteksi perubahan
   const initialProductInterest = useRef(
@@ -187,6 +195,15 @@ export default function OpportunityForm({
     }
   };
 
+  // Handler for Convert to SQ (unified with table)
+  const handleConvertToSQ = async () => {
+    if (!formData.id) return;
+    setConvertDialogOpen(false);
+    await convert(formData.id, null);
+    // No redirect here; handled by the hook
+    onSuccess?.();
+  };
+
   // Ubah products menjadi array nama produk
   const productOptions = products.map((p) => ({
     label: p.name,
@@ -196,6 +213,39 @@ export default function OpportunityForm({
   return (
     <Card className="w-full mx-auto dark:bg-gray-800">
       <CardContent className="pt-6">
+        {/* Convert to SQ Dialog (same as table) */}
+        <Dialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Convert to SQ</DialogTitle>
+            </DialogHeader>
+            <div className="py-2">
+              <p>
+                Are you sure you want to convert this opportunity to
+                SQ/Quotation?
+              </p>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setConvertDialogOpen(false)}
+                disabled={convertLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="default"
+                onClick={handleConvertToSQ}
+                disabled={convertLoading}
+              >
+                {convertLoading ? "Converting..." : "Yes, Convert"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Dialog Konfirmasi */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
@@ -272,17 +322,6 @@ export default function OpportunityForm({
                   disabled={loading}
                 >
                   Set Prospecting
-                </Button>
-              )}
-              {formData.status !== OPPORTUNITY_STATUSES.SQ && (
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  onClick={() => handleStatusChange(OPPORTUNITY_STATUSES.SQ)}
-                  disabled={loading}
-                >
-                  Convert to SQ
                 </Button>
               )}
               {formData.status !== OPPORTUNITY_STATUSES.LOST && (
@@ -556,6 +595,14 @@ export default function OpportunityForm({
             className="min-w-[100px]"
           >
             Close
+          </Button>
+          <Button
+            type="button"
+            variant="default"
+            onClick={() => setConvertDialogOpen(true)}
+            disabled={convertLoading}
+          >
+            Convert to SQ
           </Button>
         </div>
       </CardContent>

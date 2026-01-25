@@ -251,17 +251,19 @@ export default function QuotationDetailPage() {
                 Edit
               </Button>
               {["sq_approved", "sq_converted"].includes(quotation.status) && (
-                <Button
-                  variant="default"
-                  disabled={converting}
-                  onClick={handleConvertToSO}
-                  className="ml-2"
-                >
-                  {converting ? "Converting..." : "Convert to SO"}
-                </Button>
+                <>
+                  <Button
+                    variant="default"
+                    disabled={converting}
+                    onClick={handleConvertToSO}
+                    className="ml-2"
+                  >
+                    {converting ? "Converting..." : "Convert to SO"}
+                  </Button>
+                  <PrintButton printRef={printRef} />
+                </>
               )}
               {/* Tambahkan tombol print di sini */}
-              <PrintButton printRef={printRef} />
             </div>
             <div className="text-sm text-gray-500 mt-1">
               Created at: {formatDate(quotation.created_at)}

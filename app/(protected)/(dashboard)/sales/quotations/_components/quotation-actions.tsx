@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import QuotationDeleteDialog from "./quotation-delete-dialog";
+import { useSession } from "@/contexts/session-context";
+import { canEditQuotation, canDeleteQuotation } from "@/utils/quotationAccess";
 
 type Quotation = {
   id: string;
@@ -17,6 +19,7 @@ type Quotation = {
   created_at: string;
   updated_at: string;
   opportunity_no: string;
+  user_id?: number | null;
 };
 
 interface QuotationActionsProps {
@@ -34,10 +37,16 @@ export default function QuotationActions({
   loading,
   onRefresh, // Destructure onRefresh
 }: QuotationActionsProps) {
+  const session = useSession();
+  const user = session?.user;
+
+  const canEdit = user && canEditQuotation(user, quotation);
+  const canDelete = user && canDeleteQuotation(user, quotation);
+
   if (!quotation) return null;
   return (
     <div className="flex gap-2">
-      {/* View */}
+      {/* View always available if canViewQuotation is true */}
       <Link href={`/sales/quotations/${quotation.id}`}>
         <Button
           size="icon"
@@ -48,34 +57,36 @@ export default function QuotationActions({
           <Eye className="w-4 h-4" />
         </Button>
       </Link>
-
-      {/* Edit */}
-      <Link href={`/sales/quotations/${quotation.id}/edit`}>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-          title="Edit"
-        >
-          <Edit className="w-4 h-4" />
-        </Button>
-      </Link>
-
-      {/* Delete */}
-      <QuotationDeleteDialog
-        quotation={quotation}
-        onSuccess={onRefresh} // Pass refresh callback
-        trigger={
+      {/* Edit only for manager-sales and superuser */}
+      {canEdit && (
+        <Link href={`/sales/quotations/${quotation.id}/edit`}>
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-            title="Delete"
+            className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+            title="Edit"
           >
-            <Trash2 className="w-4 h-4" />
+            <Edit className="w-4 h-4" />
           </Button>
-        }
-      />
+        </Link>
+      )}
+      {/* Delete only for manager-sales and superuser */}
+      {canDelete && (
+        <QuotationDeleteDialog
+          quotation={quotation}
+          onSuccess={onRefresh} // Pass refresh callback
+          trigger={
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+              title="Delete"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          }
+        />
+      )}
     </div>
   );
 }

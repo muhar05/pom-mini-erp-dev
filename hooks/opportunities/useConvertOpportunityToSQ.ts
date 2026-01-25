@@ -31,11 +31,15 @@ export function useConvertOpportunityToSQ() {
       }
       setResult(data.data);
       setLoading(false);
-      // Redirect otomatis ke halaman edit SQ
-      if (data.redirect) {
-        router.push(data.redirect);
-      } else if (data.data && data.data.id) {
-        router.push(`/sales/quotations/${data.data.id}/edit`);
+
+      // Centralized redirect logic
+      const quotationId =
+        data.data?.data?.id || // if API returns { data: { id: ... } }
+        data.data?.id || // if API returns { data: { id: ... } }
+        data.data?.quotation?.id || // fallback for other shapes
+        null;
+      if (quotationId) {
+        router.push(`/sales/quotations/${quotationId}/edit`);
       }
       return true;
     } catch (err: any) {
