@@ -20,7 +20,7 @@ import {
   getSalesOrderByIdDb,
   getAllSalesOrdersDb,
 } from "@/data/sales-orders";
-import { checkSalesOrderOwnership } from "@/utils/auth-utils";
+import { checkSalesOrderOwnership, checkQuotationOwnership } from "@/utils/auth-utils";
 import { ZodError } from "zod";
 
 // Helper to generate sale order number following pattern: SO2515020001
@@ -181,6 +181,11 @@ export async function createSalesOrderAction(data: CreateSalesOrderData) {
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
+  // Only Sales and Superuser can create
+  if (isManagerSales(user) && !isSuperuser(user)) {
+    throw new Error("Managers cannot create Sales Orders directly");
+  }
+
   try {
     const validatedData = validateSalesOrderFormData(data, "create");
 
@@ -189,6 +194,16 @@ export async function createSalesOrderAction(data: CreateSalesOrderData) {
     }
 
     const { quotation_id, customer_id, boq_items, ...rest } = validatedData;
+
+    // Validate quotation ownership if provided
+    if (quotation_id) {
+      const quotation = await prisma.quotations.findUnique({
+        where: { id: Number(quotation_id) },
+      });
+      if (!quotation) throw new Error("Quotation not found");
+      checkQuotationOwnership(quotation, user);
+    }
+
     const prismaData = {
       ...rest,
       sale_no: validatedData.sale_no,
@@ -261,6 +276,11 @@ export async function updateSalesOrderAction(
 
     // Ownership check
     checkSalesOrderOwnership(currentSO, user);
+
+    // Manager Role Constraint: Cannot edit detail if manager
+    if (isManagerSales(user) && !isSuperuser(user)) {
+      throw new Error("Manager Sales cannot edit Sales Order details");
+    }
 
     const { quotation_id, customer_id, boq_items, ...rest } = validatedData;
     const prismaData = {
@@ -718,6 +738,11 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
+  // Only Sales and Superuser can convert
+  if (isManagerSales(user) && !isSuperuser(user)) {
+    throw new Error("Managers cannot create Sales Orders");
+  }
+
   try {
     // 1. Get quotation data with all relations
     const quotation = await prisma.quotations.findUnique({
@@ -742,6 +767,9 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
         message: "Quotation not found",
       };
     }
+
+    // Ownership check
+    checkQuotationOwnership(quotation, user);
 
     // 2. Check if quotation is eligible for conversion (not draft)
     if (quotation.status?.toLowerCase() === "draft") {

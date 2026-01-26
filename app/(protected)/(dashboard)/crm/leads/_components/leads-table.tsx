@@ -56,8 +56,8 @@ export default function LeadsTable({
     setLocalLeads(leads);
   }, [leads]);
 
-  // Filter leads based on provided filters
-  const filteredLeads = filterLeads(localLeads, filters);
+  // No more client-side filtering, we trust server-side results
+  const filteredLeads = leads;
 
   // Pagination logic
   const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);

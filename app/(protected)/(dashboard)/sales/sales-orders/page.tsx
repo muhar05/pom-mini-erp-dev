@@ -14,6 +14,7 @@ import {
   SalesOrder,
 } from "@/hooks/sales-orders/useSalesOrders";
 import LoadingSkeleton from "@/components/loading-skeleton";
+import { useI18n } from "@/contexts/i18n-context";
 
 // Type for components (matches existing component interfaces)
 type ComponentSalesOrder = {
@@ -46,6 +47,7 @@ type ComponentSalesOrder = {
 
 export default function SalesOrdersPage() {
   const { user } = useSession();
+  const { t } = useI18n();
   const { salesOrders, loading, error, refresh } = useSalesOrders();
   const isSuperadmin = user?.role === "superadmin";
 
@@ -179,13 +181,13 @@ export default function SalesOrdersPage() {
     return (
       <>
         <DashboardBreadcrumb
-          title="Sales Orders"
-          text="Monitor and manage your sales order pipeline"
+          title={t("page.sales_order.title")}
+          text={t("page.sales_order.list")}
         />
         <div className="flex justify-center items-center p-16 w-full h-full">
           <div className="flex flex-col w-full justify-center items-center">
             <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
-            <span className="text-sm text-muted-foreground">Loading...</span>
+            <span className="text-sm text-muted-foreground">{t("common.loading")}</span>
           </div>
         </div>
       </>
@@ -196,14 +198,14 @@ export default function SalesOrdersPage() {
     return (
       <>
         <DashboardBreadcrumb
-          title="Sales Orders"
-          text="Monitor and manage your sales order pipeline"
+          title={t("page.sales_order.title")}
+          text={t("page.sales_order.list")}
         />
         <div className="flex justify-center items-center p-16 w-full h-full">
           <div className="text-center">
-            <p className="text-red-600 mb-4">Failed to load sales orders</p>
+            <p className="text-red-600 mb-4">{t("message.error.generic")}</p>
             <Button onClick={refresh} variant="outline">
-              Retry
+              {t("common.reset")}
             </Button>
           </div>
         </div>
@@ -214,8 +216,8 @@ export default function SalesOrdersPage() {
   return (
     <>
       <DashboardBreadcrumb
-        title="Sales Orders"
-        text="Monitor and manage your sales order pipeline"
+        title={t("page.sales_order.title")}
+        text={t("page.sales_order.list")}
       />
 
       <SalesOrderFilters
@@ -226,7 +228,7 @@ export default function SalesOrdersPage() {
       <div className="grid grid-cols-1 gap-6 mt-6">
         <Card className="w-full dark:bg-gray-800">
           <CardHeader>
-            <CardTitle>Sales Orders</CardTitle>
+            <CardTitle>{t("page.sales_order.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <SalesOrdersTable salesOrders={pagedData} onUpdate={refresh} />
@@ -239,7 +241,7 @@ export default function SalesOrdersPage() {
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
                 >
-                  Previous
+                  {t("common.back")}
                 </Button>
                 <span className="flex items-center px-3">
                   Page {currentPage} of {totalPages}

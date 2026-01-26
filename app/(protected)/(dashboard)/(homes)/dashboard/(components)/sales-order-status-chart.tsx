@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useDashboardStats } from "@/hooks/dashboard/useDashboardStats";
 import { Progress } from "@/components/ui/progress";
 import dynamic from "next/dynamic";
+import { useI18n } from "@/contexts/i18n-context";
 
 // 1. Definisikan union type untuk key status
 type StatusKey = "draft" | "open" | "processing" | "completed" | "cancelled";
@@ -21,6 +22,7 @@ const STATUS: { key: StatusKey; label: string; color: string }[] = [
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 const SalesOrderStatusChart = () => {
+  const { t } = useI18n();
   const { data: stats, loading } = useDashboardStats();
 
   // Hitung total sales order untuk persentase
@@ -58,7 +60,7 @@ const SalesOrderStatusChart = () => {
     <Card className="card">
       <CardContent className="px-0">
         <div className="px-6 pt-6">
-          <h6 className="text-lg mb-2">Sales Order Status</h6>
+          <h6 className="text-lg mb-2">{t("page.dashboard.sales_status")}</h6>
           <p className="text-sm text-muted-foreground mb-6">
             Distribution by status
           </p>
@@ -76,7 +78,7 @@ const SalesOrderStatusChart = () => {
             </div>
           ) : total === 0 ? (
             <div className="h-64 flex items-center justify-center text-muted-foreground">
-              Tidak ada data
+              {t("common.no_data")}
             </div>
           ) : (
             <Chart

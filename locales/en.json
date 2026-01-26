@@ -1,0 +1,212 @@
+{
+    "common": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "view": "View",
+        "add": "Add",
+        "search": "Search...",
+        "actions": "Actions",
+        "loading": "Loading...",
+        "no_data": "No data found",
+        "back": "Back",
+        "status": "Status",
+        "created_at": "Created At",
+        "total": "Total",
+        "confirm": "Confirm",
+        "submit": "Submit",
+        "download": "Download",
+        "filter": "Filter",
+        "reset": "Reset",
+        "all": "All",
+        "yes": "Yes",
+        "no": "No",
+        "select": "Select",
+        "mandatory": "Mandatory",
+        "optional": "Optional",
+        "from": "From",
+        "to": "To"
+    },
+    "sidebar": {
+        "dashboard": "Dashboard",
+        "superuser": "Superuser",
+        "crm": "CRM",
+        "leads": "Leads",
+        "opportunities": "Opportunities",
+        "sales": "Sales",
+        "quotations": "Quotations",
+        "sales_orders": "Sales",
+        "purchasing": "Purchasing",
+        "purchase_orders": "Purchase Orders",
+        "warehouse": "Warehouse",
+        "stock_reservations": "Stock Reservations",
+        "delivery_requests": "Delivery Requests",
+        "delivery_orders": "Delivery Orders",
+        "receiving": "Goods Receipt",
+        "finance": "Finance",
+        "approvals": "Approvals",
+        "transactions": "Transactions",
+        "settings": "Settings",
+        "master_data": "Master Data",
+        "users": "Users",
+        "products": "Products",
+        "customers": "Customers",
+        "vendors": "Vendors",
+        "manager_sales": "Manager Sales",
+        "manager_purchasing": "Manager Purchasing",
+        "roles": "Roles",
+        "company": "Company"
+    },
+    "page": {
+        "dashboard": {
+            "title": "Dashboard Overview",
+            "superuser_title": "Dashboard Superuser",
+            "sales_title": "Dashboard Sales",
+            "manager_sales_title": "Dashboard Manager Sales",
+            "purchasing_title": "Dashboard Purchasing",
+            "manager_purchasing_title": "Dashboard Manager Purchasing",
+            "warehouse_title": "Dashboard Warehouse",
+            "finance_title": "Dashboard Finance",
+            "delivery_title": "Dashboard Delivery",
+            "stat_leads": "Total Leads",
+            "stat_quotations": "Total Quotations",
+            "stat_sales": "Total Sales",
+            "revenue": "Monthly Revenue",
+            "source_dist": "Lead Source Distribution",
+            "quotation_status": "Quotation Status",
+            "sales_status": "Sales Order Status",
+            "converted_leads": "Converted Leads",
+            "approved_quotations": "Approved Quotations",
+            "pending_quotations": "Pending Quotations",
+            "new": "New",
+            "qualified": "Qualified",
+            "approved": "Approved",
+            "draft": "Draft",
+            "open": "Open",
+            "processing": "Processing",
+            "converted": "Converted",
+            "submitted": "Submitted"
+        },
+        "leads": {
+            "title": "Leads",
+            "list": "Lead List",
+            "create": "Create New Lead",
+            "edit": "Edit Lead",
+            "details": "Lead Details"
+        },
+        "opportunities": {
+            "title": "Opportunities",
+            "list": "Opportunity List",
+            "details": "Opportunity Details"
+        },
+        "quotations": {
+            "title": "Quotations",
+            "list": "Quotation List",
+            "create": "Create Quotation",
+            "edit": "Edit Quotation",
+            "details": "Quotation Details"
+        },
+        "sales_order": {
+            "title": "Sales",
+            "list": "Sales Order List",
+            "create": "Create Sales Order",
+            "edit": "Edit Sales Order",
+            "details": "Sales Order Details"
+        },
+        "purchasing": {
+            "title": "Purchasing",
+            "list": "Purchase Order List",
+            "details": "Purchase Order Details"
+        },
+        "warehouse": {
+            "title": "Warehouse",
+            "list": "Stock List",
+            "details": "Stock Details"
+        },
+        "settings": {
+            "title": "Settings",
+            "users": "User Settings",
+            "roles": "Manage Roles",
+            "company": "Company Setup"
+        }
+    },
+    "form": {
+        "lead": {
+            "name": "Lead Name",
+            "contact": "Contact Person",
+            "email": "Email",
+            "phone": "Phone",
+            "company": "Company",
+            "location": "Location",
+            "type": "Type",
+            "source": "Source",
+            "status": "Status",
+            "products": "Product Interests",
+            "potential_value": "Potential Value",
+            "note": "Notes",
+            "placeholders": {
+                "name": "Enter lead name",
+                "contact": "Enter contact person",
+                "email": "Enter email address",
+                "phone": "Example: +62 812...",
+                "company": "Enter company name",
+                "location": "Select location",
+                "potential_value": "Example: 1,000,000"
+            }
+        },
+        "quotation": {
+            "number": "Quotation Number",
+            "customer": "Customer",
+            "target_date": "Target Date",
+            "payment_term": "Payment Term",
+            "shipping": "Shipping Fee",
+            "discount": "Discount (%)",
+            "tax": "Tax (11%)",
+            "subtotal": "Subtotal",
+            "grand_total": "Grand Total",
+            "items": {
+                "product": "Product",
+                "qty": "Quantity",
+                "price": "Unit Price",
+                "total": "Total Price"
+            }
+        }
+    },
+    "status": {
+        "draft": "Draft",
+        "new": "New",
+        "contacted": "Contacted",
+        "qualified": "Qualified",
+        "unqualified": "Unqualified",
+        "prospecting": "Prospecting",
+        "open": "Open",
+        "sq_submitted": "Submitted",
+        "sq_approved": "Approved",
+        "sq_rejected": "Rejected",
+        "converted": "Converted",
+        "processing": "Processing",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "confirmed": "Confirmed",
+        "pending": "Pending",
+        "paid": "Paid",
+        "unpaid": "Unpaid"
+    },
+    "message": {
+        "success": {
+            "create": "Data created successfully",
+            "update": "Data updated successfully",
+            "delete": "Data deleted successfully"
+        },
+        "error": {
+            "generic": "A system error occurred",
+            "unauthorized": "You do not have permission",
+            "not_found": "Data not found"
+        },
+        "confirm": {
+            "delete_title": "Are you sure?",
+            "delete_desc": "This data will be permanently deleted and cannot be recovered."
+        }
+    }
+}

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import React from "react";
 import { useDashboardStats } from "@/hooks/dashboard/useDashboardStats";
+import { useI18n } from "@/contexts/i18n-context";
 
 interface StatCardData {
   title: string;
@@ -26,6 +27,7 @@ interface StatCardData {
 }
 
 const CrmStatCard = () => {
+  const { t } = useI18n();
   const { data: stats, loading } = useDashboardStats();
 
   if (loading) {
@@ -61,52 +63,52 @@ const CrmStatCard = () => {
 
   const cardsData: StatCardData[] = [
     {
-      title: "Total Leads",
+      title: t("page.dashboard.stat_leads"),
       value: stats.totalLeads.toLocaleString(),
       icon: Users,
       iconBg: "bg-blue-600",
       gradientFrom: "from-blue-600/10",
-      description: `${stats.leadsByStatus.new} New, ${stats.leadsByStatus.qualified} Qualified`,
+      description: `${stats.leadsByStatus.new} ${t("page.dashboard.new")}, ${stats.leadsByStatus.qualified} ${t("page.dashboard.qualified")}`,
     },
     {
-      title: "Total Quotations",
+      title: t("page.dashboard.stat_quotations"),
       value: stats.totalQuotations.toLocaleString(),
       icon: FileText,
       iconBg: "bg-purple-600",
       gradientFrom: "from-purple-600/10",
-      description: `${stats.quotationsByStatus.sq_approved} Approved, ${stats.quotationsByStatus.draft} Draft`,
+      description: `${stats.quotationsByStatus.sq_approved} ${t("page.dashboard.approved")}, ${stats.quotationsByStatus.draft} ${t("page.dashboard.draft")}`,
     },
     {
-      title: "Sales Orders",
+      title: t("page.dashboard.stat_sales"),
       value: stats.totalSalesOrders.toLocaleString(),
       icon: ShoppingCart,
       iconBg: "bg-green-600",
       gradientFrom: "from-green-600/10",
-      description: `${stats.salesOrdersByStatus.open} Open, ${stats.salesOrdersByStatus.processing} Processing`,
+      description: `${stats.salesOrdersByStatus.open} ${t("page.dashboard.open")}, ${stats.salesOrdersByStatus.processing} ${t("page.dashboard.processing")}`,
     },
     {
-      title: "Converted Leads",
+      title: t("page.dashboard.converted_leads"),
       value: stats.leadsByStatus.qualified?.toLocaleString?.() ?? "0",
       icon: TrendingUp,
       iconBg: "bg-cyan-600",
       gradientFrom: "from-cyan-600/10",
-      description: "Successfully converted to opportunities",
+      description: t("page.dashboard.converted"),
     },
     {
-      title: "Approved Quotations",
+      title: t("page.dashboard.approved_quotations"),
       value: stats.quotationsByStatus.sq_approved.toLocaleString(),
       icon: CheckCircle2,
       iconBg: "bg-emerald-600",
       gradientFrom: "from-emerald-600/10",
-      description: "Ready to convert to SO",
+      description: t("page.dashboard.approved"),
     },
     {
-      title: "Pending Quotations",
+      title: t("page.dashboard.pending_quotations"),
       value: stats.quotationsByStatus.sq_submitted.toLocaleString(),
       icon: Clock,
       iconBg: "bg-orange-600",
       gradientFrom: "from-orange-600/10",
-      description: "Awaiting approval",
+      description: t("page.dashboard.submitted"),
     },
   ];
 

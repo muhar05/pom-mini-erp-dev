@@ -20,17 +20,20 @@ import { cn } from "@/lib/utils";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useI18n } from "@/contexts/i18n-context";
 
 export interface SidebarItem {
   title: string;
+  labelKey?: string;
   url?: string;
   icon?: LucideIcon;
-  items?: { title: string; url: string; circleColor: string }[];
+  items?: { title: string; labelKey?: string; url: string; circleColor: string }[];
   circleColor?: string;
 }
 
 function RenderSidebarItems({ items }: { items: SidebarItem[] }) {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <>
@@ -52,7 +55,7 @@ function RenderSidebarItems({ items }: { items: SidebarItem[] }) {
             <Collapsible key={item.title}>
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton
-                  tooltip={item.title}
+                  tooltip={item.labelKey ? t(item.labelKey) : item.title}
                   className={cn(
                     "cursor-pointer py-5.5 px-3 text-base transition-colors duration-200",
                     "text-[#2A2A2A] dark:text-white",
@@ -62,7 +65,7 @@ function RenderSidebarItems({ items }: { items: SidebarItem[] }) {
                   )}
                 >
                   {item.icon && <item.icon className="w-4.5! h-4.5!" />}
-                  <span>{item.title}</span>
+                  <span>{item.labelKey ? t(item.labelKey) : item.title}</span>
                   <ChevronRight className="ml-auto transition-transform" />
                 </SidebarMenuButton>
               </CollapsibleTrigger>
@@ -94,7 +97,7 @@ function RenderSidebarItems({ items }: { items: SidebarItem[] }) {
                                   : "text-black dark:text-white",
                               )}
                             >
-                              {sub.title}
+                              {sub.labelKey ? t(sub.labelKey) : sub.title}
                             </span>
                           </SidebarMenuSubButton>
                         </Link>
@@ -118,7 +121,7 @@ function RenderSidebarItems({ items }: { items: SidebarItem[] }) {
                   style={{ display: "flex", width: "100%", height: "100%" }}
                 >
                   {item.icon && <item.icon className="w-4.5! h-4.5!" />}
-                  <span>{item.title}</span>
+                  <span>{item.labelKey ? t(item.labelKey) : item.title}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

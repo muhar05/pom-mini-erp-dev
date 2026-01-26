@@ -27,7 +27,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
-  if (url.startsWith(`/dashboard/${roleName}`)) {
+  // Allow superuser to access any dashboard path
+  if (roleName === "superuser" && url.startsWith("/dashboard")) {
+    return NextResponse.next();
+  }
+
+  // Allow manager-sales to access sales dashboard
+  if (roleName === "manager-sales" && url.startsWith("/dashboard/sales")) {
     return NextResponse.next();
   }
 
@@ -35,7 +41,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL(`/dashboard/${roleName}`, req.url));
   }
 
-  if (url.startsWith("/dashboard")) {
+  if (url.startsWith("/dashboard") && !url.startsWith(`/dashboard/${roleName}`)) {
     return NextResponse.redirect(new URL(`/dashboard/${roleName}`, req.url));
   }
 

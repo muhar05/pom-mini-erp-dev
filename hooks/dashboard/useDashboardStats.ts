@@ -28,6 +28,13 @@ interface DashboardStats {
     converted: number;
     unqualified: number;
   };
+  leadsBySource: Record<string, number>;
+  recentLogs: {
+    id: string;
+    activity: string;
+    user_name: string;
+    created_at: string;
+  }[];
 }
 
 export function useDashboardStats() {

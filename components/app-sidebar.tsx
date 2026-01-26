@@ -18,21 +18,25 @@ function convertMenuToSidebar(items: MenuItem[]): SidebarItem[] {
     if (item.items && item.items.length > 0) {
       return {
         title: item.title,
+        labelKey: item.labelKey,
         icon: item.icon,
         items: item.items.map((sub) => ({
           title: sub.title,
+          labelKey: sub.labelKey,
           url: sub.url ?? "#",
-          circleColor: getColorByTitle(sub.title), // tambahkan ini untuk semua sub-menu
+          circleColor: getColorByTitle(sub.title),
         })),
       };
     }
 
     return {
       title: item.title,
+      labelKey: item.labelKey,
       url: item.url,
       icon: item.icon,
     };
   });
+
 }
 
 // mapping warna bullet

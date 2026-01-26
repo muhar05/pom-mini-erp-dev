@@ -4,10 +4,12 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDashboardStats } from "@/hooks/dashboard/useDashboardStats";
 import dynamic from "next/dynamic";
+import { useI18n } from "@/contexts/i18n-context";
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 const QuotationStatusChart = () => {
+  const { t } = useI18n();
   const { data: stats, loading } = useDashboardStats();
 
   if (loading) {
@@ -72,7 +74,7 @@ const QuotationStatusChart = () => {
     <Card className="card">
       <CardContent className="px-0">
         <div className="px-6">
-          <h6 className="text-lg mb-2">Quotation Status</h6>
+          <h6 className="text-lg mb-2">{t("page.dashboard.quotation_status")}</h6>
           <p className="text-sm text-muted-foreground">
             Distribution by status
           </p>
@@ -81,7 +83,7 @@ const QuotationStatusChart = () => {
         <div className="mt-4">
           {total === 0 ? (
             <div className="h-64 flex items-center justify-center text-muted-foreground">
-              Tidak ada data
+              {t("common.no_data")}
             </div>
           ) : (
             <Chart

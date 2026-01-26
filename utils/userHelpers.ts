@@ -50,3 +50,40 @@ export function isManagerSales(user: UserLike): boolean {
   return false;
 }
 
+export function isPurchasing(user: UserLike): boolean {
+  if (!user) return false;
+  const role = ("role_name" in user ? user.role_name : (user as any)?.roles?.role_name)?.toLowerCase();
+  return role === "purchasing";
+}
+
+export function isManagerPurchasing(user: UserLike): boolean {
+  if (!user) return false;
+  const role = ("role_name" in user ? user.role_name : (user as any)?.roles?.role_name)?.toLowerCase();
+  return role === "manager-purchasing";
+}
+
+export function isWarehouse(user: UserLike): boolean {
+  if (!user) return false;
+  const role = ("role_name" in user ? user.role_name : (user as any)?.roles?.role_name)?.toLowerCase();
+  return role === "warehouse";
+}
+
+export function isManagerWarehouse(user: UserLike): boolean {
+  if (!user) return false;
+  const role = ("role_name" in user ? user.role_name : (user as any)?.roles?.role_name)?.toLowerCase();
+  return role === "manager-warehouse";
+}
+
+export function isFinance(user: UserLike): boolean {
+  if (!user) return false;
+  const role = ("role_name" in user ? user.role_name : (user as any)?.roles?.role_name)?.toLowerCase();
+  return role === "finance";
+}
+
+export function isManagerFinance(user: UserLike): boolean {
+  if (!user) return false;
+  const role = ("role_name" in user ? user.role_name : (user as any)?.roles?.role_name)?.toLowerCase();
+  return role === "manager-finance";
+}
+
+

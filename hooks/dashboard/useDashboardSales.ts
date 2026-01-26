@@ -6,6 +6,13 @@ export interface DashboardSalesData {
   totalQuotation: number;
   monthlyRevenue: { month: string; total: number }[];
   orderStatus: { status: string; total: number }[];
+  salesPerformance?: {
+    sales_name: string;
+    total_leads: number;
+    total_quotations: number;
+    total_orders: number;
+    total_revenue: number;
+  }[];
 }
 
 export function useDashboardSales(params?: {

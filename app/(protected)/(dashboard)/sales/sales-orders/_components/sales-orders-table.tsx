@@ -24,6 +24,7 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import Link from "next/link";
 import { useSession } from "@/contexts/session-context";
 import { getSalesOrderPermissions } from "@/utils/salesOrderPermissions";
+import { useI18n } from "@/contexts/i18n-context";
 
 type SalesOrder = {
   id: string;
@@ -98,6 +99,7 @@ export default function SalesOrdersTable({
   onUpdate,
 }: SalesOrdersTableProps) {
   const { user } = useSession();
+  const { t } = useI18n();
 
   const handleDeleteSuccess = () => {
     onUpdate?.(); // Refresh table data
@@ -108,15 +110,15 @@ export default function SalesOrdersTable({
       <TableHeader>
         <TableRow>
           <TableHead>No</TableHead>
-          <TableHead>SO No</TableHead>
-          <TableHead>From Quotation</TableHead>
-          <TableHead>Customer</TableHead>
-          <TableHead>Items</TableHead>
-          <TableHead>Total Amount</TableHead>
-          <TableHead>Sale Status</TableHead>
-          <TableHead>Payment Status</TableHead>
-          <TableHead>Created At</TableHead>
-          <TableHead className="w-[150px]">Actions</TableHead>
+          <TableHead>{t("sales_order.no")}</TableHead>
+          <TableHead>{t("sales_order.from_quotation")}</TableHead>
+          <TableHead>{t("sales_order.customer")}</TableHead>
+          <TableHead>{t("sales_order.items")}</TableHead>
+          <TableHead>{t("sales_order.amount")}</TableHead>
+          <TableHead>{t("sales_order.status")}</TableHead>
+          <TableHead>{t("sales_order.payment")}</TableHead>
+          <TableHead>{t("common.created_at")}</TableHead>
+          <TableHead className="w-[150px]">{t("common.actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -183,7 +185,7 @@ export default function SalesOrdersTable({
                     salesOrder.sale_status || salesOrder.status
                   )}
                 >
-                  {salesOrder.sale_status || salesOrder.status}
+                  {t(`status.${(salesOrder.sale_status || salesOrder.status || "draft").toLowerCase()}`)}
                 </Badge>
               </TableCell>
               <TableCell>
@@ -193,7 +195,7 @@ export default function SalesOrdersTable({
                     salesOrder.payment_status || "unpaid"
                   )}
                 >
-                  {salesOrder.payment_status || "Unpaid"}
+                  {t(`status.${(salesOrder.payment_status || "unpaid").toLowerCase()}`)}
                 </Badge>
               </TableCell>
               <TableCell>{formatDate(salesOrder.created_at)}</TableCell>
@@ -259,28 +261,12 @@ export default function SalesOrdersTable({
           <TableRow>
             <TableCell colSpan={10} className="text-center py-8 text-gray-500">
               <div className="flex flex-col items-center gap-2">
-                <p>No sales orders found.</p>
-                <p className="text-sm">
-                  Sales Orders can be created from{" "}
-                  <a
-                    href="/sales/quotations"
-                    className="text-blue-600 hover:underline font-medium"
-                  >
-                    approved quotations
-                  </a>{" "}
-                  or{" "}
-                  <a
-                    href="/sales/sales-orders/add"
-                    className="text-blue-600 hover:underline font-medium"
-                  >
-                    created directly
-                  </a>
-                  .
-                </p>
+                <p>{t("common.no_data")}</p>
               </div>
             </TableCell>
           </TableRow>
         )}
+
       </TableBody>
     </Table>
   );

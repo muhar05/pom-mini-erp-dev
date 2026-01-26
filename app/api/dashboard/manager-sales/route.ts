@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import { isManagerSales, isSuperuser } from "@/utils/leadHelpers";
 
 function parseDate(dateStr?: string) {
   if (!dateStr) return undefined;
@@ -10,6 +12,13 @@ function parseDate(dateStr?: string) {
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await auth();
+    const user = session?.user;
+
+    if (!user || (!isSuperuser(user) && !isManagerSales(user))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
 
     const start = parseDate(searchParams.get("start") || undefined);

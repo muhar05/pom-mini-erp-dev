@@ -4,7 +4,7 @@ import { isSuperuser, isSales, isManagerSales } from "@/utils/leadHelpers";
 import { getAllLeadsDb, createLeadDb } from "@/data/leads";
 
 // GET: Ambil semua leads
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   const user = session?.user;
   if (
@@ -13,10 +13,21 @@ export async function GET() {
   ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { searchParams } = new URL(req.url);
+  const filters = {
+    search: searchParams.get("search") || undefined,
+    status: searchParams.get("status") || undefined,
+    dateFrom: searchParams.get("dateFrom") || undefined,
+    dateTo: searchParams.get("dateTo") || undefined,
+    prefix: searchParams.get("prefix") || undefined,
+  };
+
   try {
-    const leads = await getAllLeadsDb(user);
+    const leads = await getAllLeadsDb(user, filters);
     return NextResponse.json(leads);
   } catch (error) {
+    console.error("GET /api/leads Error:", error);
     return NextResponse.json(
       { error: "Failed to fetch leads" },
       { status: 500 },

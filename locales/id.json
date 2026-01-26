@@ -1,0 +1,212 @@
+{
+    "common": {
+        "save": "Simpan",
+        "cancel": "Batal",
+        "delete": "Hapus",
+        "edit": "Edit",
+        "view": "Lihat",
+        "add": "Tambah",
+        "search": "Cari...",
+        "actions": "Aksi",
+        "loading": "Memuat...",
+        "no_data": "Tidak ada data ditemukan",
+        "back": "Kembali",
+        "status": "Status",
+        "created_at": "Dibuat Pada",
+        "total": "Total",
+        "confirm": "Konfirmasi",
+        "submit": "Kirim",
+        "download": "Unduh",
+        "filter": "Filter",
+        "reset": "Reset",
+        "all": "Semua",
+        "yes": "Ya",
+        "no": "Tidak",
+        "select": "Pilih",
+        "mandatory": "Wajib diisi",
+        "optional": "Opsional",
+        "from": "Dari",
+        "to": "Sampai"
+    },
+    "sidebar": {
+        "dashboard": "Dashboard",
+        "superuser": "Superuser",
+        "crm": "CRM",
+        "leads": "Leads",
+        "opportunities": "Opportunities",
+        "sales": "Sales",
+        "quotations": "Quotations",
+        "sales_orders": "Sales",
+        "purchasing": "Purchasing",
+        "purchase_orders": "Purchase Orders",
+        "warehouse": "Warehouse",
+        "stock_reservations": "Stock Reservations",
+        "delivery_requests": "Delivery Requests",
+        "delivery_orders": "Delivery Orders",
+        "receiving": "Goods Receipt",
+        "finance": "Finance",
+        "approvals": "Persetujuan",
+        "transactions": "Transaksi",
+        "settings": "Pengaturan",
+        "master_data": "Master Data",
+        "users": "User",
+        "products": "Produk",
+        "customers": "Customer",
+        "vendors": "Vendor",
+        "manager_sales": "Manajer Penjualan",
+        "manager_purchasing": "Manajer Pembelian",
+        "roles": "Role",
+        "company": "Perusahaan"
+    },
+    "page": {
+        "dashboard": {
+            "title": "Dashboard Overview",
+            "superuser_title": "Dashboard Superuser",
+            "sales_title": "Dashboard Sales",
+            "manager_sales_title": "Dashboard Manager Sales",
+            "purchasing_title": "Dashboard Purchasing",
+            "manager_purchasing_title": "Dashboard Manager Purchasing",
+            "warehouse_title": "Dashboard Warehouse",
+            "finance_title": "Dashboard Finance",
+            "delivery_title": "Dashboard Pengiriman",
+            "stat_leads": "Total Lead",
+            "stat_quotations": "Total Quotation",
+            "stat_sales": "Total Sales",
+            "revenue": "Pendapatan Bulanan",
+            "source_dist": "Distribusi Sumber Lead",
+            "quotation_status": "Status Quotation",
+            "sales_status": "Status Sales Order",
+            "converted_leads": "Lead Terkonversi",
+            "approved_quotations": "Quotation Disetujui",
+            "pending_quotations": "Quotation Menunggu",
+            "new": "Baru",
+            "qualified": "Memenuhi Syarat",
+            "approved": "Disetujui",
+            "draft": "Draft",
+            "open": "Terbuka",
+            "processing": "Diproses",
+            "converted": "Terkonversi",
+            "submitted": "Diajukan"
+        },
+        "leads": {
+            "title": "Leads",
+            "list": "Daftar Lead",
+            "create": "Tambah Lead Baru",
+            "edit": "Edit Lead",
+            "details": "Detail Lead"
+        },
+        "opportunities": {
+            "title": "Opportunities",
+            "list": "Daftar Opportunity",
+            "details": "Detail Opportunity"
+        },
+        "quotations": {
+            "title": "Quotations",
+            "list": "Daftar Quotation",
+            "create": "Tambah Quotation",
+            "edit": "Edit Quotation",
+            "details": "Detail Quotation"
+        },
+        "sales_order": {
+            "title": "Sales",
+            "list": "Daftar Sales Order",
+            "create": "Tambah Sales Order",
+            "edit": "Edit Sales Order",
+            "details": "Detail Sales Order"
+        },
+        "purchasing": {
+            "title": "Purchasing",
+            "list": "Daftar Purchase Order",
+            "details": "Detail Purchase Order"
+        },
+        "warehouse": {
+            "title": "Warehouse",
+            "list": "Daftar Stok",
+            "details": "Detail Stok"
+        },
+        "settings": {
+            "title": "Pengaturan",
+            "users": "Pengaturan User",
+            "roles": "Manajemen Role",
+            "company": "Pengaturan Perusahaan"
+        }
+    },
+    "form": {
+        "lead": {
+            "name": "Nama Lead",
+            "contact": "Orang Kontak",
+            "email": "Email",
+            "phone": "Telepon",
+            "company": "Perusahaan",
+            "location": "Lokasi",
+            "type": "Tipe",
+            "source": "Sumber",
+            "status": "Status",
+            "products": "Produk Minati",
+            "potential_value": "Nilai Potensial",
+            "note": "Catatan",
+            "placeholders": {
+                "name": "Masukkan nama lead",
+                "contact": "Masukkan nama kontak",
+                "email": "Masukkan email",
+                "phone": "Contoh: +62 812...",
+                "company": "Masukkan nama perusahaan",
+                "location": "Pilih lokasi",
+                "potential_value": "Contoh: 1.000.000"
+            }
+        },
+        "quotation": {
+            "number": "Nomor Quotation",
+            "customer": "Pelanggan",
+            "target_date": "Tanggal Target",
+            "payment_term": "Term of Payment",
+            "shipping": "Biaya Kirim",
+            "discount": "Diskon (%)",
+            "tax": "Pajak (11%)",
+            "subtotal": "Subtotal",
+            "grand_total": "Grand Total",
+            "items": {
+                "product": "Produk",
+                "qty": "Kuantitas",
+                "price": "Harga Satuan",
+                "total": "Total Harga"
+            }
+        }
+    },
+    "status": {
+        "draft": "Draft",
+        "new": "Baru",
+        "contacted": "Dihubungi",
+        "qualified": "Qualified",
+        "unqualified": "Unqualified",
+        "prospecting": "Prospecting",
+        "open": "Buka",
+        "sq_submitted": "Terkirim",
+        "sq_approved": "Disetujui",
+        "sq_rejected": "Ditolak",
+        "converted": "Konversi",
+        "processing": "Diproses",
+        "completed": "Selesai",
+        "cancelled": "Dibatalkan",
+        "confirmed": "Dikonfirmasi",
+        "pending": "Menunggu",
+        "paid": "Lunas",
+        "unpaid": "Belum Bayar"
+    },
+    "message": {
+        "success": {
+            "create": "Berhasil membuat data baru",
+            "update": "Berhasil memperbarui data",
+            "delete": "Berhasil menghapus data"
+        },
+        "error": {
+            "generic": "Terjadi kesalahan sistem",
+            "unauthorized": "Anda tidak memiliki akses",
+            "not_found": "Data tidak ditemukan"
+        },
+        "confirm": {
+            "delete_title": "Apakah Anda yakin?",
+            "delete_desc": "Data ini akan dihapus secara permanen dan tidak dapat dikembalikan."
+        }
+    }
+}

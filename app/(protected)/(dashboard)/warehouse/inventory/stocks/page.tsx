@@ -6,6 +6,7 @@ import StocksTable from "./_components/stock-tables";
 import StockFilters from "./_components/stock-filters";
 import StockDetailDrawer from "./_components/stock-detail-drawer";
 import Pagination from "@/components/ui/pagination";
+import { useI18n } from "@/contexts/i18n-context";
 
 // Mock data for now - replace with actual API call
 const mockStocks = [
@@ -150,6 +151,7 @@ const mockStocks = [
 ];
 
 export default function StocksPage() {
+  const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -192,8 +194,8 @@ export default function StocksPage() {
   return (
     <>
       <DashboardBreadcrumb
-        title="Stock List"
-        text="Monitor and track inventory stock levels across warehouses"
+        title={t("page.warehouse.title")}
+        text={t("page.warehouse.list")}
       />
 
       <StockFilters
@@ -209,7 +211,7 @@ export default function StocksPage() {
 
       <div className="grid grid-cols-1 gap-6 mt-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Inventory Stock List</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("page.warehouse.list")}</h2>
           <StocksTable
             stocks={pagedData}
             onRowClick={(id: string) => setSelected(id)}

@@ -1,4 +1,5 @@
 import { LoadingProvider } from "@/contexts/LoadingContext";
+import { I18nProvider } from "@/contexts/i18n-context";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -42,7 +43,9 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} antialiased`} suppressHydrationWarning>
-        <LoadingProvider>{children}</LoadingProvider>
+        <I18nProvider>
+          <LoadingProvider>{children}</LoadingProvider>
+        </I18nProvider>
       </body>
     </html>
   );

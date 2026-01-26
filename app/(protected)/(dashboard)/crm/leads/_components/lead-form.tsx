@@ -21,6 +21,7 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { formatStatusDisplay } from "@/utils/formatStatus";
 import dynamic from "next/dynamic";
 import { LEAD_STATUS_OPTIONS } from "@/utils/statusHelpers";
+import { useI18n } from "@/contexts/i18n-context";
 import {
   TYPE_OPTIONS,
   SOURCE_OPTIONS,
@@ -56,8 +57,9 @@ export default function LeadForm({
   onSubmit,
   products,
 }: // customers,
-// companies,
-LeadFormProps) {
+  // companies,
+  LeadFormProps) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [formErrors, setFormErrors] = useState<FormErrors>({});
@@ -69,8 +71,8 @@ LeadFormProps) {
   >(
     lead?.product_interest
       ? lead.product_interest
-          .split(",")
-          .map((name: string) => ({ label: name, value: name }))
+        .split(",")
+        .map((name: string) => ({ label: name, value: name }))
       : [],
   );
   const [selectedLocation, setSelectedLocation] = useState<string>(
@@ -190,7 +192,7 @@ LeadFormProps) {
 
       // Show loading toast
       const loadingToastId = toast.loading(
-        mode === "create" ? "Creating lead..." : "Updating lead...",
+        mode === "create" ? t("common.loading") : t("common.loading")
       );
 
       // Set potential_value ke BE dalam bentuk angka
@@ -207,8 +209,8 @@ LeadFormProps) {
       // Show success toast with custom styling
       toast.success(
         mode === "create"
-          ? `Lead "${leadName}" created successfully!`
-          : `Lead "${leadName}" updated successfully!`,
+          ? t("message.success.create")
+          : t("message.success.update"),
         {
           duration: 4000,
           style: {
@@ -279,7 +281,7 @@ LeadFormProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="lead_name">Lead Name *</Label>
+          <Label htmlFor="lead_name">{t("form.lead.name")} *</Label>
           <Input
             id="lead_name"
             name="lead_name"
@@ -288,7 +290,7 @@ LeadFormProps) {
             disabled={loading}
             maxLength={150}
             className={formErrors.lead_name ? "border-red-500" : ""}
-            placeholder="Masukkan nama lead"
+            placeholder={t("form.lead.placeholders.name")}
           />
           {formErrors.lead_name && (
             <p className="text-sm text-red-500">{formErrors.lead_name}</p>
@@ -296,7 +298,7 @@ LeadFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="contact">Contact Person</Label>
+          <Label htmlFor="contact">{t("form.lead.contact")}</Label>
           <Input
             id="contact"
             name="contact"
@@ -304,7 +306,7 @@ LeadFormProps) {
             disabled={loading}
             maxLength={150}
             className={formErrors.contact ? "border-red-500" : ""}
-            placeholder="Masukkan nama kontak"
+            placeholder={t("form.lead.placeholders.contact")}
           />
           {formErrors.contact && (
             <p className="text-sm text-red-500">{formErrors.contact}</p>
@@ -312,7 +314,7 @@ LeadFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("form.lead.email")}</Label>
           <Input
             id="email"
             name="email"
@@ -321,7 +323,7 @@ LeadFormProps) {
             disabled={loading}
             maxLength={150}
             className={formErrors.email ? "border-red-500" : ""}
-            placeholder="Masukkan email"
+            placeholder={t("form.lead.placeholders.email")}
           />
           {formErrors.email && (
             <p className="text-sm text-red-500">{formErrors.email}</p>
@@ -329,7 +331,7 @@ LeadFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="phone">Phone</Label>
+          <Label htmlFor="phone">{t("form.lead.phone")}</Label>
           <Input
             id="phone"
             name="phone"
@@ -337,7 +339,7 @@ LeadFormProps) {
             disabled={loading}
             maxLength={50}
             className={formErrors.phone ? "border-red-500" : ""}
-            placeholder="e.g., +62 812 3456 7890"
+            placeholder={t("form.lead.placeholders.phone")}
           />
           {formErrors.phone && (
             <p className="text-sm text-red-500">{formErrors.phone}</p>
@@ -345,7 +347,7 @@ LeadFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="company">Company</Label>
+          <Label htmlFor="company">{t("form.lead.company")}</Label>
           <Input
             id="company"
             name="company"
@@ -353,7 +355,7 @@ LeadFormProps) {
             disabled={loading}
             maxLength={150}
             className={formErrors.company ? "border-red-500" : ""}
-            placeholder="Masukkan nama perusahaan"
+            placeholder={t("form.lead.placeholders.company")}
           />
           {formErrors.company && (
             <p className="text-sm text-red-500">{formErrors.company}</p>
@@ -361,7 +363,7 @@ LeadFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="location">Lokasi *</Label>
+          <Label htmlFor="location">{t("form.lead.location")} *</Label>
           <Select
             name="location"
             value={selectedLocation}
@@ -370,11 +372,10 @@ LeadFormProps) {
             required
           >
             <SelectTrigger
-              className={`w-full ${
-                formErrors.location ? "border-red-500" : ""
-              }`}
+              className={`w-full ${formErrors.location ? "border-red-500" : ""
+                }`}
             >
-              <SelectValue placeholder="Pilih lokasi" />
+              <SelectValue placeholder={t("form.lead.placeholders.location")} />
             </SelectTrigger>
             <SelectContent>
               {LOCATION_OPTIONS.map((opt) => (
@@ -408,7 +409,7 @@ LeadFormProps) {
 
         {/* Type */}
         <div className="space-y-2">
-          <Label htmlFor="type">Type</Label>
+          <Label htmlFor="type">{t("form.lead.type")}</Label>
           {(() => {
             let defaultVal = findOptionValue(
               lead?.type ?? "",
@@ -430,19 +431,18 @@ LeadFormProps) {
             const extraOption =
               !hasMatch && raw
                 ? {
-                    value: String(raw),
-                    label: formatStatusDisplay(String(raw)),
-                  }
+                  value: String(raw),
+                  label: formatStatusDisplay(String(raw)),
+                }
                 : null;
 
             return (
               <Select name="type" defaultValue={defaultVal} disabled={loading}>
                 <SelectTrigger
-                  className={`w-full ${
-                    formErrors.type ? "border-red-500" : ""
-                  }`}
+                  className={`w-full ${formErrors.type ? "border-red-500" : ""
+                    }`}
                 >
-                  <SelectValue placeholder="Select type" />
+                  <SelectValue placeholder={t("common.select")} />
                 </SelectTrigger>
                 <SelectContent>
                   {extraOption && (
@@ -469,7 +469,7 @@ LeadFormProps) {
 
         {/* Source */}
         <div className="space-y-2">
-          <Label htmlFor="source">Source</Label>
+          <Label htmlFor="source">{t("form.lead.source")}</Label>
           {(() => {
             let defaultVal = findOptionValue(
               lead?.source ?? "",
@@ -491,9 +491,9 @@ LeadFormProps) {
             const extraOption =
               !hasMatch && raw
                 ? {
-                    value: String(raw),
-                    label: formatStatusDisplay(String(raw)),
-                  }
+                  value: String(raw),
+                  label: formatStatusDisplay(String(raw)),
+                }
                 : null;
 
             return (
@@ -503,11 +503,10 @@ LeadFormProps) {
                 disabled={loading}
               >
                 <SelectTrigger
-                  className={`w-full ${
-                    formErrors.source ? "border-red-500" : ""
-                  }`}
+                  className={`w-full ${formErrors.source ? "border-red-500" : ""
+                    }`}
                 >
-                  <SelectValue placeholder="Select source" />
+                  <SelectValue placeholder={t("common.select")} />
                 </SelectTrigger>
                 <SelectContent>
                   {extraOption && (
@@ -534,21 +533,21 @@ LeadFormProps) {
 
         {/* Status */}
         <div className="space-y-2">
-          <Label htmlFor="status">Status</Label>
+          <Label htmlFor="status">{t("form.lead.status")}</Label>
           {(() => {
             // Filter opsi "qualified" (value/label) jika mode create
             const filteredStatusOptions =
               mode === "create"
                 ? STATUS_OPTIONS.filter(
-                    (opt) =>
-                      ![
-                        "qualified",
-                        "lead_qualified",
-                        "opp_qualified",
-                        "Qualified",
-                      ].includes(opt.value.toLowerCase()) &&
-                      opt.label.toLowerCase() !== "qualified",
-                  )
+                  (opt) =>
+                    ![
+                      "qualified",
+                      "lead_qualified",
+                      "opp_qualified",
+                      "Qualified",
+                    ].includes(opt.value.toLowerCase()) &&
+                    opt.label.toLowerCase() !== "qualified",
+                )
                 : STATUS_OPTIONS;
 
             let defaultVal = findOptionValue(
@@ -571,9 +570,9 @@ LeadFormProps) {
             const extraOption =
               !hasMatch && raw
                 ? {
-                    value: String(raw),
-                    label: formatStatusDisplay(String(raw)),
-                  }
+                  value: String(raw),
+                  label: formatStatusDisplay(String(raw)),
+                }
                 : null;
 
             return (
@@ -583,11 +582,10 @@ LeadFormProps) {
                 disabled={loading}
               >
                 <SelectTrigger
-                  className={`w-full ${
-                    formErrors.status ? "border-red-500" : ""
-                  }`}
+                  className={`w-full ${formErrors.status ? "border-red-500" : ""
+                    }`}
                 >
-                  <SelectValue placeholder="Select status" />
+                  <SelectValue placeholder={t("common.select")} />
                 </SelectTrigger>
                 <SelectContent>
                   {extraOption && (
@@ -613,7 +611,7 @@ LeadFormProps) {
         </div>
 
         <div className="md:col-span-2 space-y-2">
-          <Label htmlFor="product_interest">Product Interest</Label>
+          <Label htmlFor="product_interest">{t("form.lead.products")}</Label>
           <div className="w-full">
             <WindowedSelect
               windowThreshold={100}
@@ -624,7 +622,7 @@ LeadFormProps) {
               onChange={(newValue) =>
                 setProductInterest(Array.isArray(newValue) ? newValue : [])
               }
-              placeholder="Select products"
+              placeholder={t("common.select")}
               classNamePrefix="react-select"
               styles={{
                 ...selectStyles,
@@ -648,7 +646,7 @@ LeadFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="potential_value">Potential Value</Label>
+          <Label htmlFor="potential_value">{t("form.lead.potential_value")}</Label>
           <Input
             id="potential_value"
             name="potential_value"
@@ -661,7 +659,7 @@ LeadFormProps) {
             }}
             disabled={loading}
             className={formErrors.potential_value ? "border-red-500" : ""}
-            placeholder="Masukkan nilai potensial (contoh: 1.000.000)"
+            placeholder={t("form.lead.placeholders.potential_value")}
           />
           {formErrors.potential_value && (
             <p className="text-sm text-red-500">{formErrors.potential_value}</p>
@@ -689,10 +687,10 @@ LeadFormProps) {
       <div className="flex gap-3 pt-4">
         <Button type="submit" disabled={loading}>
           {loading
-            ? "Saving..."
+            ? t("common.loading")
             : mode === "create"
-              ? "Create Lead"
-              : "Update Lead"}
+              ? t("page.leads.create")
+              : t("page.leads.edit")}
         </Button>
         <Button
           type="button"
@@ -700,7 +698,7 @@ LeadFormProps) {
           onClick={() => router.push("/crm/leads")}
           disabled={loading}
         >
-          Cancel
+          {t("common.cancel")}
         </Button>
       </div>
     </form>

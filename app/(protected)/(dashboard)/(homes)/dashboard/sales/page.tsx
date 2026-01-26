@@ -11,7 +11,7 @@ export default function DashboardSalesPage() {
     return <div className="p-8 text-center">Loading dashboard...</div>;
   }
 
-  if (role === "sales") {
+  if (role === "sales" || role === "manager-sales" || role === "superuser") {
     return <DashboardSales />;
   }
 

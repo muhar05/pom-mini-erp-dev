@@ -26,14 +26,14 @@ export const PAYMENT_STATUSES = {
 
 // Helper untuk check superuser
 export function isSuperuser(user: users | any): boolean {
-  return user?.roles?.role_name === "superadmin" || user?.role === "superadmin";
+  const role = user?.roles?.role_name || user?.role || "";
+  return role.toLowerCase() === "superuser";
 }
 
 // Helper untuk check sales role
 export function isSales(user: users | any): boolean {
-  return ["sales", "manager_sales", "superadmin"].includes(
-    user?.roles?.role_name || user?.role || ""
-  );
+  const role = user?.roles?.role_name || user?.role || "";
+  return ["sales", "manager-sales", "superuser"].includes(role.toLowerCase());
 }
 
 // Sales Order permissions berdasarkan status dan role
@@ -60,7 +60,7 @@ export function getSalesOrderPermissions(
   }
 
   const status = salesOrder?.sale_status || salesOrder?.status;
-  const userRole = user.roles?.role_name || "sales";
+  const userRole = (user.roles?.role_name || "sales").toLowerCase();
 
   // Default permissions - no access
   let permissions: SalesOrderPermissions = getDefaultPermissions();
@@ -186,28 +186,29 @@ function getDefaultPermissions(): SalesOrderPermissions {
 
 // Role-based authorization helpers
 function isAuthorizedToConfirm(role: string): boolean {
-  return ["superadmin", "manager_sales", "sales"].includes(role);
+  return ["superuser", "manager-sales", "sales"].includes(role);
 }
 
 function isAuthorizedToCancel(role: string): boolean {
-  return ["superadmin", "manager_sales"].includes(role);
+  return ["superuser", "manager-sales"].includes(role);
 }
 
 function isAuthorizedForFinance(role: string): boolean {
-  return ["superadmin", "manager_sales", "finance"].includes(role);
+  return ["superuser", "manager-sales", "finance"].includes(role);
 }
 
 function isAuthorizedForDelivery(role: string): boolean {
-  return ["superadmin", "manager_sales", "warehouse"].includes(role);
+  return ["superuser", "manager-sales", "warehouse"].includes(role);
 }
 
 function isAuthorizedForPayment(role: string): boolean {
-  return ["superadmin", "manager_sales", "finance"].includes(role);
+  return ["superuser", "manager-sales", "finance"].includes(role);
 }
 
 function isAuthorizedToClose(role: string): boolean {
-  return ["superadmin", "manager_sales"].includes(role);
+  return ["superuser", "manager-sales"].includes(role);
 }
+
 
 // Helper untuk check apakah field bisa diedit
 export function isFieldEditable(

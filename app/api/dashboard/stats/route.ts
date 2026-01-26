@@ -42,7 +42,6 @@ export async function GET() {
       },
     });
 
-
     const quotationsStatusMap = {
       draft: 0,
       sq_submitted: 0,
@@ -109,6 +108,40 @@ export async function GET() {
       }
     });
 
+    // Get leads by source
+    const leadsBySourceGrouped = await prisma.leads.groupBy({
+      by: ["source"],
+      where: leadWhere,
+      _count: {
+        id: true,
+      },
+    });
+
+    const leadsBySource: Record<string, number> = {};
+    leadsBySourceGrouped.forEach((item) => {
+      const source = item.source || "Others";
+      leadsBySource[source] = (leadsBySource[source] || 0) + item._count.id;
+    });
+
+    // Get recent logs
+    const recentLogsRaw = await prisma.user_logs.findMany({
+      where: isManager ? {} : { user_id: userId },
+      take: 5,
+      orderBy: { created_at: "desc" },
+      include: {
+        users: {
+          select: { name: true },
+        },
+      },
+    });
+
+    const recentLogs = recentLogsRaw.map((log) => ({
+      id: log.id.toString(),
+      activity: log.activity,
+      user_name: log.users.name,
+      created_at: log.created_at,
+    }));
+
     return NextResponse.json({
       totalLeads,
       totalQuotations,
@@ -116,6 +149,8 @@ export async function GET() {
       quotationsByStatus: quotationsStatusMap,
       salesOrdersByStatus: salesOrdersStatusMap,
       leadsByStatus: leadsStatusMap,
+      leadsBySource,
+      recentLogs,
     });
   } catch (error) {
     console.error("Dashboard stats error:", error);

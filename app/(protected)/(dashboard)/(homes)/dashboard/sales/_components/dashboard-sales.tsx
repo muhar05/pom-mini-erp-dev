@@ -4,13 +4,28 @@ import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { useDashboardSales } from "@/hooks/dashboard/useDashboardSales";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import LeadSourceChart from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/lead-source-chart";
+import QuotationStatusChart from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/quotation-status-chart";
+import SalesOrderStatusChart from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/sales-order-status-chart";
+import LoadingSkeleton from "@/components/loading-skeleton";
+import { Suspense } from "react";
 import StatCard, {
   StatCardData,
 } from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/stat-card";
+import CrmStatCard from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/crm-stat-card";
 import { Wallet, FileText, Medal } from "lucide-react";
+import { useI18n } from "@/contexts/i18n-context";
+import { isSuperuser, isManagerSales } from "@/utils/userHelpers";
+import { useSession } from "@/contexts/session-context";
+import SalesPerformanceTable from "./sales-performance-table";
 
 export default function DashboardSales() {
+  const { t } = useI18n();
+  const session = useSession();
+  const user = session?.user;
   const { data, loading, error, refetch } = useDashboardSales();
+
+  const showPerformance = isSuperuser(user) || isManagerSales(user);
 
   // Siapkan data untuk StatCard
   const statCards: StatCardData[] = [
@@ -100,7 +115,7 @@ export default function DashboardSales() {
       <>
         <Card>
           <CardHeader>
-            <CardTitle>Dashboard Sales</CardTitle>
+            <CardTitle>{t("page.dashboard.sales_title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -120,7 +135,7 @@ export default function DashboardSales() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Dashboard Sales</CardTitle>
+          <CardTitle>{t("page.dashboard.sales_title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="py-8 text-center text-red-500">{error}</div>
@@ -136,58 +151,77 @@ export default function DashboardSales() {
 
   return (
     <>
-      <DashboardBreadcrumb title="Dashboard Sales" text="Dashboard" />
+      <DashboardBreadcrumb title={t("page.dashboard.sales_title")} text={t("sidebar.dashboard")} />
+
+      {/* CRM Highlight Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-6 mb-6">
+        <Suspense
+          fallback={<LoadingSkeleton height="h-32" text={t("common.loading")} />}
+        >
+          <CrmStatCard />
+        </Suspense>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <StatCard data={statCards} />
       </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+        <Suspense
+          fallback={<LoadingSkeleton height="h-96" text={t("common.loading")} />}
+        >
+          <QuotationStatusChart />
+        </Suspense>
+
+        <Suspense
+          fallback={<LoadingSkeleton height="h-96" text={t("common.loading")} />}
+        >
+          <SalesOrderStatusChart />
+        </Suspense>
+
+        <Suspense
+          fallback={<LoadingSkeleton height="h-96" text={t("common.loading")} />}
+        >
+          <LeadSourceChart />
+        </Suspense>
+      </div>
+
+      {showPerformance && data?.salesPerformance && (
+        <SalesPerformanceTable data={data.salesPerformance} />
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Ringkasan Sales</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-primary" />
+            {t("page.dashboard.revenue")}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="w-full">
-          <Separator className="my-4" />
-          <div className="mb-4">
-            <div className="font-semibold mb-2">Monthly Revenue</div>
-            <div className="flex flex-wrap gap-4">
-              {data.monthlyRevenue.length === 0 && (
-                <span className="text-muted-foreground">No data</span>
-              )}
-              {data.monthlyRevenue.map((item) => (
-                <div
-                  key={item.month}
-                  className="p-2 border rounded min-w-[100px] text-center"
-                >
-                  <div className="text-xs text-muted-foreground">
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            {data.monthlyRevenue.length === 0 && (
+              <div className="col-span-full py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg">
+                {t("common.no_data")}
+              </div>
+            )}
+            {data.monthlyRevenue.map((item) => (
+              <div
+                key={item.month}
+                className="group relative overflow-hidden p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all hover:shadow-md hover:border-primary/20"
+              >
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                     {item.month}
-                  </div>
-                  <div className="font-bold">
+                  </span>
+                  <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
                     Rp {item.total.toLocaleString("id-ID")}
-                  </div>
+                  </span>
                 </div>
-              ))}
-            </div>
-          </div>
-          <Separator className="my-4" />
-          <div>
-            <div className="font-semibold mb-2">Order Status</div>
-            <div className="flex flex-wrap gap-4">
-              {data.orderStatus.length === 0 && (
-                <span className="text-muted-foreground">No data</span>
-              )}
-              {data.orderStatus.map((item) => (
-                <div
-                  key={item.status}
-                  className="p-2 border rounded min-w-[100px] text-center"
-                >
-                  <div className="text-xs text-muted-foreground">
-                    {item.status}
-                  </div>
-                  <div className="font-bold">{item.total}</div>
+                <div className="absolute top-0 right-0 p-2 opacity-5">
+                  <Wallet className="w-12 h-12" />
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

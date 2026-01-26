@@ -111,6 +111,48 @@ export async function GET(req: NextRequest) {
       total: row._count.sale_status,
     }));
 
+    // 4. Sales performance (For Manager/Superuser)
+    let salesPerformance: any[] = [];
+    if (isSuperuser(user) || isManagerSales(user)) {
+      // Ambil daftar sales
+      const salesUsers = await prisma.users.findMany({
+        where: { role_id: 2 }, // ID 2 adalah sales
+        select: { id: true, name: true },
+      });
+
+      salesPerformance = await Promise.all(
+        salesUsers.map(async (s) => {
+          const sId = Number(s.id);
+          const [leadsCount, quotationsCount, soStats] = await Promise.all([
+            prisma.leads.count({
+              where: {
+                OR: [{ id_user: sId }, { assigned_to: sId }],
+              },
+            }),
+            prisma.quotations.count({
+              where: { user_id: sId },
+            }),
+            prisma.sales_orders.aggregate({
+              where: { user_id: sId, status: { not: "CANCELLED" } },
+              _count: { id: true },
+              _sum: { grand_total: true },
+            }),
+          ]);
+
+          return {
+            sales_name: s.name,
+            total_leads: leadsCount,
+            total_quotations: quotationsCount,
+            total_orders: soStats._count.id,
+            total_revenue: Number(soStats._sum.grand_total || 0),
+          };
+        })
+      );
+
+      // Urutkan berdasarkan revenue atau jumlah order (misal revenue DESC)
+      salesPerformance.sort((a, b) => b.total_revenue - a.total_revenue);
+    }
+
     return NextResponse.json(
       {
         totalRevenue: Number(totalRevenueResult._sum.grand_total || 0),
@@ -118,6 +160,7 @@ export async function GET(req: NextRequest) {
         totalQuotation,
         monthlyRevenue,
         orderStatus,
+        salesPerformance,
       },
       { status: 200 },
     );

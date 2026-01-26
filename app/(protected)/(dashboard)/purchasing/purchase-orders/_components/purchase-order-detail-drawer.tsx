@@ -29,18 +29,21 @@ import PurchaseOrderRelatedData from "./purchase-order-related-data";
 type PurchaseOrder = {
   id: string;
   po_no: string;
-  pr_no: string;
-  vendor_name: string;
-  vendor_email: string;
-  contact_person: string;
-  items_count: number;
-  total_amount: number;
-  order_date: string;
-  delivery_date: string;
-  payment_term: string;
+  pr_id?: string | null;
+  user_id?: number | null;
+  supplier_id?: string | null;
+  assigned_to?: number | null;
+  po_detail_items: any[];
+  total: number;
   status: string;
   created_at: string;
-  updated_at: string;
+  supplier?: {
+    supplier_name: string;
+    email?: string | null;
+    phone?: string | null;
+  } | null;
+  vendor_name?: string; // For compatibility with table mapping
+  total_amount?: number; // For compatibility with table mapping
 };
 
 interface PurchaseOrderDetailDrawerProps {
@@ -49,6 +52,7 @@ interface PurchaseOrderDetailDrawerProps {
   onClose: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onRefresh?: () => Promise<void>;
 }
 
 function getStatusBadgeClass(status: string): string {
@@ -137,10 +141,10 @@ export default function PurchaseOrderDetailDrawer({
                 <div>
                   <p className="text-sm text-gray-500">PR Reference</p>
                   <Link
-                    href={`/purchasing/purchase-requests/${purchaseOrder.pr_no}`}
+                    href={`/purchasing/purchase-requests/${purchaseOrder.pr_id}`}
                     className="font-medium text-blue-600 hover:underline"
                   >
-                    {purchaseOrder.pr_no}
+                    {purchaseOrder.pr_id || "-"}
                   </Link>
                 </div>
               </div>
@@ -158,7 +162,7 @@ export default function PurchaseOrderDetailDrawer({
                 <div>
                   <p className="text-sm text-gray-500">Vendor Email</p>
                   <p className="font-medium">
-                    {purchaseOrder.vendor_email || "-"}
+                    {purchaseOrder.supplier?.email || "-"}
                   </p>
                 </div>
               </div>
@@ -168,7 +172,7 @@ export default function PurchaseOrderDetailDrawer({
                 <div>
                   <p className="text-sm text-gray-500">Contact Person</p>
                   <p className="font-medium">
-                    {purchaseOrder.contact_person || "-"}
+                    {purchaseOrder.supplier?.phone || "-"}
                   </p>
                 </div>
               </div>
@@ -178,7 +182,7 @@ export default function PurchaseOrderDetailDrawer({
                 <div>
                   <p className="text-sm text-gray-500">Total Items</p>
                   <p className="font-medium">
-                    {purchaseOrder.items_count} items
+                    {purchaseOrder.po_detail_items?.length || 0} items
                   </p>
                 </div>
               </div>
@@ -188,7 +192,7 @@ export default function PurchaseOrderDetailDrawer({
                 <div>
                   <p className="text-sm text-gray-500">Total Amount</p>
                   <p className="font-medium text-lg">
-                    {purchaseOrder.total_amount.toLocaleString("id-ID", {
+                    {(purchaseOrder.total || 0).toLocaleString("id-ID", {
                       style: "currency",
                       currency: "IDR",
                     })}
@@ -199,29 +203,9 @@ export default function PurchaseOrderDetailDrawer({
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-gray-400" />
                 <div>
-                  <p className="text-sm text-gray-500">Order Date</p>
+                  <p className="text-sm text-gray-500">Created At</p>
                   <p className="font-medium">
-                    {formatDate(purchaseOrder.order_date)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Truck className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Delivery Date</p>
-                  <p className="font-medium">
-                    {formatDate(purchaseOrder.delivery_date)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <CreditCard className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-sm text-gray-500">Payment Term</p>
-                  <p className="font-medium">
-                    {purchaseOrder.payment_term || "-"}
+                    {formatDate(purchaseOrder.created_at)}
                   </p>
                 </div>
               </div>
