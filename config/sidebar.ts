@@ -41,7 +41,6 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       items: [
         { title: "Superuser", labelKey: "sidebar.superuser", url: "/dashboard/superuser" },
         { title: "Sales", labelKey: "sidebar.sales_orders", url: "/dashboard/sales" },
-        { title: "Manager Sales", labelKey: "sidebar.manager_sales", url: "/dashboard/manager-sales" },
         { title: "Finance", labelKey: "sidebar.finance", url: "/dashboard/finance" },
         { title: "Purchase", labelKey: "sidebar.purchasing", url: "/dashboard/purchasing" },
         { title: "Warehouse", labelKey: "sidebar.warehouse", url: "/dashboard/warehouse" },
