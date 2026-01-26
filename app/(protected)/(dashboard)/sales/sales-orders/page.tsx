@@ -7,14 +7,12 @@ import SalesOrdersTable from "./_components/sales-orders-table";
 import SalesOrderFilters from "./_components/sales-order-filters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import Link from "next/link";
 import {
   useSalesOrders,
   SalesOrder,
 } from "@/hooks/sales-orders/useSalesOrders";
-import LoadingSkeleton from "@/components/loading-skeleton";
 import { useI18n } from "@/contexts/i18n-context";
+import AddSalesOrderButton from "./_components/add-sales-order-button";
 
 // Type for components (matches existing component interfaces)
 type ComponentSalesOrder = {
@@ -49,7 +47,8 @@ export default function SalesOrdersPage() {
   const { user } = useSession();
   const { t } = useI18n();
   const { salesOrders, loading, error, refresh } = useSalesOrders();
-  const isSuperadmin = user?.role === "superadmin";
+
+  const standsAsSales = ["sales", "manager-sales", "superuser"].includes((user?.role_name || "").toLowerCase());
 
   const [filters, setFilters] = useState<{
     search?: string;
@@ -60,7 +59,6 @@ export default function SalesOrdersPage() {
     dateTo?: string;
   }>({});
 
-  const [selected, setSelected] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const handleFilterChange = (newFilters: {
@@ -227,8 +225,9 @@ export default function SalesOrdersPage() {
 
       <div className="grid grid-cols-1 gap-6 mt-6">
         <Card className="w-full dark:bg-gray-800">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{t("page.sales_order.title")}</CardTitle>
+            {standsAsSales && <AddSalesOrderButton />}
           </CardHeader>
           <CardContent>
             <SalesOrdersTable salesOrders={pagedData} onUpdate={refresh} />

@@ -34,9 +34,9 @@
         "crm": "CRM",
         "leads": "Leads",
         "opportunities": "Opportunities",
-        "sales": "Sales",
+        "sales": "Penjualan",
         "quotations": "Quotations",
-        "sales_orders": "Sales",
+        "sales_orders": "Sales Order",
         "purchasing": "Purchasing",
         "purchase_orders": "Purchase Orders",
         "warehouse": "Warehouse",
@@ -57,6 +57,28 @@
         "manager_purchasing": "Manajer Pembelian",
         "roles": "Role",
         "company": "Perusahaan"
+    },
+    "sales_order": {
+        "no": "Nomor SO",
+        "from_quotation": "Dari Quotation",
+        "customer": "Pelanggan",
+        "items": "Item",
+        "amount": "Total Nilai",
+        "status": "Status Pesanan",
+        "payment": "Status Pembayaran",
+        "items_count": "{count} item",
+        "more": "lebih banyak...",
+        "actions": {
+            "view": "Lihat Detail",
+            "edit": "Edit Sales Order",
+            "confirm": "Konfirmasi Sales Order",
+            "download": "Unduh PDF",
+            "finance": "Ajukan Finance",
+            "delivery": "Buat Pengiriman",
+            "cancel": "Batalkan Pesanan",
+            "delete": "Hapus Sales Order"
+        },
+        "delete_confirm_desc": "Apakah Anda yakin ingin menghapus sales order {no} untuk {customer}? Tindakan ini tidak dapat dibatalkan dan akan menghapus semua data terkait (permintaan pengiriman, invoice, pembayaran)."
     },
     "page": {
         "dashboard": {

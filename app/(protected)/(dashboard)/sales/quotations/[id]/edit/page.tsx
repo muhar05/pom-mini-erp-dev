@@ -4,10 +4,23 @@ import QuotationForm from "../../_components/quotation-form";
 import { useParams, useRouter } from "next/navigation";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { useQuotationDetail } from "@/hooks/quotations/useQuotationDetail";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ShoppingCart } from "lucide-react";
+import { toast } from "react-hot-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { convertQuotationToSalesOrderAction } from "@/app/actions/sales-orders";
+import { QUOTATION_STATUSES } from "@/utils/quotationPermissions";
+import { useState } from "react";
+import { useSession } from "@/contexts/session-context";
 import { Button } from "@/components/ui/button";
 import type { quotations } from "@/types/models";
-import { useSession } from "@/contexts/session-context";
 import { canAccessQuotation } from "@/utils/quotationAccess";
 
 export default function QuotationEditPage() {
@@ -16,6 +29,8 @@ export default function QuotationEditPage() {
   const router = useRouter();
   const { quotation, loading, error } = useQuotationDetail(idParam);
   const user = useSession();
+  const [converting, setConverting] = useState(false);
+  const [showConvertDialog, setShowConvertDialog] = useState(false);
 
   const handleSuccess = () => {
     router.push("/sales/quotations");
@@ -23,6 +38,47 @@ export default function QuotationEditPage() {
 
   const handleClose = () => {
     router.push("/sales/quotations");
+  };
+
+  const handleConvertToSO = async () => {
+    if (!quotation?.id) return;
+    setConverting(true);
+    try {
+      const result = await convertQuotationToSalesOrderAction(
+        Number(quotation.id),
+      );
+      if (result.success) {
+        toast.success(
+          result.message || "Quotation successfully converted to Sales Order!",
+          {
+            duration: 4000,
+            icon: "🎉",
+          },
+        );
+        if (result.data?.id) {
+          router.push(`/sales/sales-orders/${result.data.id}/edit`);
+        } else {
+          router.push("/sales/sales-orders");
+        }
+      } else {
+        toast.error(
+          result.message || "Failed to convert quotation to Sales Order",
+          {
+            duration: 5000,
+          },
+        );
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred while converting quotation",
+        { duration: 5000 },
+      );
+    } finally {
+      setConverting(false);
+      setShowConvertDialog(false);
+    }
   };
 
   // Konversi Decimal ke number
@@ -40,7 +96,6 @@ export default function QuotationEditPage() {
       sales_pic: (obj as any).sales_pic ?? "",
       type: (obj as any).type ?? "",
       company: (obj as any).company ?? "",
-      // Tambahkan field lain yang dibutuhkan oleh QuotationForm jika perlu
     };
   }
 
@@ -108,6 +163,19 @@ export default function QuotationEditPage() {
             <ArrowLeft className="w-4 h-4" />
             Back
           </Button>
+
+          {/* Convert to SO Button - Available for APPROVED and SENT statuses */}
+          {quotation && [QUOTATION_STATUSES.APPROVED, QUOTATION_STATUSES.SENT].includes(quotation.status as any) && (
+            <Button
+              variant="default"
+              disabled={converting}
+              onClick={() => setShowConvertDialog(true)}
+              className="flex items-center gap-2"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              {converting ? "Converting..." : "Convert to SO"}
+            </Button>
+          )}
         </div>
 
         <div className="w-full py-4">
@@ -118,6 +186,36 @@ export default function QuotationEditPage() {
           />
         </div>
       </div>
+
+      {/* SO Conversion Confirmation Dialog */}
+      <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-primary" />
+              Convert to Sales Order
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to convert this quotation to a Sales Order?
+              This will create a new Sales Order record and mark this quotation as converted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <DialogClose asChild>
+              <Button variant="outline" disabled={converting}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              onClick={handleConvertToSO}
+              disabled={converting}
+              className="bg-primary"
+            >
+              {converting ? "Converting..." : "Yes, Convert to SO"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

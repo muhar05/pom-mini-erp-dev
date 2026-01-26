@@ -9,22 +9,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Eye, Edit, Trash2, MoreVertical } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import SalesOrderDeleteDialog from "./sales-order-delete-dialog";
 import { formatDate } from "@/utils/formatDate";
 import { formatCurrency } from "@/utils/formatCurrency";
-import Link from "next/link";
-import { useSession } from "@/contexts/session-context";
-import { getSalesOrderPermissions } from "@/utils/salesOrderPermissions";
 import { useI18n } from "@/contexts/i18n-context";
+import SalesOrderActions from "./sales-order-actions";
 
 type SalesOrder = {
   id: string;
@@ -61,19 +49,25 @@ interface SalesOrdersTableProps {
 
 // Enhanced status badge styling
 function getStatusBadgeClass(status: string): string {
-  switch (status?.toLowerCase()) {
-    case "open":
+  switch (status?.toUpperCase()) {
+    case "NEW":
       return "bg-blue-100 text-blue-800 border-blue-200";
-    case "confirmed":
+    case "PR":
+    case "PO":
+    case "SR":
+    case "FAR":
+    case "DR":
+      return "bg-indigo-100 text-indigo-800 border-indigo-200";
+    case "DELIVERY":
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    case "DELIVERED":
       return "bg-green-100 text-green-800 border-green-200";
-    case "in_progress":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "completed":
+    case "RECEIVED":
+      return "bg-teal-100 text-teal-800 border-teal-200";
+    case "COMPLETED":
       return "bg-purple-100 text-purple-800 border-purple-200";
-    case "cancelled":
+    case "CANCELLED":
       return "bg-red-100 text-red-800 border-red-200";
-    case "draft":
-      return "bg-gray-100 text-gray-800 border-gray-200";
     default:
       return "bg-gray-100 text-gray-800 border-gray-200";
   }
@@ -98,12 +92,7 @@ export default function SalesOrdersTable({
   salesOrders,
   onUpdate,
 }: SalesOrdersTableProps) {
-  const { user } = useSession();
   const { t } = useI18n();
-
-  const handleDeleteSuccess = () => {
-    onUpdate?.(); // Refresh table data
-  };
 
   return (
     <Table>
@@ -152,7 +141,7 @@ export default function SalesOrdersTable({
               <TableCell>
                 <div className="flex flex-col">
                   <span className="font-medium text-sm">
-                    {salesOrder.items_count} item(s)
+                    {t("sales_order.items_count", { count: salesOrder.items_count })}
                   </span>
                   {salesOrder.items_details &&
                     salesOrder.items_details.length > 0 && (
@@ -166,7 +155,7 @@ export default function SalesOrdersTable({
                           ))}
                         {salesOrder.items_details.length > 2 && (
                           <div className="text-xs text-gray-400">
-                            +{salesOrder.items_details.length - 2} more...
+                            +{salesOrder.items_details.length - 2} {t("sales_order.more")}
                           </div>
                         )}
                       </div>
@@ -200,59 +189,10 @@ export default function SalesOrdersTable({
               </TableCell>
               <TableCell>{formatDate(salesOrder.created_at)}</TableCell>
               <TableCell>
-                {/* Actions Buttons */}
-                <div className="flex gap-1 items-center">
-                  {/* More Actions Dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                        title="More Actions"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem asChild>
-                        <Link
-                          href={`/sales/sales-orders/${salesOrder.id}`}
-                          className="flex items-center"
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Full Details
-                        </Link>
-                      </DropdownMenuItem>
-
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link
-                          href={`/sales/sales-orders/${salesOrder.id}/edit`}
-                          className="flex items-center"
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit Sales Order
-                        </Link>
-                      </DropdownMenuItem>
-
-                      <DropdownMenuSeparator />
-                      <SalesOrderDeleteDialog
-                        salesOrder={salesOrder}
-                        trigger={
-                          <DropdownMenuItem
-                            onSelect={(e) => e.preventDefault()}
-                            className="text-red-600 focus:text-red-600 flex items-center cursor-pointer"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Sales Order
-                          </DropdownMenuItem>
-                        }
-                        onDelete={handleDeleteSuccess}
-                      />
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                <SalesOrderActions
+                  salesOrder={salesOrder}
+                  onUpdate={onUpdate}
+                />
               </TableCell>
             </TableRow>
           );

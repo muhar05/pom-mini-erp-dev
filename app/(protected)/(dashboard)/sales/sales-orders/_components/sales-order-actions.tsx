@@ -13,6 +13,7 @@ import {
   Download,
   MoreVertical,
 } from "lucide-react";
+import { useI18n } from "@/contexts/i18n-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,10 +25,12 @@ import SalesOrderDeleteDialog from "./sales-order-delete-dialog";
 import {
   getSalesOrderPermissions,
   isActionAvailable,
+  isSuperuser,
 } from "@/utils/salesOrderPermissions";
 import { useSession } from "@/contexts/session-context";
 import { useState, useRef } from "react";
-import { confirmSalesOrderAction } from "@/app/actions/sales-orders";
+import { updateSalesOrderStatusAction } from "@/app/actions/sales-orders";
+import { SALE_STATUSES } from "@/utils/salesOrderPermissions";
 import toast from "react-hot-toast";
 import SalesOrderExport, {
   SOExportHandle,
@@ -66,6 +69,7 @@ export default function SalesOrderActions({
   onDelete,
   onUpdate,
 }: SalesOrderActionsProps) {
+  const { t } = useI18n();
   const { user } = useSession();
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const exportRef = useRef<SOExportHandle>(null);
@@ -88,7 +92,7 @@ export default function SalesOrderActions({
   };
 
   const handleConfirm = async () => {
-    await handleAction("confirm", () => confirmSalesOrderAction(salesOrder.id));
+    await handleAction("confirm", () => updateSalesOrderStatusAction(salesOrder.id, SALE_STATUSES.PR));
   };
 
   const handleDownloadPDF = () => {
@@ -147,33 +151,33 @@ export default function SalesOrderActions({
             size="icon"
             variant="ghost"
             className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-            title="View Details"
+            title={t("sales_order.actions.view")}
           >
             <Eye className="w-4 h-4" />
           </Button>
         </Link>
 
         {/* Edit - Only for limited fields based on status */}
-        {permissions.editableFields.length > 0 && (
+        {permissions.canEdit && (
           <Link href={`/sales/sales-orders/${salesOrder.id}/edit`}>
             <Button
               size="icon"
               variant="ghost"
               className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-              title="Edit (Limited)"
+              title={t("sales_order.actions.edit")}
             >
               <Edit className="w-4 h-4" />
             </Button>
           </Link>
         )}
 
-        {/* Confirm - Only for OPEN status */}
-        {isActionAvailable("confirm", permissions) && (
+        {/* Confirm - Only for NEW status */}
+        {isActionAvailable("update_status_pr", permissions) && (
           <Button
             size="icon"
             variant="ghost"
             className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-            title="Confirm Sales Order"
+            title={t("sales_order.actions.confirm")}
             onClick={handleConfirm}
             disabled={loading.confirm}
           >
@@ -188,17 +192,17 @@ export default function SalesOrderActions({
               size="icon"
               variant="ghost"
               className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-              title="More Actions"
+              title={t("common.actions")}
             >
               <MoreVertical className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {/* Download PDF */}
-            <DropdownMenuItem onClick={handleDownloadPDF}>
+            {/* <DropdownMenuItem onClick={handleDownloadPDF}>
               <Download className="mr-2 h-4 w-4" />
-              Download PDF
-            </DropdownMenuItem>
+              {t("sales_order.actions.download")}
+            </DropdownMenuItem> */}
 
             {/* Request Finance - Only after confirmed */}
             {isActionAvailable("request_finance", permissions) && (
@@ -210,7 +214,7 @@ export default function SalesOrderActions({
                 }}
               >
                 <CreditCard className="mr-2 h-4 w-4" />
-                Request Finance
+                {t("sales_order.actions.finance")}
               </DropdownMenuItem>
             )}
 
@@ -224,7 +228,7 @@ export default function SalesOrderActions({
                 }}
               >
                 <Truck className="mr-2 h-4 w-4" />
-                Create Delivery
+                {t("sales_order.actions.delivery")}
               </DropdownMenuItem>
             )}
 
@@ -238,14 +242,14 @@ export default function SalesOrderActions({
                 }}
               >
                 <XCircle className="mr-2 h-4 w-4" />
-                Cancel Order
+                {t("sales_order.actions.cancel")}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Delete - Only for superadmin and specific statuses */}
-        {permissions.canCancel && user?.role === "superadmin" && (
+        {/* Delete - Only for superuser and specific statuses */}
+        {permissions.canCancel && isSuperuser(user) && (
           <SalesOrderDeleteDialog
             salesOrder={salesOrder}
             trigger={
@@ -253,7 +257,7 @@ export default function SalesOrderActions({
                 size="icon"
                 variant="ghost"
                 className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                title="Delete"
+                title={t("common.delete")}
               >
                 <Trash2 className="w-4 h-4" />
               </Button>

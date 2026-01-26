@@ -16,7 +16,6 @@ import {
 import { format } from "date-fns";
 import { formatCurrency } from "@/utils/formatCurrency";
 import {
-  Package,
   FileText,
   User,
   Calendar,
@@ -28,12 +27,27 @@ import {
   Receipt,
   Eye,
 } from "lucide-react";
-import { getSalesOrderByIdAction } from "@/app/actions/sales-orders";
+import {
+  getSalesOrderByIdAction,
+  updateSalesOrderStatusAction,
+  updateSalesOrderItemStatusAction,
+} from "@/app/actions/sales-orders";
 import LoadingSkeleton from "@/components/loading-skeleton";
 import SalesOrderExport, {
   SOExportHandle,
 } from "@/components/sales-orders/salesOrderExport";
 import { SalesOrderPrintButton } from "@/components/sales-orders/PrintButton";
+import { useSession } from "@/contexts/session-context";
+import {
+  getSalesOrderPermissions,
+  isActionAvailable,
+  isSuperuser,
+  isWarehouse,
+  isSales,
+} from "@/utils/salesOrderPermissions";
+import toast from "react-hot-toast";
+import { Edit, CheckCircle, CreditCard, Truck, XCircle, ChevronDown, Package, Edit2 } from "lucide-react";
+import Link from "next/link";
 
 function getStatusBadgeClass(status: string): string {
   switch (status?.toLowerCase()) {
@@ -47,63 +61,136 @@ function getStatusBadgeClass(status: string): string {
 }
 
 function getSaleStatusBadgeClass(status: string): string {
-  switch (status?.toLowerCase()) {
-    case "open":
-      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
-    case "confirmed":
-      return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
-    case "completed":
-      return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800";
-    case "cancelled":
-      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
+  switch (status?.toUpperCase()) {
+    case "NEW":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "PR":
+    case "PO":
+    case "SR":
+    case "FAR":
+    case "DR":
+      return "bg-indigo-100 text-indigo-800 border-indigo-200";
+    case "DELIVERY":
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    case "DELIVERED":
+      return "bg-green-100 text-green-800 border-green-200";
+    case "RECEIVED":
+      return "bg-teal-100 text-teal-800 border-teal-200";
+    case "COMPLETED":
+      return "bg-purple-100 text-purple-800 border-purple-200";
+    case "CANCELLED":
+      return "bg-red-100 text-red-800 border-red-200";
     default:
-      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
 }
 
 function getPaymentStatusBadgeClass(status: string): string {
-  switch (status?.toLowerCase()) {
-    case "unpaid":
-      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
-    case "partially_paid":
+  switch (status?.toUpperCase()) {
+    case "UNPAID":
+      return "bg-red-100 text-red-800 border-red-200";
+    case "PARTIAL":
+    case "PARTIALLY_PAID":
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    case "PAID":
+      return "bg-green-100 text-green-800 border-green-200";
+    case "OVERDUE":
+      return "bg-orange-100 text-orange-800 border-orange-200";
+    default:
+      return "bg-gray-100 text-gray-800 border-gray-200";
+  }
+}
+
+function getItemStatusBadgeClass(status: string): string {
+  switch (status?.toUpperCase()) {
+    case "ACTIVE":
+      return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
+    case "PARTIAL_DELIVERED":
       return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800";
-    case "paid":
+    case "DELIVERED":
       return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
+    case "CANCELLED":
+      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
     default:
       return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
   }
 }
 
+import { SALE_STATUSES, ITEM_STATUSES, ITEM_STATUS_DETAILS } from "@/utils/salesOrderPermissions";
+
 export default function SalesOrderDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useSession();
   const [salesOrder, setSalesOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<SOExportHandle>(null);
 
-  useEffect(() => {
-    const fetchSalesOrder = async () => {
-      try {
-        setLoading(true);
-        const id = params.id as string;
-        const data = await getSalesOrderByIdAction(id);
-        setSalesOrder(data);
-      } catch (err) {
-        console.error("Error fetching sales order:", err);
-        setError(
-          err instanceof Error ? err.message : "Failed to fetch sales order"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchSalesOrder = async () => {
+    try {
+      setLoading(true);
+      const id = params.id as string;
+      const data = await getSalesOrderByIdAction(id);
+      setSalesOrder(data);
+    } catch (err) {
+      console.error("Error fetching sales order:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch sales order"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (params.id) {
       fetchSalesOrder();
     }
   }, [params.id]);
+
+  const permissions = useMemo(() => {
+    if (!salesOrder || !user) return null;
+    return getSalesOrderPermissions(salesOrder, user);
+  }, [salesOrder, user]);
+
+  const handleUpdateStatus = async (newStatus: string) => {
+    if (!salesOrder?.id) return;
+
+    setActionLoading(true);
+    try {
+      const result = await updateSalesOrderStatusAction(salesOrder.id, newStatus);
+      if (result.success) {
+        toast.success(result.message);
+        fetchSalesOrder();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update status");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpdateItemStatus = async (itemId: string, newStatus: string) => {
+    setActionLoading(true);
+    try {
+      const result = await updateSalesOrderItemStatusAction(itemId, newStatus);
+      if (result.success) {
+        toast.success(result.message);
+        fetchSalesOrder();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update item status");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // Derived data
   const customer = salesOrder?.customers;
@@ -204,18 +291,142 @@ export default function SalesOrderDetailPage() {
                 {salesOrder.payment_status}
               </span>
 
-              <div className="flex items-center gap-2 ml-2">
+              <div className="flex items-center gap-3 ml-2">
+                {/* Dynamic Action Buttons based on flow */}
+                {permissions && permissions.availableActions.map(action => {
+                  if (action === "update_status_pr") {
+                    return (
+                      <Button key={action} size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => handleUpdateStatus(SALE_STATUSES.PR)} disabled={actionLoading}>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Confirm & Create PR
+                      </Button>
+                    );
+                  }
+                  if (action === "update_status_po") {
+                    return (
+                      <Button key={action} size="sm" className="bg-indigo-600 hover:bg-indigo-700" onClick={() => handleUpdateStatus(SALE_STATUSES.PO)} disabled={actionLoading}>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Create PO
+                      </Button>
+                    );
+                  }
+                  if (action === "update_status_sr") {
+                    return (
+                      <Button key={action} size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={() => handleUpdateStatus(SALE_STATUSES.SR)} disabled={actionLoading}>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Reserved Stock (SR)
+                      </Button>
+                    );
+                  }
+                  if (action === "update_status_far") {
+                    return (
+                      <Button key={action} size="sm" className="bg-cyan-600 hover:bg-cyan-700" onClick={() => handleUpdateStatus(SALE_STATUSES.FAR)} disabled={actionLoading}>
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Request Finance Approval
+                      </Button>
+                    );
+                  }
+                  if (action === "approve_far") {
+                    return (
+                      <Button key={action} size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => handleUpdateStatus(SALE_STATUSES.DR)} disabled={actionLoading}>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Approve Finance
+                      </Button>
+                    );
+                  }
+                  if (action === "update_status_dr") {
+                    return (
+                      <Button key={action} size="sm" className="bg-violet-600 hover:bg-violet-700" onClick={() => handleUpdateStatus(SALE_STATUSES.DR)} disabled={actionLoading}>
+                        <Truck className="w-4 h-4 mr-2" />
+                        Create Delivery Request
+                      </Button>
+                    );
+                  }
+                  if (action === "update_status_delivery") {
+                    return (
+                      <Button key={action} size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => handleUpdateStatus(SALE_STATUSES.DELIVERY)} disabled={actionLoading}>
+                        <Truck className="w-4 h-4 mr-2" />
+                        Ship Items
+                      </Button>
+                    );
+                  }
+                  if (action === "update_status_delivered") {
+                    return (
+                      <Button key={action} size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleUpdateStatus(SALE_STATUSES.DELIVERED)} disabled={actionLoading}>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        All Items Delivered
+                      </Button>
+                    );
+                  }
+                  if (action === "update_status_received") {
+                    return (
+                      <Button key={action} size="sm" className="bg-teal-600 hover:bg-teal-700" onClick={() => handleUpdateStatus(SALE_STATUSES.RECEIVED)} disabled={actionLoading}>
+                        <Package className="w-4 h-4 mr-2" />
+                        Customer Received
+                      </Button>
+                    );
+                  }
+                  if (action === "complete") {
+                    return (
+                      <Button key={action} size="sm" className="bg-gray-800 hover:bg-black" onClick={() => handleUpdateStatus(SALE_STATUSES.COMPLETED)} disabled={actionLoading}>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Finalize Order
+                      </Button>
+                    );
+                  }
+                  if (action === "cancel") {
+                    return (
+                      <Button key={action} size="sm" variant="destructive" onClick={() => handleUpdateStatus(SALE_STATUSES.CANCELLED)} disabled={actionLoading}>
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Cancel Order
+                      </Button>
+                    );
+                  }
+                  return null;
+                })}
+
+                {/* Edit Button */}
+                {permissions && permissions.canEdit && (
+                  <Link href={`/sales/sales-orders/${salesOrder.id}/edit`}>
+                    <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50">
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Order
+                    </Button>
+                  </Link>
+                )}
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
                       <MoreVertical className="w-4 h-4 mr-1" />
-                      Actions
+                      More Actions
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem asChild>
                       <SalesOrderPrintButton printRef={printRef} />
                     </DropdownMenuItem>
+
+                    {permissions && isActionAvailable("request_finance", permissions) && (
+                      <DropdownMenuItem onClick={() => toast("Finance request feature coming soon", { icon: "ℹ️" })}>
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        Request Finance
+                      </DropdownMenuItem>
+                    )}
+
+                    {permissions && isActionAvailable("create_delivery", permissions) && (
+                      <DropdownMenuItem onClick={() => toast("Delivery request feature coming soon", { icon: "ℹ️" })}>
+                        <Truck className="mr-2 h-4 w-4" />
+                        Create Delivery
+                      </DropdownMenuItem>
+                    )}
+
+                    {permissions && isActionAvailable("cancel", permissions) && (
+                      <DropdownMenuItem className="text-red-600" onClick={() => toast("Cancel feature coming soon", { icon: "ℹ️" })}>
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Cancel Order
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -405,7 +616,10 @@ export default function SalesOrderDetailPage() {
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-10">#</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Product</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">Qty</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">Ordered</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">Delivered</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">Remaining</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Item Status</th>
                         <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit Price</th>
                         <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
                       </tr>
@@ -419,6 +633,55 @@ export default function SalesOrderDetailPage() {
                             {item.product_code && <p className="text-xs text-gray-500">{item.product_code}</p>}
                           </td>
                           <td className="px-4 py-3 text-sm text-right font-medium">{item.qty}</td>
+                          <td className="px-4 py-3 text-sm text-right font-medium">
+                            {item.status === ITEM_STATUSES.DELIVERED ? item.qty : (item.status === ITEM_STATUSES.PARTIAL_DELIVERED ? "..." : 0)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-right font-medium text-amber-600">
+                            {item.status === ITEM_STATUSES.DELIVERED ? 0 : (item.status === ITEM_STATUSES.PARTIAL_DELIVERED ? "..." : item.qty)}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="flex flex-col items-center">
+                                <Badge variant="outline" className={`text-xs ${getItemStatusBadgeClass(item.status)}`}>
+                                  {ITEM_STATUS_DETAILS[item.status]?.label || item.status}
+                                </Badge>
+                                {ITEM_STATUS_DETAILS[item.status] && (
+                                  <span className="text-[10px] text-muted-foreground mt-0.5">
+                                    {ITEM_STATUS_DETAILS[item.status].desc}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Item Status Update (Only if current role can update items) */}
+                              {permissions && (isWarehouse(user) || isSuperuser(user)) && item.status !== ITEM_STATUSES.DELIVERED && item.status !== ITEM_STATUSES.CANCELLED && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-1">
+                                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="min-w-[160px]">
+                                    {Object.entries(ITEM_STATUS_DETAILS).map(([value, detail]) => {
+                                      // Only show specific transitions or if superuser
+                                      const isSuper = isSuperuser(user);
+                                      if (value === ITEM_STATUSES.CANCELLED && !isSuper) return null;
+
+                                      return (
+                                        <DropdownMenuItem
+                                          key={value}
+                                          onClick={() => handleUpdateItemStatus(item.id, value)}
+                                          className="flex flex-col items-start px-3 py-2 cursor-pointer focus:bg-blue-50"
+                                        >
+                                          <span className="font-bold text-xs">{detail.label}</span>
+                                          <span className="text-[10px] text-muted-foreground">{detail.desc}</span>
+                                        </DropdownMenuItem>
+                                      );
+                                    })}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-4 py-3 text-sm text-right">{formatCurrency(item.price)}</td>
                           <td className="px-4 py-3 text-sm text-right font-semibold text-primary">
                             {formatCurrency((Number(item.price) || 0) * (Number(item.qty) || 0))}

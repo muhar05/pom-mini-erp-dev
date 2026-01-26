@@ -36,7 +36,7 @@
         "opportunities": "Opportunities",
         "sales": "Sales",
         "quotations": "Quotations",
-        "sales_orders": "Sales",
+        "sales_orders": "Sales Orders",
         "purchasing": "Purchasing",
         "purchase_orders": "Purchase Orders",
         "warehouse": "Warehouse",
@@ -57,6 +57,28 @@
         "manager_purchasing": "Manager Purchasing",
         "roles": "Roles",
         "company": "Company"
+    },
+    "sales_order": {
+        "no": "SO Number",
+        "from_quotation": "From Quotation",
+        "customer": "Customer",
+        "items": "Items",
+        "amount": "Grand Total",
+        "status": "Order Status",
+        "payment": "Payment Status",
+        "items_count": "{count} item(s)",
+        "more": "more...",
+        "actions": {
+            "view": "View Details",
+            "edit": "Edit Sales Order",
+            "confirm": "Confirm Sales Order",
+            "download": "Download PDF",
+            "finance": "Request Finance",
+            "delivery": "Create Delivery",
+            "cancel": "Cancel Order",
+            "delete": "Delete Sales Order"
+        },
+        "delete_confirm_desc": "Are you sure you want to delete sales order {no} for {customer}? This action cannot be undone and will also remove all related data (delivery requests, invoices, payments)."
     },
     "page": {
         "dashboard": {

@@ -7,8 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ArrowLeft, Calendar, FileText, Pencil } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Calendar, FileText, Pencil, ShoppingCart } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useQuotationDetail } from "@/hooks/quotations/useQuotationDetail";
 import { useLeadById } from "@/hooks/leads/useLeadsById";
@@ -85,6 +93,7 @@ export default function QuotationDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [copied, setCopied] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [showConvertDialog, setShowConvertDialog] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Ambil detail customer dari API (untuk company level & diskon)
@@ -300,18 +309,21 @@ export default function QuotationDetailPage() {
                   Edit
                 </Button>
               )}
-              {["sq_approved", "sq_converted"].includes(quotation.status) && (
-                <>
-                  <Button
-                    variant="default"
-                    disabled={converting}
-                    onClick={handleConvertToSO}
-                    className="ml-2"
-                  >
-                    {converting ? "Converting..." : "Convert to SO"}
-                  </Button>
-                  <PrintButton printRef={printRef} />
-                </>
+              {/* Print Button - Available for finalized statuses */}
+              {[QUOTATION_STATUSES.APPROVED, QUOTATION_STATUSES.SENT, QUOTATION_STATUSES.WIN, QUOTATION_STATUSES.CONVERTED].includes(quotation.status as any) && (
+                <PrintButton printRef={printRef} />
+              )}
+
+              {/* Convert to SO Button - Hidden for Lost, Win, Converted */}
+              {[QUOTATION_STATUSES.APPROVED, QUOTATION_STATUSES.SENT].includes(quotation.status as any) && (
+                <Button
+                  variant="default"
+                  disabled={converting}
+                  onClick={() => setShowConvertDialog(true)}
+                  className="ml-2"
+                >
+                  {converting ? "Converting..." : "Convert to SO"}
+                </Button>
               )}
               {/* Tambahkan tombol print di sini */}
             </div>
@@ -573,6 +585,36 @@ export default function QuotationDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* SO Conversion Confirmation Dialog */}
+      <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-primary" />
+              Convert to Sales Order
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to convert this quotation to a Sales Order?
+              This will create a new Sales Order record and mark this quotation as converted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <DialogClose asChild>
+              <Button variant="outline" disabled={converting}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              onClick={handleConvertToSO}
+              disabled={converting}
+              className="bg-primary"
+            >
+              {converting ? "Converting..." : "Yes, Convert to SO"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

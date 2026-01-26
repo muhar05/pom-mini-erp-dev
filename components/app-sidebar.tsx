@@ -14,6 +14,7 @@ import { MenuItem } from "@/config/sidebar";
 import { SidebarItem } from "@/components/nav-main";
 
 function convertMenuToSidebar(items: MenuItem[]): SidebarItem[] {
+  if (!items) return [];
   return items.map((item) => {
     if (item.items && item.items.length > 0) {
       return {
@@ -100,7 +101,10 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     "3": "warehouse",
     "4": "finance",
     "5": "purchasing",
-    "6": "manager_sales",
+    "6": "manager-sales",
+    "7": "manager-warehouse",
+    "8": "manager-finance",
+    "9": "manager-purchasing",
   };
 
   const roleName = roleMap[session?.user?.role_id ?? "2"];

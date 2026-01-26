@@ -5,8 +5,16 @@ import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { users } from "@/types/models";
-import { getSalesOrderPermissions } from "@/utils/salesOrderPermissions";
-import { isSuperuser, isManagerSales, isSales } from "@/utils/userHelpers";
+import {
+  getSalesOrderPermissions,
+  SALE_STATUSES,
+  ITEM_STATUSES,
+  isValidStatusTransition,
+  isSales,
+  isPurchasing,
+  isWarehouse,
+  isFinance
+} from "@/utils/salesOrderPermissions";
 import {
   CreateSalesOrderData,
   UpdateSalesOrderData,
@@ -22,6 +30,7 @@ import {
 } from "@/data/sales-orders";
 import { checkSalesOrderOwnership, checkQuotationOwnership } from "@/utils/auth-utils";
 import { ZodError } from "zod";
+import { isManagerSales, isSuperuser } from "@/utils/userHelpers";
 
 // Helper to generate sale order number following pattern: SO2515020001
 async function generateSaleOrderNo(): Promise<string> {
@@ -181,6 +190,10 @@ export async function createSalesOrderAction(data: CreateSalesOrderData) {
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
+  if (!isSuperuser(user) && !isSales(user)) {
+    throw new Error("Only Sales team can create orders");
+  }
+
   // Only Sales and Superuser can create
   if (isManagerSales(user) && !isSuperuser(user)) {
     throw new Error("Managers cannot create Sales Orders directly");
@@ -223,7 +236,7 @@ export async function createSalesOrderAction(data: CreateSalesOrderData) {
         product_name: item.product_name,
         price: item.price,
         qty: item.qty,
-        // Remove total field - let database calculate it automatically
+        total: Number(item.price) * Number(item.qty),
         status: item.status || "ACTIVE",
       }));
 
@@ -274,15 +287,72 @@ export async function updateSalesOrderAction(
 
     const currentSO = await getSalesOrderByIdDb(id);
 
-    // Ownership check
-    checkSalesOrderOwnership(currentSO, user);
+    const { quotation_id, customer_id, boq_items, ...rest } = validatedData;
+
+    // Constraint: Cannot edit detail (items/qty) if status is not NEW
+    if (currentSO.sale_status !== SALE_STATUSES.NEW && boq_items !== undefined) {
+      throw new Error("Cannot change order quantities after the order has left the NEW stage. Please create a revision instead.");
+    }
+
+    // NEW: Validation for RECEIVED status sync with items
+    if (validatedData.sale_status === SALE_STATUSES.RECEIVED) {
+      const pendingItems = await prisma.sale_order_detail.findMany({
+        where: {
+          sale_id: BigInt(id),
+          status: {
+            in: [ITEM_STATUSES.ACTIVE, ITEM_STATUSES.PARTIAL_DELIVERED],
+          },
+        },
+      });
+
+      if (pendingItems.length > 0) {
+        throw new Error(
+          `Cannot set Sales Order to RECEIVED because ${pendingItems.length} item(s) are still ACTIVE or PARTIAL. All items must be DELIVERED or CANCELLED first.`
+        );
+      }
+    }
 
     // Manager Role Constraint: Cannot edit detail if manager
     if (isManagerSales(user) && !isSuperuser(user)) {
       throw new Error("Manager Sales cannot edit Sales Order details");
     }
 
-    const { quotation_id, customer_id, boq_items, ...rest } = validatedData;
+    // ROLE & FIELD RESTRICTION: Limit what can be updated based on status
+    const isNew = currentSO.sale_status === SALE_STATUSES.NEW;
+    const userRole = ((user as any).role_name || user.roles?.role_name || "sales").toLowerCase();
+
+    // If not NEW, restrict fields to: note, sale_status, file_po_customer
+    if (!isNew && !isSuperuser(user)) {
+      const allowedFields = ["note", "sale_status", "file_po_customer"];
+      const attemptKeys = Object.keys(rest).filter(k => (rest as any)[k] !== undefined);
+      const invalidKeys = attemptKeys.filter(k => !allowedFields.includes(k));
+
+      if (invalidKeys.length > 0 && boq_items === undefined) {
+        throw new Error(`Fields ${invalidKeys.join(", ")} cannot be updated after the NEW stage.`);
+      }
+    }
+
+    // STATUS TRANSITION VALIDATION in main update
+    if (validatedData.sale_status && validatedData.sale_status !== currentSO.sale_status) {
+      if (!isValidStatusTransition(currentSO.sale_status || SALE_STATUSES.NEW, validatedData.sale_status)) {
+        throw new Error(`Invalid status transition from ${currentSO.sale_status} to ${validatedData.sale_status}`);
+      }
+
+      // Role validation for status change (sync with updateSalesOrderStatusAction)
+      if (!isSuperuser(user)) {
+        const newStatus = validatedData.sale_status;
+        if ((newStatus === SALE_STATUSES.PR || newStatus === SALE_STATUSES.RECEIVED) && !isSales(user)) {
+          throw new Error("Only Sales team can set this status");
+        }
+        if ([SALE_STATUSES.PO, SALE_STATUSES.SR, SALE_STATUSES.FAR, SALE_STATUSES.DR].includes(newStatus as any) && !isPurchasing(user)) {
+          throw new Error("Only Purchasing team can set this status");
+        }
+        if ([SALE_STATUSES.DELIVERY, SALE_STATUSES.DELIVERED].includes(newStatus as any) && !isWarehouse(user)) {
+          throw new Error("Only Warehouse team can set this status");
+        }
+      }
+    }
+
     const prismaData = {
       ...rest,
       quotation_id: quotation_id ? Number(quotation_id) : undefined,
@@ -314,7 +384,7 @@ export async function updateSalesOrderAction(
           product_name: item.product_name,
           price: item.price,
           qty: item.qty,
-          // Remove total field - let database calculate it automatically
+          total: Number(item.price) * Number(item.qty),
           status: item.status || "ACTIVE",
         }));
 
@@ -322,6 +392,21 @@ export async function updateSalesOrderAction(
           data: saleOrderDetails,
         });
       }
+    }
+
+    // Audit Log for Header Update
+    try {
+      await prisma.user_logs.create({
+        data: {
+          user_id: typeof user.id === "string" ? parseInt(user.id) : user.id,
+          activity: `Updated Sales Order ${currentSO.sale_no}`,
+          method: "PATCH",
+          old_data: { sale_status: currentSO.sale_status, role: userRole },
+          new_data: { sale_status: validatedData.sale_status || currentSO.sale_status, role: userRole },
+        },
+      });
+    } catch (logErr) {
+      console.error("Audit log failed:", logErr);
     }
 
     revalidatePath("/sales/sales-orders");
@@ -491,8 +576,8 @@ export async function createSalesOrderFromQuotationAction(quotationId: number) {
       shipping: Number(quotation.shipping || 0),
       tax: Number(quotation.tax || 0),
       grand_total: Number(quotation.grand_total || 0),
-      status: "DRAFT",
-      sale_status: "OPEN",
+      status: "ACTIVE",
+      sale_status: SALE_STATUSES.NEW,
       payment_status: "UNPAID",
       note: quotation.note || "",
       boq_items: boqItems, // Add BOQ items from quotation
@@ -505,69 +590,170 @@ export async function createSalesOrderFromQuotationAction(quotationId: number) {
   }
 }
 
-// CONFIRM SALES ORDER - New action
-export async function confirmSalesOrderAction(id: string) {
+// UPDATE SALES ORDER STATUS - New multi-departmental action
+export async function updateSalesOrderStatusAction(id: string, newStatus: string) {
   const session = await auth();
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
   try {
-    // Get current sales order
     const currentSO = await getSalesOrderByIdDb(id);
+    const oldStatus = currentSO.sale_status || SALE_STATUSES.NEW;
 
-    // Validate current status
-    if (currentSO.sale_status !== "OPEN") {
-      throw new Error("Only OPEN sales orders can be confirmed");
+    // 1. Validate status transition
+    if (!isValidStatusTransition(oldStatus, newStatus)) {
+      throw new Error(`Invalid status transition from ${oldStatus} to ${newStatus}`);
     }
 
-    // Check permissions
-    const permissions = getSalesOrderPermissions(currentSO, user);
-    if (!permissions.canConfirm) {
-      throw new Error("You don't have permission to confirm this sales order");
+    // 2. Validate role authorization
+    const userRole = ((user as any).role_name || user.roles?.role_name || "sales").toLowerCase();
+    const isSU = userRole === "superuser";
+
+    if (!isSU) {
+      if ((newStatus === SALE_STATUSES.PR || newStatus === SALE_STATUSES.RECEIVED) && !isSales(user)) {
+        throw new Error("Only Sales team can set this status");
+      }
+      if ([SALE_STATUSES.PO, SALE_STATUSES.SR, SALE_STATUSES.FAR, SALE_STATUSES.DR].includes(newStatus as any) && !isPurchasing(user)) {
+        throw new Error("Only Purchasing team can set this status");
+      }
+      if ([SALE_STATUSES.DELIVERY, SALE_STATUSES.DELIVERED].includes(newStatus as any) && !isWarehouse(user)) {
+        throw new Error("Only Warehouse team can set this status");
+      }
     }
 
-    // Update status to CONFIRMED
+    // 3. Special Validation for RECEIVED: All items must be DELIVERED or CANCELLED
+    if (newStatus === SALE_STATUSES.RECEIVED) {
+      const items = currentSO.sale_order_detail || [];
+      const unfinishedItems = items.filter(
+        (item: any) => item.status !== ITEM_STATUSES.DELIVERED && item.status !== ITEM_STATUSES.CANCELLED
+      );
+      if (unfinishedItems.length > 0) {
+        throw new Error("Cannot receive Sales Order until all items are Delivered or Cancelled");
+      }
+    }
+
+    // 4. Update status
     const updatedSO = await updateSalesOrderDb(id, {
-      sale_status: "CONFIRMED",
-      status: "ACTIVE", // Also update general status
+      sale_status: newStatus,
+      status: newStatus === SALE_STATUSES.CANCELLED ? "CANCELLED" : "ACTIVE",
     });
 
-    // Trigger automatic stock check and reservation
-    await handlePostConfirmationProcess(updatedSO);
+    // 4.5. Trigger stock check/PO generation if moving from NEW to PR
+    if (oldStatus === SALE_STATUSES.NEW && newStatus === SALE_STATUSES.PR) {
+      await handlePostConfirmationProcess(updatedSO);
+    }
 
-    // Log activity
+    // 5. Audit Log
     await prisma.user_logs.create({
       data: {
         user_id: typeof user.id === "string" ? parseInt(user.id) : user.id,
-        activity: `Confirmed sales order ${currentSO.sale_no}`,
-        method: "PUT",
-        endpoint: "/actions/confirm-sales-order",
-        old_data: { sale_status: currentSO.sale_status },
-        new_data: { sale_status: "CONFIRMED" },
+        activity: `Updated Sales Order ${currentSO.sale_no} status to ${newStatus}`,
+        method: "PATCH",
+        endpoint: "/actions/update-sales-order-status",
+        old_data: { sale_status: oldStatus, role: userRole },
+        new_data: { sale_status: newStatus, role: userRole },
       },
     });
 
-    revalidatePath("/sales/orders");
+    revalidatePath(`/sales/sales-orders/${id}`);
+    revalidatePath("/sales/sales-orders");
+
     return {
       success: true,
-      message: "Sales order confirmed successfully",
-      data: {
-        ...updatedSO,
-        id: updatedSO.id.toString(),
-        quotation_id: updatedSO.quotation_id?.toString() || null,
-        total: updatedSO.total ? Number(updatedSO.total) : 0,
-        shipping: updatedSO.shipping ? Number(updatedSO.shipping) : 0,
-        discount: updatedSO.discount ? Number(updatedSO.discount) : 0,
-        tax: updatedSO.tax ? Number(updatedSO.tax) : 0,
-        grand_total: updatedSO.grand_total ? Number(updatedSO.grand_total) : 0,
-      },
+      message: `Status updated to ${newStatus}`,
+      data: safeSalesOrder(updatedSO),
     };
   } catch (error) {
-    console.error("Error confirming sales order:", error);
-    if (error instanceof Error) {
-      throw error;
+    console.error("Error updating SO status:", error);
+    return { success: false, message: error instanceof Error ? error.message : "Failed to update status" };
+  }
+}
+
+// UPDATE SALES ORDER ITEM STATUS - Enhanced for role-based tracking and terminal status protection
+export async function updateSalesOrderItemStatusAction(itemId: number | string, newStatus: string) {
+  const session = await auth();
+  const user = session?.user as any; // Cast as any to access roles safely
+  if (!user) {
+    return { success: false, message: "Unauthorized" };
+  }
+
+  try {
+    const item = await prisma.sale_order_detail.findUnique({
+      where: { id: BigInt(itemId) },
+    });
+    if (!item) {
+      return { success: false, message: "Item not found" };
     }
-    throw new Error("Failed to confirm sales order");
+
+    const userRole = (user.role_name || user.roles?.role_name || "sales").toLowerCase();
+
+    // 1. Authorization Check
+    const isWarehouseUser = ["warehouse", "manager-warehouse", "superuser"].includes(userRole);
+    const isSuper = userRole === "superuser";
+
+    if (newStatus === ITEM_STATUSES.CANCELLED && !isSuper) {
+      return { success: false, message: "Only Superuser can cancel specific items." };
+    }
+
+    if (!isWarehouseUser) {
+      return { success: false, message: "Only Warehouse team or Superuser can update item status." };
+    }
+
+    // 2. Prevent update if already terminal (unless superuser)
+    if (!isSuper) {
+      if (item.status === ITEM_STATUSES.DELIVERED || item.status === ITEM_STATUSES.CANCELLED) {
+        return { success: false, message: `Cannot update item that is already ${item.status}.` };
+      }
+    }
+
+    // 3. Item Status Transition Validation
+    const oldItemStatus = item.status || ITEM_STATUSES.ACTIVE;
+    const validTransitions: Record<string, string[]> = {
+      [ITEM_STATUSES.ACTIVE]: [ITEM_STATUSES.PARTIAL_DELIVERED, ITEM_STATUSES.DELIVERED, ITEM_STATUSES.CANCELLED],
+      [ITEM_STATUSES.PARTIAL_DELIVERED]: [ITEM_STATUSES.DELIVERED, ITEM_STATUSES.CANCELLED],
+      [ITEM_STATUSES.DELIVERED]: [],
+      [ITEM_STATUSES.CANCELLED]: [],
+    };
+
+    if (!isSuper && !validTransitions[oldItemStatus].includes(newStatus)) {
+      return { success: false, message: `Invalid status transition for item from ${oldItemStatus} to ${newStatus}` };
+    }
+
+    // 4. Update the item
+    await prisma.sale_order_detail.update({
+      where: { id: BigInt(itemId) },
+      data: { status: newStatus },
+    });
+
+    // 4. Audit Log
+    try {
+      await prisma.user_logs.create({
+        data: {
+          user_id: Number(user.id),
+          activity: `Updated SO Item #${itemId} status to ${newStatus}`,
+          method: "PATCH",
+          old_data: { status: item.status, role: userRole },
+          new_data: { status: newStatus, role: userRole },
+        },
+      });
+    } catch (logErr) {
+      console.error("Audit log failed:", logErr);
+    }
+
+    const saleId = item.sale_id.toString();
+    revalidatePath(`/sales/sales-orders/${saleId}`);
+    revalidatePath("/sales/sales-orders");
+
+    return {
+      success: true,
+      message: `Item status updated to ${newStatus}`,
+    };
+  } catch (error) {
+    console.error("Error updating item status:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to update item status"
+    };
   }
 }
 
@@ -836,8 +1022,8 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
           shipping: quotation.shipping || 0,
           tax: quotation.tax || 0,
           grand_total: quotation.grand_total || 0,
-          status: "DRAFT",
-          sale_status: "OPEN",
+          status: "ACTIVE",
+          sale_status: SALE_STATUSES.NEW,
           payment_status: "UNPAID",
           note: quotation.note || "",
           file_po_customer: null,
@@ -919,3 +1105,4 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
     };
   }
 }
+

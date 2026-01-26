@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SALE_STATUSES, ITEM_STATUSES, isSuperuser, isSales, isPurchasing, isWarehouse, isFinance } from "@/utils/salesOrderPermissions";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,14 +38,14 @@ import { useCustomerById } from "@/hooks/customers/useCustomerById";
 import { usePaymentTerms } from "@/hooks/payment-terms/usePaymentTerms";
 import { users } from "@/types/models";
 import toast from "react-hot-toast";
-import BoqTable, { BoqItem } from "../../quotations/_components/BoqTable";
+import SalesOrderItemsTable, { SaleOrderDetail } from "./SalesOrderItemsTable";
 import POFileUpload from "./po-file-upload";
 
 type SalesOrderFormData = {
   sale_no: string;
   customer_id: string | number;
   quotation_id?: string | number;
-  boq_items: BoqItem[];
+  boq_items: SaleOrderDetail[];
   total: number;
   discount: number;
   tax: number;
@@ -84,16 +85,16 @@ interface SalesOrderFormProps {
   onSuccess?: () => void;
 }
 
+/**
+ * ROLE-BASED WORKFLOW EXPLANATION:
+ * 1. NEW (Sales) -> Ownership: Sales. Finalizing order, PO check. Moves to PR.
+ * 2. PR/PO/SR/FAR/DR (Purchasing) -> Ownership: Purchasing. Procurement process, reservation & vendor management.
+ * 3. DELIVERY/DELIVERED (Warehouse) -> Ownership: Warehouse. Physical goods movement.
+ * 4. RECEIVED (Sales) -> Ownership: Sales. Handover confirmation from customer.
+ * 5. COMPLETED (Terminal) -> Process done.
+ */
 const STATUS_OPTIONS = [
-  { value: "DRAFT", label: "Draft" },
-  { value: "ACTIVE", label: "Active" },
-  { value: "CANCELLED", label: "Cancelled" },
-];
-
-const SALE_STATUS_OPTIONS = [
-  { value: "OPEN", label: "Open" },
-  { value: "CONFIRMED", label: "Confirmed" },
-  { value: "COMPLETED", label: "Completed" },
+  { value: "ACTIVE", label: "Active (Standard)" },
   { value: "CANCELLED", label: "Cancelled" },
 ];
 
@@ -103,6 +104,20 @@ const PAYMENT_STATUS_OPTIONS = [
   { value: "PAID", label: "Paid" },
   { value: "OVERDUE", label: "Overdue" },
 ];
+
+const STATUS_DESCRIPTIONS: Record<string, { label: string; desc: string; role: string }> = {
+  [SALE_STATUSES.NEW]: { label: "NEW", desc: "Order baru dibuat, tahap verifikasi awal.", role: "Sales" },
+  [SALE_STATUSES.PR]: { label: "PR", desc: "Purchase Request (Permintaan Pengadaan).", role: "Purchasing" },
+  [SALE_STATUSES.PO]: { label: "PO", desc: "Purchase Order (Pemesanan ke Vendor).", role: "Purchasing" },
+  [SALE_STATUSES.SR]: { label: "SR", desc: "Stock Receipt (Penerimaan Stok/Barang).", role: "Purchasing" },
+  [SALE_STATUSES.FAR]: { label: "FAR", desc: "Finance Approval (Validasi Pembayaran).", role: "Finance" },
+  [SALE_STATUSES.DR]: { label: "DR", desc: "Delivery Request (Permintaan Pengiriman).", role: "Purchasing" },
+  [SALE_STATUSES.DELIVERY]: { label: "DELIVERY", desc: "Proses pengemasan & pengiriman.", role: "Warehouse" },
+  [SALE_STATUSES.DELIVERED]: { label: "DELIVERED", desc: "Barang sudah dalam pengiriman.", role: "Warehouse" },
+  [SALE_STATUSES.RECEIVED]: { label: "RECEIVED", desc: "Konfirmasi barang diterima customer.", role: "Sales" },
+  [SALE_STATUSES.COMPLETED]: { label: "COMPLETED", desc: "Transaksi selesai sepenuhnya.", role: "Final" },
+  [SALE_STATUSES.CANCELLED]: { label: "CANCELLED", desc: "Pesanan dibatalkan.", role: "Final" },
+};
 
 export default function SalesOrderForm({
   mode,
@@ -120,7 +135,7 @@ export default function SalesOrderForm({
   const [isCustomerEditMode, setIsCustomerEditMode] = useState(false);
   const [customerLoadingDelay, setCustomerLoadingDelay] = useState(false);
 
-  // Inisialisasi state - SAMA DENGAN FORM QUOTATION (Konversi Decimal ke Number)
+  // Inisialisasi state
   const [formData, setFormData] = useState<SalesOrderFormData>({
     sale_no: salesOrder?.sale_no || "",
     customer_id: salesOrder?.customer_id || "",
@@ -130,24 +145,24 @@ export default function SalesOrderForm({
         id: item.id?.toString() || `item-${Date.now()}`,
         product_id: item.product_id != null ? Number(item.product_id) : undefined,
         product_name: item.product_name || "",
-        product_code: item.product_code || "",
-        quantity: Number(item.qty) || 0,
-        unit_price: Number(item.price) || 0,
+        price: Number(item.price) || 0,
+        qty: Number(item.qty) || 0,
+        total: Number(item.total) || 0,
+        status: item.status || "ACTIVE",
       }))
       : [],
     total: Number(salesOrder?.total) || 0,
     discount: Number(salesOrder?.discount) || 0,
     tax: Number(salesOrder?.tax) || 0,
     grand_total: Number(salesOrder?.grand_total) || 0,
-    status: salesOrder?.status || "DRAFT",
+    status: salesOrder?.status || "ACTIVE",
     note: salesOrder?.note || "",
-    sale_status: salesOrder?.sale_status || "OPEN",
+    sale_status: salesOrder?.sale_status === "OPEN" ? SALE_STATUSES.NEW : (salesOrder?.sale_status || SALE_STATUSES.NEW),
     payment_status: salesOrder?.payment_status || "UNPAID",
     file_po_customer: salesOrder?.file_po_customer || "",
     payment_term_id: salesOrder?.payment_term_id ?? null,
   });
 
-  const [boqItems, setBoqItems] = useState<BoqItem[]>(formData.boq_items);
   const [customerOptions, setCustomerOptions] = useState<any[]>([]);
   const [quotationOptions, setQuotationOptions] = useState<any[]>([]);
   const [user, setUser] = useState<users | null>(null);
@@ -157,7 +172,7 @@ export default function SalesOrderForm({
   const { paymentTerms, isLoading: paymentTermsLoading } = usePaymentTerms();
   const { customer: customerDetail, loading: customerLoading } = useCustomerById(formData.customer_id);
 
-  // Info Diskon & Level - Konversi Decimal ke Number
+  // Info Diskon & Level
   const companyLevel = customerDetail?.company?.company_level;
   const companyLevelDiscount1 = Number(companyLevel?.disc1) || 0;
   const companyLevelDiscount2 = Number(companyLevel?.disc2) || 0;
@@ -201,17 +216,20 @@ export default function SalesOrderForm({
   }, [salesOrder]);
 
   useEffect(() => {
-    if (session?.user) setUser(session.user as unknown as users);
+    if (session?.user) {
+      setUser(session.user as unknown as users);
+    }
   }, [session]);
 
-  // Helpers
   const handleInputChange = (field: keyof SalesOrderFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setIsDirty(true);
   };
 
   const calculatePricing = () => {
-    const subtotal = boqItems.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
+    // Current items from formData for calculation
+    const currentItems = formData.boq_items;
+    const subtotal = currentItems.reduce((sum, item) => sum + Number(item.price) * Number(item.qty), 0);
     const disc1 = companyLevelDiscount1;
     const disc2 = companyLevelDiscount2;
     const addDisc = Number(formData.discount) || 0;
@@ -238,7 +256,7 @@ export default function SalesOrderForm({
     };
   };
 
-  const pricing = useMemo(calculatePricing, [boqItems, formData.discount, companyLevelDiscount1, companyLevelDiscount2]);
+  const pricing = useMemo(calculatePricing, [formData.boq_items, formData.discount, companyLevelDiscount1, companyLevelDiscount2]);
 
   useEffect(() => {
     if (!isInitialLoad && isDirty) {
@@ -274,15 +292,15 @@ export default function SalesOrderForm({
       }));
 
       const detail = q.quotation_detail || [];
-      const imported: BoqItem[] = (Array.isArray(detail) ? detail : JSON.parse(detail)).map((item: any, i: number) => ({
+      const imported: SaleOrderDetail[] = (Array.isArray(detail) ? detail : JSON.parse(detail)).map((item: any, i: number) => ({
         id: `imp-${i}`,
         product_id: item.product_id,
         product_name: item.product_name,
-        product_code: item.product_code,
-        quantity: Number(item.quantity),
-        unit_price: Number(item.unit_price),
+        price: Number(item.unit_price),
+        qty: Number(item.quantity),
+        total: Number(item.unit_price) * Number(item.quantity),
+        status: "ACTIVE",
       }));
-      setBoqItems(imported);
       setFormData(prev => ({ ...prev, boq_items: imported }));
       setIsDirty(true);
     }
@@ -292,7 +310,6 @@ export default function SalesOrderForm({
     const changed: any = {};
     Object.keys(formData).forEach(key => {
       const k = key as keyof SalesOrderFormData;
-      // Skip boq_items in the general loop to handle it separately with proper mapping
       if (k === "boq_items") return;
 
       if (formData[k] !== (originalData as any)?.[k]) {
@@ -300,24 +317,34 @@ export default function SalesOrderForm({
       }
     });
 
-    // Compare boqItems against the initial mapped details from salesOrder
-    const initialBoq = salesOrder?.sale_order_detail?.map(item => ({
+    // Compare formData.boq_items against the initial mapped details from salesOrder
+    const initialItems = salesOrder?.sale_order_detail?.map(item => ({
       product_id: item.product_id != null ? Number(item.product_id) : undefined,
       product_name: item.product_name || "",
-      product_code: item.product_code || "",
-      quantity: Number(item.qty) || 0,
-      unit_price: Number(item.price) || 0,
+      price: Number(item.price) || 0,
+      qty: Number(item.qty) || 0,
+      total: Number(item.total) || 0,
+      status: item.status || "ACTIVE"
     })) || [];
 
-    if (JSON.stringify(boqItems) !== JSON.stringify(initialBoq)) {
-      changed.boq_items = boqItems.map(item => ({
+    // Simple comparison for boq_items changes - only relevant for NEW stage
+    const currentItemsMapped = formData.boq_items.map(item => ({
+      product_id: item.product_id ? Number(item.product_id) : undefined,
+      product_name: item.product_name,
+      price: Number(item.price),
+      qty: Number(item.qty),
+      total: Number(item.total),
+      status: item.status
+    }));
+
+    if (JSON.stringify(currentItemsMapped) !== JSON.stringify(initialItems)) {
+      changed.boq_items = formData.boq_items.map(item => ({
         product_id: item.product_id,
         product_name: item.product_name,
-        product_code: item.product_code,
-        price: item.unit_price,
-        qty: item.quantity,
-        total: item.unit_price * item.quantity,
-        status: "ACTIVE"
+        price: Number(item.price),
+        qty: Number(item.qty),
+        total: Number(item.total),
+        status: item.status
       }));
     }
     return changed;
@@ -331,13 +358,12 @@ export default function SalesOrderForm({
       if (mode === "add") {
         const result = await createSalesOrderAction({
           ...formData,
-          boq_items: boqItems.map(it => ({
+          boq_items: formData.boq_items.map(it => ({
             product_id: it.product_id,
             product_name: it.product_name,
-            product_code: it.product_code,
-            price: it.unit_price,
-            qty: it.quantity,
-            total: it.unit_price * it.quantity,
+            price: Number(it.price),
+            qty: Number(it.qty),
+            total: Number(it.total),
             status: "ACTIVE"
           }))
         } as any);
@@ -364,11 +390,10 @@ export default function SalesOrderForm({
     setIsDirty(true);
   };
 
-  const isFormValid = !!formData.sale_no && !!formData.customer_id && boqItems.length > 0;
+  const isFormValid = !!formData.sale_no && !!formData.customer_id && formData.boq_items.length > 0;
 
   return (
     <div className="w-full mx-auto py-4 space-y-6">
-      {/* Header - Layout konsisten dengan Quotation */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
@@ -387,9 +412,7 @@ export default function SalesOrderForm({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content (Left) */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Sales Order Information Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -404,7 +427,7 @@ export default function SalesOrderForm({
                     <Input value={formData.sale_no} disabled className="font-mono bg-gray-50 dark:bg-gray-800/40" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Status</Label>
+                    <Label>Record Status</Label>
                     <Select value={formData.status} onValueChange={v => handleInputChange("status", v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -420,13 +443,41 @@ export default function SalesOrderForm({
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>Sale Status</Label>
+                    <Label>Sale Workflow Status</Label>
                     <Select value={formData.sale_status} onValueChange={v => handleInputChange("sale_status", v)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {SALE_STATUS_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                        {Object.entries(SALE_STATUSES).filter(([_, value]) => {
+                          if (isSuperuser(user)) return true;
+                          // Current role's statuses
+                          if (isSales(user)) {
+                            return ([SALE_STATUSES.NEW, SALE_STATUSES.PR, SALE_STATUSES.RECEIVED, SALE_STATUSES.COMPLETED, SALE_STATUSES.CANCELLED] as string[]).includes(value);
+                          }
+                          if (isPurchasing(user)) {
+                            return ([SALE_STATUSES.PR, SALE_STATUSES.PO, SALE_STATUSES.SR, SALE_STATUSES.FAR, SALE_STATUSES.DR, SALE_STATUSES.CANCELLED] as string[]).includes(value);
+                          }
+                          if (isWarehouse(user)) {
+                            return ([SALE_STATUSES.DELIVERY, SALE_STATUSES.DELIVERED, SALE_STATUSES.CANCELLED] as string[]).includes(value);
+                          }
+                          if (isFinance(user)) {
+                            return ([SALE_STATUSES.FAR, SALE_STATUSES.CANCELLED] as string[]).includes(value);
+                          }
+                          return value === formData.sale_status;
+                        }).map(([_, value]) => (
+                          <SelectItem key={value} value={value}>
+                            <div className="flex flex-col">
+                              <span className="font-bold">{STATUS_DESCRIPTIONS[value]?.label || value}</span>
+                              <span className="text-[10px] text-muted-foreground">{STATUS_DESCRIPTIONS[value]?.role} Division</span>
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    {STATUS_DESCRIPTIONS[formData.sale_status] && (
+                      <p className="text-[11px] text-blue-600 dark:text-blue-400 mt-1 italic pl-1 border-l-2 border-blue-200">
+                        {STATUS_DESCRIPTIONS[formData.sale_status].desc}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Payment Status</Label>
@@ -466,21 +517,26 @@ export default function SalesOrderForm({
                 </div>
               </CardContent>
             </Card>
-
-            {/* BOQ Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Package className="w-5 h-5 text-primary" />
-                  Bill of Quantity (BOQ)
+                  Sales Order Items
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <BoqTable items={boqItems} onChange={setBoqItems} />
+                <SalesOrderItemsTable
+                  items={formData.boq_items}
+                  user={user}
+                  editable={mode === "add" || formData.sale_status === SALE_STATUSES.NEW}
+                  onChange={(newItems) => handleInputChange("boq_items", newItems)}
+                  onStatusUpdated={() => {
+                    // Logic to refresh data if needed
+                  }}
+                />
               </CardContent>
             </Card>
 
-            {/* Note Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -499,9 +555,7 @@ export default function SalesOrderForm({
             </Card>
           </div>
 
-          {/* Right Column */}
           <div className="space-y-6">
-            {/* Customer Information Card */}
             <Card>
               <CardHeader className="border-b dark:border-gray-700">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -544,14 +598,13 @@ export default function SalesOrderForm({
                         <Label className="text-xs text-muted-foreground uppercase">Level</Label>
                         <div className="p-2 border rounded mt-1">{companyLevelName || "-"} ({companyLevelDiscount1}% / {companyLevelDiscount2}%)</div>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => setIsCustomerEditMode(true)}>Change Customer</Button>
+                      <Button variant="outline" size="sm" type="button" onClick={() => setIsCustomerEditMode(true)}>Change Customer</Button>
                     </div>
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Pricing Summary Card */}
             <Card>
               <CardHeader className="border-b dark:border-gray-700">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -612,7 +665,6 @@ export default function SalesOrderForm({
               </CardContent>
             </Card>
 
-            {/* Customer PO Section - KHUSUS SALES ORDER */}
             <Card className="border-t-4 border-t-primary">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -632,7 +684,6 @@ export default function SalesOrderForm({
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-6 border-t">
           <Button variant="outline" type="button" onClick={onClose} disabled={loading}>Cancel</Button>
           <Button type="submit" disabled={loading || !isFormValid || (!isDirty && mode === "edit")}>

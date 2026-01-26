@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { deleteSalesOrderAction } from "@/app/actions/sales-orders";
 import toast from "react-hot-toast";
+import { useI18n } from "@/contexts/i18n-context";
 
 type SalesOrder = {
   id: string;
@@ -42,6 +43,7 @@ export default function SalesOrderDeleteDialog({
   trigger,
   onDelete,
 }: SalesOrderDeleteDialogProps) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -75,19 +77,18 @@ export default function SalesOrderDeleteDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete Sales Order</DialogTitle>
+          <DialogTitle>{t("sales_order.actions.delete")}</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete sales order{" "}
-            <strong>{salesOrder.so_no}</strong> for{" "}
-            <strong>{salesOrder.customer_name}</strong>? This action cannot be
-            undone and will also remove all related data (delivery requests,
-            invoices, payments).
+            {t("sales_order.delete_confirm_desc", {
+              no: salesOrder.so_no,
+              customer: salesOrder.customer_name,
+            })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" disabled={loading}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           </DialogClose>
           <Button
@@ -96,7 +97,7 @@ export default function SalesOrderDeleteDialog({
             disabled={loading}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
-            {loading ? "Deleting..." : "Delete Sales Order"}
+            {loading ? t("common.loading") : t("sales_order.actions.delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

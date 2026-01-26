@@ -209,7 +209,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
     },
     {
       title: "Sales",
-      labelKey: "sidebar.sales_orders",
+      labelKey: "sidebar.sales",
       icon: ShoppingCart,
       items: [
         { title: "Quotation (SQ)", labelKey: "sidebar.quotations", url: "/sales/quotations", icon: FileCheck },
@@ -265,6 +265,19 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
         {
           title: "Quotation Approval",
           labelKey: "sidebar.approvals",
+          url: "/manager-sales/pending-task",
+          icon: FileCheck,
+        },
+      ],
+    },
+    {
+      title: "Quotation",
+      labelKey: "sidebar.quotations",
+      icon: FileCheck,
+      items: [
+        {
+          title: "Quotation",
+          labelKey: "sidebar.quotations",
           url: "/sales/quotations",
           icon: FileCheck,
         },

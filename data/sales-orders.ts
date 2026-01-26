@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { isSuperuser, isManagerSales, isSales } from "@/utils/userHelpers";
+import { isSuperuser, isManagerSales, isSales, isPurchasing, isManagerPurchasing, isFinance, isManagerFinance, isWarehouse, isManagerWarehouse } from "@/utils/userHelpers";
 
 // Base field schemas
 const saleNoSchema = z
@@ -434,9 +434,22 @@ export async function getAllSalesOrdersDb(user?: any) {
 
   if (!isManager && isSales(user)) {
     where = { user_id: userId };
+  } else if (
+    isPurchasing(user) || isManagerPurchasing(user) ||
+    isFinance(user) || isManagerFinance(user) ||
+    isWarehouse(user) || isManagerWarehouse(user)
+  ) {
+    // Allow access to all (Read Only via UI)
+    where = {};
   } else if (!isManager) {
     throw new Error("Forbidden access");
   }
+
+  if (isPurchasing(user) || isFinance(user) || isWarehouse(user)) {
+    // Allow access to all (Read Only via UI) or filter by status relevant to them
+    where = {};
+  }
+
 
   const salesOrders = await prisma.sales_orders.findMany({
     orderBy: { created_at: "desc" },

@@ -10,7 +10,7 @@ type Language = "id" | "en";
 interface I18nContextType {
     locale: Language;
     setLocale: (lang: Language) => void;
-    t: (key: string) => string;
+    t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const translations: Record<Language, any> = { id, en };
@@ -34,7 +34,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("locale", lang);
     }, []);
 
-    const t = useCallback((keyPath: string): string => {
+    const t = useCallback((keyPath: string, params?: Record<string, string | number>): string => {
         const keys = keyPath.split(".");
         let current = translations[locale];
 
@@ -42,16 +42,33 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
             if (!current || typeof current !== 'object' || current[key] === undefined) {
                 // Fallback to ID if key not found in current locale
                 let fallback = translations["id"];
+                let found = true;
                 for (const fKey of keys) {
-                    if (!fallback || typeof fallback !== 'object' || fallback[fKey] === undefined) return keyPath;
+                    if (!fallback || typeof fallback !== 'object' || fallback[fKey] === undefined) {
+                        found = false;
+                        break;
+                    }
                     fallback = fallback[fKey];
                 }
-                return typeof fallback === "string" ? fallback : keyPath;
+                if (found) {
+                    current = fallback;
+                } else {
+                    return keyPath;
+                }
+                break;
             }
             current = current[key];
         }
 
-        return typeof current === "string" ? current : keyPath;
+        let result = typeof current === "string" ? current : keyPath;
+
+        if (params) {
+            Object.entries(params).forEach(([key, value]) => {
+                result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), String(value));
+            });
+        }
+
+        return result;
     }, [locale]);
 
     const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);

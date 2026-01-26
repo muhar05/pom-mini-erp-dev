@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { isSuperuser, isManagerSales, isSales } from "./userHelpers";
+import { isSuperuser, isManagerSales, isSales, isPurchasing, isManagerPurchasing, isFinance, isManagerFinance, isWarehouse, isManagerWarehouse } from "./userHelpers";
 import { canAccessQuotation } from "./quotationAccess";
 import { users } from "@/types/models";
 import { notFound, redirect } from "next/navigation";
@@ -47,10 +47,16 @@ export function checkQuotationOwnership(quotation: any, user: any) {
 
 export function checkSalesOrderOwnership(so: any, user: any) {
     if (canAccessAll(user)) return true;
+
+    // IZINKAN role pendukung untuk melihat data (termasuk manager mereka)
+    if (
+        isPurchasing(user) || isManagerPurchasing(user) ||
+        isFinance(user) || isManagerFinance(user) ||
+        isWarehouse(user) || isManagerWarehouse(user)
+    ) return true;
+
     if (isSales(user)) {
         if (Number(so.user_id) === Number(user.id)) return true;
     }
     notFound();
 }
-
-
