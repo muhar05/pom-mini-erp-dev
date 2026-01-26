@@ -23,7 +23,9 @@ type SalesOrder = {
   note?: string | null;
   payment_status?: string | null;
   file_po_customer?: string | null;
+  payment_term_id?: number | null;
   created_at?: Date | null;
+  sale_order_detail?: any[];
 };
 
 export default function SalesOrderEditPage() {
@@ -40,6 +42,7 @@ export default function SalesOrderEditPage() {
         const data = await getSalesOrderByIdAction(id as string);
 
         const formattedSalesOrder: SalesOrder = {
+          ...data,
           id: data.id,
           sale_no: data.sale_no,
           customer_id: data.customer_id ? data.customer_id.toString() : null,
@@ -54,7 +57,9 @@ export default function SalesOrderEditPage() {
           note: data.note,
           payment_status: data.payment_status,
           file_po_customer: data.file_po_customer,
+          payment_term_id: data.payment_term_id,
           created_at: data.created_at ? new Date(data.created_at) : null,
+          sale_order_detail: data.sale_order_detail,
         };
 
         setSalesOrder(formattedSalesOrder);

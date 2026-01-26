@@ -30,6 +30,7 @@ import {
   canEditQuotationByStatus,
   QUOTATION_STATUSES,
 } from "@/utils/quotationPermissions";
+import { serializeDecimal } from "@/utils/formatDecimal";
 
 // Helper to generate quotation number following pattern: SQ2515020001R0
 async function generateQuotationNo(): Promise<string> {
@@ -101,7 +102,7 @@ export async function createQuotationAction(data: QuotationFormData) {
     return {
       success: true,
       message: "Quotation created successfully",
-      data: safeQuotation,
+      data: serializeDecimal(safeQuotation),
     };
   } catch (error) {
     console.error("Error creating quotation:", error);
@@ -272,7 +273,7 @@ export async function updateQuotationAction(
     return {
       success: true,
       message: "Quotation updated successfully",
-      data: safeQuotation,
+      data: serializeDecimal(safeQuotation),
     };
   } catch (error) {
     console.error("Error updating quotation:", error);
@@ -338,7 +339,7 @@ export async function getQuotationByIdAction(id: number) {
   // Ownership check
   checkQuotationOwnership(quotation, user);
 
-  return quotation;
+  return serializeDecimal(quotation);
 }
 
 // GET ALL
@@ -350,17 +351,7 @@ export async function getAllQuotationsAction() {
   // Pass user ke getAllQuotationsDb
   const quotations = await getAllQuotationsDb(user);
 
-  // Convert Decimal fields to numbers for client compatibility
-  const safeQuotations = quotations.map((quotation) => ({
-    ...quotation,
-    total: quotation.total ? Number(quotation.total) : 0,
-    shipping: quotation.shipping ? Number(quotation.shipping) : 0,
-    discount: quotation.discount ? Number(quotation.discount) : 0,
-    tax: quotation.tax ? Number(quotation.tax) : 0,
-    grand_total: quotation.grand_total ? Number(quotation.grand_total) : 0,
-  }));
-
-  return safeQuotations;
+  return serializeDecimal(quotations);
 }
 
 // GET OPPORTUNITY QUALIFIED LEADS

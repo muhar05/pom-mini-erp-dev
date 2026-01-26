@@ -61,10 +61,17 @@ async function generateSaleOrderNo(): Promise<string> {
 
 // Robust recursive conversion to ensure NO Decimals or BigInts reach the client
 function safeSalesOrder(result: any): any {
-  if (!result) return null;
+  // Ensure no Decimal objects are passed to Client Components
+  const toNum = (val: any) => {
+    if (val == null) return 0;
+    if (typeof val === "number") return val;
+    if (typeof val === "string") return parseFloat(val) || 0;
+    if (typeof val.toNumber === "function") return val.toNumber();
+    if (typeof val.toString === "function") return parseFloat(val.toString()) || 0;
+    return 0;
+  };
 
-  const toNum = (val: any) => (val ? Number(val) : 0);
-  const toStr = (val: any) => (val?.toString() || null);
+  const toStr = (val: any) => (val != null ? val.toString() : "");
 
   const convertCompanyLevel = (cl: any) => {
     if (!cl) return null;
@@ -163,6 +170,8 @@ function safeSalesOrder(result: any): any {
       email: result.user.email,
       role_id: result.user.role_id,
     } : null,
+    payment_term_id: result.payment_term_id,
+    payment_term: result.payment_term,
   };
 }
 
@@ -179,32 +188,13 @@ export async function createSalesOrderAction(data: CreateSalesOrderData) {
       validatedData.sale_no = await generateSaleOrderNo();
     }
 
-    // Calculate totals
-    const total = validatedData.total || 0;
-    const shipping = validatedData.shipping || 0;
-    const discountPercent = validatedData.discount || 0;
-
-    // Calculate discount amount
-    const discountAmount = (total * discountPercent) / 100;
-    const subtotal = total - discountAmount;
-
-    // Calculate tax (11%)
-    const tax = subtotal * 0.11;
-    const grandTotal = subtotal + tax + shipping;
-
-    validatedData.total = total;
-    validatedData.discount = discountPercent; // Store as percentage
-    validatedData.shipping = shipping;
-    validatedData.tax = tax;
-    validatedData.grand_total = grandTotal;
-
     const { quotation_id, customer_id, boq_items, ...rest } = validatedData;
     const prismaData = {
       ...rest,
       sale_no: validatedData.sale_no,
       quotation_id: quotation_id ? Number(quotation_id) : null,
       customer_id: customer_id ? Number(customer_id) : null,
-      user_id: typeof user.id === "string" ? parseInt(user.id) : user.id, // <--- Konversi ke Int
+      user_id: user.id ? Number(user.id) : null,
     } as any;
 
     // Create sales order first
@@ -213,7 +203,7 @@ export async function createSalesOrderAction(data: CreateSalesOrderData) {
     // Create sale order details if BOQ items exist
     if (boq_items && boq_items.length > 0) {
       const saleOrderDetails = boq_items.map((item: SaleOrderDetailItem) => ({
-        sale_id: salesOrder.id,
+        sale_id: BigInt(salesOrder.id),
         product_id: item.product_id ? BigInt(item.product_id) : null,
         product_name: item.product_name,
         price: item.price,
@@ -271,34 +261,6 @@ export async function updateSalesOrderAction(
 
     // Ownership check
     checkSalesOrderOwnership(currentSO, user);
-
-    // Recalculate totals if financial fields are being updated
-    if (
-      validatedData.total !== undefined ||
-      validatedData.discount !== undefined ||
-      validatedData.shipping !== undefined
-    ) {
-
-      const total = validatedData.total ?? Number(currentSO.total || 0);
-      const shipping =
-        validatedData.shipping ?? Number(currentSO.shipping || 0);
-      const discountPercent =
-        validatedData.discount ?? Number(currentSO.discount || 0);
-
-      // Calculate discount amount
-      const discountAmount = (total * discountPercent) / 100;
-      const subtotal = total - discountAmount;
-
-      // Calculate tax (11%)
-      const tax = subtotal * 0.11;
-      const grandTotal = subtotal + tax + shipping;
-
-      validatedData.total = total;
-      validatedData.discount = discountPercent; // Store as percentage
-      validatedData.shipping = shipping;
-      validatedData.tax = tax;
-      validatedData.grand_total = grandTotal;
-    }
 
     const { quotation_id, customer_id, boq_items, ...rest } = validatedData;
     const prismaData = {
@@ -594,7 +556,7 @@ async function handlePostConfirmationProcess(salesOrder: any) {
   try {
     // 1. Check stock availability for all items
     const orderDetails = await prisma.sale_order_detail.findMany({
-      where: { sale_id: salesOrder.id },
+      where: { sale_id: BigInt(salesOrder.id) },
     });
 
     for (const detail of orderDetails) {
@@ -612,7 +574,7 @@ async function handlePostConfirmationProcess(salesOrder: any) {
                 product_name: detail.product_name,
                 qty: detail.qty,
               },
-              lead_id: salesOrder.id,
+              lead_id: BigInt(salesOrder.id),
               type: "SALES_ORDER",
               status: "RESERVED",
               created_at: new Date(),

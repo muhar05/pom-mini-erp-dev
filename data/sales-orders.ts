@@ -199,6 +199,7 @@ export async function createSalesOrderDb(input: CreateSalesOrderInput) {
       customers: { include: { company: { include: { company_level: true } } } }, // <-- Tambahkan ini!
       sale_order_detail: true,
       user: true,
+      payment_term: true,
     },
   });
 
@@ -207,6 +208,8 @@ export async function createSalesOrderDb(input: CreateSalesOrderInput) {
     sale_no: salesOrder.sale_no,
     quotation_id: salesOrder.quotation_id ? Number(salesOrder.quotation_id) : null,
     customer_id: salesOrder.customer_id ? Number(salesOrder.customer_id) : null,
+    payment_term_id: salesOrder.payment_term_id,
+    payment_term: salesOrder.payment_term,
     user_id: salesOrder.user_id,
     total: salesOrder.total ? Number(salesOrder.total) : 0,
     discount: salesOrder.discount ? Number(salesOrder.discount) : 0,
@@ -255,6 +258,7 @@ export async function updateSalesOrderDb(
       customers: { include: { company: { include: { company_level: true } } } }, // <-- Tambahkan ini!
       sale_order_detail: true,
       user: true,
+      payment_term: true,
     },
   });
 
@@ -263,6 +267,8 @@ export async function updateSalesOrderDb(
     sale_no: salesOrder.sale_no,
     quotation_id: salesOrder.quotation_id ? Number(salesOrder.quotation_id) : null,
     customer_id: salesOrder.customer_id ? Number(salesOrder.customer_id) : null,
+    payment_term_id: salesOrder.payment_term_id,
+    payment_term: salesOrder.payment_term,
     user_id: salesOrder.user_id,
     total: salesOrder.total ? Number(salesOrder.total) : 0,
     discount: salesOrder.discount ? Number(salesOrder.discount) : 0,
@@ -302,7 +308,7 @@ export async function deleteSalesOrderDb(id: string) {
 // GET BY ID
 export async function getSalesOrderByIdDb(id: string) {
   const salesOrder = await prisma.sales_orders.findUnique({
-    where: { id: Number(id) },
+    where: { id: BigInt(id) },
     include: {
       sale_order_detail: true,
       customers: { include: { company: { include: { company_level: true } } } }, // <-- Tambahkan ini!
@@ -314,6 +320,7 @@ export async function getSalesOrderByIdDb(id: string) {
         },
       },
       user: true,
+      payment_term: true,
     },
   });
   if (!salesOrder) throw new Error("Sales order not found");
@@ -411,6 +418,8 @@ export async function getSalesOrderByIdDb(id: string) {
     customers: convertCustomer(salesOrder.customers),
     sale_order_detail: safeSaleOrderDetails,
     user: safeUser,
+    payment_term_id: salesOrder.payment_term_id,
+    payment_term: salesOrder.payment_term,
   };
 }
 
@@ -442,6 +451,7 @@ export async function getAllSalesOrdersDb(user?: any) {
       },
       customers: { include: { company: { include: { company_level: true } } } }, // <-- Tambahkan ini!
       sale_order_detail: true,
+      payment_term: true,
     },
   });
 
@@ -450,6 +460,8 @@ export async function getAllSalesOrdersDb(user?: any) {
     id: so.id.toString(),
     quotation_id: so.quotation_id ? so.quotation_id.toString() : null,
     customer_id: so.customer_id ? so.customer_id.toString() : null,
+    payment_term_id: so.payment_term_id,
+    payment_term: so.payment_term,
     total: so.total ? Number(so.total) : 0,
     discount: so.discount ? Number(so.discount) : 0,
     shipping: so.shipping ? Number(so.shipping) : 0,
