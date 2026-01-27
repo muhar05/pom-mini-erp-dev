@@ -70,13 +70,9 @@ export function canEditQuotationByStatus(user: any, status: string): boolean {
 
   const currentStatus = status.toLowerCase();
 
-  // Sales hanya bisa edit Draft, Waiting Approval, atau Review (tapi WA/Review akan revert ke Draft)
+  // Hanya bisa edit jika status Draft
   if (isSales(user)) {
-    return [
-      QUOTATION_STATUSES.DRAFT,
-      QUOTATION_STATUSES.WAITING_APPROVAL,
-      QUOTATION_STATUSES.REVIEW,
-    ].includes(currentStatus as any);
+    return currentStatus === QUOTATION_STATUSES.DRAFT;
   }
 
   // Manager Sales tidak boleh edit jika sudah Approved
@@ -129,7 +125,7 @@ export function canChangeStatus(
     const allowedAfterApproved = [
       QUOTATION_STATUSES.APPROVED,
       QUOTATION_STATUSES.SENT,
-      QUOTATION_STATUSES.REVISED,
+      QUOTATION_STATUSES.REVISED, // Sebagai trigger revisi
       QUOTATION_STATUSES.LOST,
       QUOTATION_STATUSES.WIN,
       QUOTATION_STATUSES.CONVERTED,

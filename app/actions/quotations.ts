@@ -164,7 +164,11 @@ export async function updateQuotationAction(
   }
 
   try {
-    // Get current quotation (already fetched above)
+    // Handle trigger Revised -> Draft
+    const isRevisedTrigger = data.status === QUOTATION_STATUSES.REVISED;
+    if (isRevisedTrigger) {
+      data.status = QUOTATION_STATUSES.DRAFT;
+    }
 
     // Get permissions
     const permissions = getQuotationPermissions(user);
@@ -177,19 +181,22 @@ export async function updateQuotationAction(
         throw new Error("Unauthorized");
       }
 
-      // Check if current status allows editing
-      if (!canEditQuotationByStatus(user, currentQuotation.status || "sq_draft")) {
-        // Jika hanya mau update status, boleh. Jika ada field lain, dilarang.
-        const otherFields = Object.keys(data).filter(f => f !== "status" && f !== "stage" && f !== "note");
-        if (otherFields.length > 0) {
-          throw new Error(`Status ${currentQuotation.status} tidak mengizinkan pengubahan data.`);
-        }
+      // Check if current status allows editing data (Only Draft is allowed for editing content)
+      if (currentQuotation.status !== QUOTATION_STATUSES.DRAFT) {
+        // Jika status bukan Draft, hanya boleh update status, stage, atau note.
+        // Abaikan field lain yang mungkin dikirim secara redundan oleh UI.
+        const allowedFieldsForNonDraft = ["status", "stage", "note"];
+        Object.keys(data).forEach(key => {
+          if (!allowedFieldsForNonDraft.includes(key)) {
+            delete (data as any)[key];
+          }
+        });
       }
     }
 
-    // Validate status/stage changes if provided
-    if (!isSuper && data.status) {
-      const newStatus = data.status || currentQuotation.status || "sq_draft";
+    // Validate status changes if provided
+    if (!isSuper && (data.status || isRevisedTrigger)) {
+      const newStatus = isRevisedTrigger ? QUOTATION_STATUSES.REVISED : (data.status || currentQuotation.status || "sq_draft");
 
       const validation = validateQuotationChange(
         user,
@@ -220,24 +227,25 @@ export async function updateQuotationAction(
       data.customer_id = parseInt(data.customer_id, 10);
     }
 
-    // Handle revision
-    const oldRevision =
-      typeof currentQuotation.revision_no === "number"
-        ? currentQuotation.revision_no
-        : 0;
-    const newRevision = oldRevision + 1;
-
-    // Update SQ No: ganti R{old} → R{new}
+    // Handle revision increment logic
+    let newRevision = typeof currentQuotation.revision_no === "number" ? currentQuotation.revision_no : 0;
     let newQuotationNo = currentQuotation.quotation_no;
-    if (/R\d+$/i.test(newQuotationNo)) {
-      newQuotationNo = newQuotationNo.replace(/R\d+$/i, `R${newRevision}`);
-    } else {
-      newQuotationNo = `${newQuotationNo}R${newRevision}`;
+
+    // Increment revision if triggering revised OR if editing data in Draft
+    // (User said: "revision_no ditambah 1" when status diubah ke Draft via Revised)
+    if (isRevisedTrigger) {
+      newRevision += 1;
+      // Update SQ No: ganti R{old} → R{new}
+      if (/R\d+$/i.test(newQuotationNo)) {
+        newQuotationNo = newQuotationNo.replace(/R\d+$/i, `R${newRevision}`);
+      } else {
+        newQuotationNo = `${newQuotationNo}R${newRevision}`;
+      }
     }
 
     const updateData: any = { ...data };
 
-    // Pastikan update quotation_no dan revision_no
+    // Pastikan update quotation_no dan revision_no jika ada perubahan
     updateData.quotation_no = newQuotationNo;
     updateData.revision_no = newRevision;
 

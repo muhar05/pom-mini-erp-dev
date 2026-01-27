@@ -36,6 +36,21 @@ export const PAYMENT_STATUSES = {
   OVERDUE: "OVERDUE",
 } as const;
 
+export const REOPEN_SYSTEM_PREFIXES = {
+  REQUEST: "[REOPEN REQUEST]",
+  APPROVED: "[REOPEN APPROVED]",
+  REJECTED: "[REOPEN REJECTED]",
+} as const;
+
+export function hasPendingReopenRequest(note: string | null | undefined): boolean {
+  if (!note) return false;
+  return (
+    note.includes(REOPEN_SYSTEM_PREFIXES.REQUEST) &&
+    !note.includes(REOPEN_SYSTEM_PREFIXES.APPROVED) &&
+    !note.includes(REOPEN_SYSTEM_PREFIXES.REJECTED)
+  );
+}
+
 // Helper untuk check superuser
 export function isSuperuser(user: users | any): boolean {
   const role = user?.role_name || user?.roles?.role_name || user?.role || "";
@@ -53,6 +68,7 @@ export interface SalesOrderPermissions {
   canCreateDelivery: boolean;
   canUpdatePayment: boolean;
   canClose: boolean;
+  canRequestReopen: boolean;
   editableFields: string[];
   availableActions: string[];
 }
@@ -103,7 +119,14 @@ export function getSalesOrderPermissions(
       if (["purchasing", "manager-purchasing", "superuser"].includes(userRole)) {
         permissions.canUpdateNote = true;
 
-        if (status === SALE_STATUSES.PR) availableActions.push("update_status_po");
+        if (status === SALE_STATUSES.PR) {
+          availableActions.push("update_status_po");
+          if (["manager-sales", "superuser"].includes(userRole)) {
+            availableActions.push("reopen_to_new");
+          } else if (userRole === "sales") {
+            permissions.canRequestReopen = true;
+          }
+        }
         if (status === SALE_STATUSES.PO) availableActions.push("update_status_sr");
         if (status === SALE_STATUSES.SR) availableActions.push("update_status_far");
         if (status === SALE_STATUSES.FAR) availableActions.push("update_status_dr");
@@ -154,6 +177,7 @@ function getDefaultPermissions(): SalesOrderPermissions {
     canCreateDelivery: false,
     canUpdatePayment: false,
     canClose: false,
+    canRequestReopen: false,
     editableFields: [],
     availableActions: [],
   };
@@ -163,6 +187,11 @@ function getDefaultPermissions(): SalesOrderPermissions {
 export function isSales(user: users | any): boolean {
   const role = user?.role_name || user?.roles?.role_name || user?.role || "";
   return ["sales", "manager-sales", "superuser"].includes(role.toLowerCase());
+}
+
+export function isManagerSales(user: users | any): boolean {
+  const role = user?.role_name || user?.roles?.role_name || user?.role || "";
+  return ["manager-sales", "superuser"].includes(role.toLowerCase());
 }
 
 export function isPurchasing(user: users | any): boolean {
@@ -202,7 +231,7 @@ export function getNextPossibleStatuses(currentStatus: string): string[] {
     case SALE_STATUSES.NEW:
       return [SALE_STATUSES.PR, SALE_STATUSES.CANCELLED];
     case SALE_STATUSES.PR:
-      return [SALE_STATUSES.PO, SALE_STATUSES.CANCELLED];
+      return [SALE_STATUSES.PO, SALE_STATUSES.CANCELLED, SALE_STATUSES.NEW];
     case SALE_STATUSES.PO:
       return [SALE_STATUSES.SR, SALE_STATUSES.CANCELLED];
     case SALE_STATUSES.SR:

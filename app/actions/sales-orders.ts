@@ -13,7 +13,9 @@ import {
   isSales,
   isPurchasing,
   isWarehouse,
-  isFinance
+  isFinance,
+  REOPEN_SYSTEM_PREFIXES,
+  hasPendingReopenRequest
 } from "@/utils/salesOrderPermissions";
 import {
   CreateSalesOrderData,
@@ -294,6 +296,22 @@ export async function updateSalesOrderAction(
       throw new Error("Cannot change order quantities after the order has left the NEW stage. Please create a revision instead.");
     }
 
+    // PREVENT MANUAL NOTE INJECTION
+    if (rest.note && !isSuperuser(user)) {
+      const manualNote = rest.note;
+      const systemPrefixes = Object.values(REOPEN_SYSTEM_PREFIXES);
+
+      // Check if user is trying to type the prefix manually
+      // Note: We only block if the prefix is at the start of a line OR if it's appearing for the first time in this update
+      // But a more robust way is to check if it's being ADDED compared to old note.
+      const oldNote = currentSO.note || "";
+      for (const prefix of systemPrefixes) {
+        if (manualNote.includes(prefix) && !oldNote.includes(prefix)) {
+          throw new Error("System note prefixes cannot be manually injected.");
+        }
+      }
+    }
+
     // NEW: Validation for RECEIVED status sync with items
     if (validatedData.sale_status === SALE_STATUSES.RECEIVED) {
       const pendingItems = await prisma.sale_order_detail.findMany({
@@ -338,9 +356,18 @@ export async function updateSalesOrderAction(
         throw new Error(`Invalid status transition from ${currentSO.sale_status} to ${validatedData.sale_status}`);
       }
 
-      // Role validation for status change (sync with updateSalesOrderStatusAction)
+      // Role validation for status change
       if (!isSuperuser(user)) {
         const newStatus = validatedData.sale_status;
+        const oldStatus = currentSO.sale_status;
+
+        // NEW RESTRICTION: PR -> NEW only allowed for Manager Sales or Superuser
+        if (oldStatus === SALE_STATUSES.PR && newStatus === SALE_STATUSES.NEW) {
+          if (!isManagerSales(user)) {
+            throw new Error("Only Manager Sales or Superuser can reopen Sales Order from PR to NEW");
+          }
+        }
+
         if ((newStatus === SALE_STATUSES.PR || newStatus === SALE_STATUSES.RECEIVED) && !isSales(user)) {
           throw new Error("Only Sales team can set this status");
         }
@@ -396,13 +423,31 @@ export async function updateSalesOrderAction(
 
     // Audit Log for Header Update
     try {
+      let activity = `Updated Sales Order ${currentSO.sale_no}`;
+      const isReopenDecision = currentSO.sale_status === SALE_STATUSES.PR && (rest as any).note;
+      const newNote = (rest as any).note || "";
+
+      if (isReopenDecision) {
+        if (newNote.includes(REOPEN_SYSTEM_PREFIXES.APPROVED)) {
+          activity = "APPROVE_REOPEN_SO";
+        } else if (newNote.includes(REOPEN_SYSTEM_PREFIXES.REJECTED)) {
+          activity = "REJECT_REOPEN_SO";
+        } else if (newNote.includes(REOPEN_SYSTEM_PREFIXES.REQUEST)) {
+          activity = "REQUEST_REOPEN_SO";
+        }
+      }
+
       await prisma.user_logs.create({
         data: {
           user_id: typeof user.id === "string" ? parseInt(user.id) : user.id,
-          activity: `Updated Sales Order ${currentSO.sale_no}`,
+          activity: activity,
           method: "PATCH",
-          old_data: { sale_status: currentSO.sale_status, role: userRole },
-          new_data: { sale_status: validatedData.sale_status || currentSO.sale_status, role: userRole },
+          old_data: { sale_status: currentSO.sale_status, role: userRole, sale_id: currentSO.id },
+          new_data: {
+            sale_status: validatedData.sale_status || currentSO.sale_status,
+            role: userRole,
+            note_summary: newNote.length > 50 ? newNote.substring(0, 50) + "..." : newNote
+          },
         },
       });
     } catch (logErr) {
@@ -610,6 +655,20 @@ export async function updateSalesOrderStatusAction(id: string, newStatus: string
     const isSU = userRole === "superuser";
 
     if (!isSU) {
+      // NEW RESTRICTION: PR -> NEW only allowed for Manager Sales or Superuser
+      if (oldStatus === SALE_STATUSES.PR && newStatus === SALE_STATUSES.NEW) {
+        if (!isManagerSales(user)) {
+          throw new Error("Only Manager Sales or Superuser can reopen Sales Order from PR to NEW");
+        }
+      }
+
+      // BLOCK PURCHASING IF REOPEN REQUEST PENDING
+      if (oldStatus === SALE_STATUSES.PR && [SALE_STATUSES.PO, SALE_STATUSES.SR, SALE_STATUSES.FAR, SALE_STATUSES.DR].includes(newStatus as any)) {
+        if (hasPendingReopenRequest(currentSO.note)) {
+          throw new Error("Sales Order sedang dalam proses permintaan perubahan oleh Sales. Tunggu keputusan Manager Sales.");
+        }
+      }
+
       if ((newStatus === SALE_STATUSES.PR || newStatus === SALE_STATUSES.RECEIVED) && !isSales(user)) {
         throw new Error("Only Sales team can set this status");
       }

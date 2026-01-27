@@ -111,6 +111,8 @@ export default function QuotationForm({
 }: QuotationFormProps) {
   const searchParams = useSearchParams();
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [showRevisionDialog, setShowRevisionDialog] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
   // Call useSession at the top level (correct hook usage)
   const session = useSession();
@@ -400,9 +402,6 @@ export default function QuotationForm({
     QUOTATION_STATUSES.APPROVED,
     QUOTATION_STATUSES.SENT,
     QUOTATION_STATUSES.REVISED,
-    QUOTATION_STATUSES.WIN,
-    QUOTATION_STATUSES.LOST,
-    QUOTATION_STATUSES.CONVERTED,
   ];
 
   // Filter status options for sales after approved
@@ -455,7 +454,22 @@ export default function QuotationForm({
       }
     }
 
+    // REVISED CONFIRMATION
+    if (newStatus === QUOTATION_STATUSES.REVISED) {
+      setPendingStatus(newStatus);
+      setShowRevisionDialog(true);
+      return;
+    }
+
     handleInputChange("status", newStatus);
+  };
+
+  const handleConfirmRevision = () => {
+    if (pendingStatus) {
+      handleInputChange("status", pendingStatus);
+    }
+    setShowRevisionDialog(false);
+    setPendingStatus(null);
   };
 
   // Set isInitialLoad to false after first render
@@ -1222,7 +1236,7 @@ export default function QuotationForm({
               generatingQuotationNo ||
               !isFormValid ||
               !isDirty ||
-              isFormDisabled
+              (isFormDisabled && formData.status === originalData.status)
             }
             className="min-w-[150px]"
           >
@@ -1288,6 +1302,43 @@ export default function QuotationForm({
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   {loading ? "Mengirim..." : "Kirim"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog
+            open={showRevisionDialog}
+            onOpenChange={setShowRevisionDialog}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Konfirmasi Revisi Quotation</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <p>
+                  Quotation ini akan dikembalikan ke status <strong>Draft</strong> untuk dapat diedit kembali.
+                </p>
+                <p className="text-sm text-amber-600 font-medium bg-amber-50 p-3 rounded-md border border-amber-200">
+                  Perhatian: Setelah diedit, Anda wajib mengirim ulang quotation ini untuk di-approve oleh Manager Sales.
+                </p>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setPendingStatus(null)}
+                  >
+                    Batal
+                  </Button>
+                </DialogClose>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleConfirmRevision}
+                >
+                  Ya, Revisi Quotation
                 </Button>
               </DialogFooter>
             </DialogContent>

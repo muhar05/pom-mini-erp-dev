@@ -14,11 +14,19 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SALE_STATUSES, ITEM_STATUSES, isSuperuser, isSales, isPurchasing, isWarehouse, isFinance } from "@/utils/salesOrderPermissions";
+import { SALE_STATUSES, ITEM_STATUSES, isSuperuser, isSales, isPurchasing, isWarehouse, isFinance, isManagerSales, getSalesOrderPermissions, REOPEN_SYSTEM_PREFIXES, hasPendingReopenRequest } from "@/utils/salesOrderPermissions";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Upload, Package, User, DollarSign, FileText, Download, Eye, X } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Calendar, Upload, Package, User, DollarSign, FileText, Download, Eye, X, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -134,6 +142,8 @@ export default function SalesOrderForm({
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isCustomerEditMode, setIsCustomerEditMode] = useState(false);
   const [customerLoadingDelay, setCustomerLoadingDelay] = useState(false);
+  const [showReopenDialog, setShowReopenDialog] = useState(false);
+  const [reopenReason, setReopenReason] = useState("");
 
   // Inisialisasi state
   const [formData, setFormData] = useState<SalesOrderFormData>({
@@ -221,7 +231,22 @@ export default function SalesOrderForm({
     }
   }, [session]);
 
+  const permissions = useMemo(() => {
+    return getSalesOrderPermissions(salesOrder, user);
+  }, [salesOrder, user]);
+
+  const hasPendingReopen = useMemo(() => {
+    return hasPendingReopenRequest(formData.note);
+  }, [formData.note]);
+
   const handleInputChange = (field: keyof SalesOrderFormData, value: any) => {
+    if (field === "note" && typeof value === "string") {
+      // Mencegah manipulasi manual prefix sistem
+      if (value.toUpperCase().includes("[REOPEN")) {
+        toast.error("Prefix [REOPEN] adalah milik sistem dan tidak boleh diketik manual.");
+        return;
+      }
+    }
     setFormData(prev => ({ ...prev, [field]: value }));
     setIsDirty(true);
   };
@@ -449,11 +474,33 @@ export default function SalesOrderForm({
                       <SelectContent>
                         {Object.entries(SALE_STATUSES).filter(([_, value]) => {
                           if (isSuperuser(user)) return true;
-                          // Current role's statuses
+
+                          const currentStatus = salesOrder?.sale_status || SALE_STATUSES.NEW;
+                          const userRole = ((user as any)?.role_name || (user as any)?.roles?.role_name || "sales").toLowerCase();
+
+                          // Dropdown status Sales: Tidak menampilkan NEW saat status sudah PR
+                          if (userRole === "sales" && currentStatus === SALE_STATUSES.PR && value === SALE_STATUSES.NEW) {
+                            return false;
+                          }
+
+                          // BLOCK PURCHASING IF REOPEN REQUEST PENDING
+                          if (isPurchasing(user) && currentStatus === SALE_STATUSES.PR && hasPendingReopen) {
+                            if ([SALE_STATUSES.PO, SALE_STATUSES.SR, SALE_STATUSES.FAR, SALE_STATUSES.DR].includes(value as any)) {
+                              return false;
+                            }
+                          }
+
+                          // Current role's allowed statuses
                           if (isSales(user)) {
-                            return ([SALE_STATUSES.NEW, SALE_STATUSES.PR, SALE_STATUSES.RECEIVED, SALE_STATUSES.COMPLETED, SALE_STATUSES.CANCELLED] as string[]).includes(value);
+                            // Manager Sales dan Superuser boleh PR -> NEW (reopen)
+                            const canReopen = isManagerSales(user) && currentStatus === SALE_STATUSES.PR;
+                            const allowed = [SALE_STATUSES.NEW, SALE_STATUSES.PR, SALE_STATUSES.RECEIVED, SALE_STATUSES.COMPLETED, SALE_STATUSES.CANCELLED];
+                            if (canReopen && value === SALE_STATUSES.NEW) return true;
+                            return (allowed as string[]).includes(value);
                           }
                           if (isPurchasing(user)) {
+                            // Purchasing boleh PR -> NEW
+                            if (currentStatus === SALE_STATUSES.PR && value === SALE_STATUSES.NEW) return true;
                             return ([SALE_STATUSES.PR, SALE_STATUSES.PO, SALE_STATUSES.SR, SALE_STATUSES.FAR, SALE_STATUSES.DR, SALE_STATUSES.CANCELLED] as string[]).includes(value);
                           }
                           if (isWarehouse(user)) {
@@ -477,6 +524,25 @@ export default function SalesOrderForm({
                       <p className="text-[11px] text-blue-600 dark:text-blue-400 mt-1 italic pl-1 border-l-2 border-blue-200">
                         {STATUS_DESCRIPTIONS[formData.sale_status].desc}
                       </p>
+                    )}
+                    {/* PR Info Banner for Sales */}
+                    {isSales(user) && !isManagerSales(user) && (salesOrder?.sale_status === SALE_STATUSES.PR) && !hasPendingReopen && (
+                      <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md flex gap-2 items-start">
+                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                        <p className="text-[11px] text-amber-800">
+                          Sales Order sedang diproses Purchasing. Perubahan data harus melalui persetujuan Manager Sales.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Pending Reopen Warning for Purchasing & Managers */}
+                    {hasPendingReopen && (isPurchasing(user) || isManagerSales(user)) && (
+                      <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md flex gap-2 items-start">
+                        <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+                        <p className="text-[11px] text-red-800 font-medium">
+                          Sales mengajukan permintaan perubahan data. Proses Purchasing sebaiknya ditunda sampai ada keputusan Manager Sales.
+                        </p>
+                      </div>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -686,10 +752,123 @@ export default function SalesOrderForm({
 
         <div className="flex justify-end gap-3 pt-6 border-t">
           <Button variant="outline" type="button" onClick={onClose} disabled={loading}>Cancel</Button>
+
+          {permissions.canRequestReopen && !hasPendingReopen && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowReopenDialog(true)}
+              className="bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-200"
+            >
+              Request Reopen
+            </Button>
+          )}
+
+          {hasPendingReopen && isManagerSales(user) && (
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-red-600 text-red-600 hover:bg-red-50"
+                disabled={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const newNote = `${formData.note}\n${REOPEN_SYSTEM_PREFIXES.REJECTED} oleh Manager Sales`;
+                    const result = await updateSalesOrderAction(salesOrder!.id!, { note: newNote });
+                    if (result?.success) {
+                      toast.success("Request Reopen ditolak");
+                      handleInputChange("note", newNote);
+                    }
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                Reject Reopen
+              </Button>
+              <Button
+                type="button"
+                className="bg-green-600 hover:bg-green-700 text-white"
+                disabled={loading}
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const newNote = `${formData.note}\n${REOPEN_SYSTEM_PREFIXES.APPROVED} oleh Manager Sales`;
+                    const result = await updateSalesOrderAction(salesOrder!.id!, {
+                      sale_status: SALE_STATUSES.NEW,
+                      note: newNote
+                    });
+                    if (result?.success) {
+                      toast.success("Request Reopen disetujui, SO kembali ke NEW");
+                      handleInputChange("note", newNote);
+                      handleInputChange("sale_status", SALE_STATUSES.NEW);
+                    }
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                Approve & Reopen
+              </Button>
+            </div>
+          )}
+
           <Button type="submit" disabled={loading || !isFormValid || (!isDirty && mode === "edit")}>
             {loading ? "Processing..." : `${mode === "add" ? "Create" : "Update"} Sales Order`}
           </Button>
         </div>
+
+        <Dialog open={showReopenDialog} onOpenChange={setShowReopenDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Request Reopen Sales Order</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                Sales Order ini sudah berada di tahap <strong>Purchasing (PR)</strong>. Anda dapat meminta pembukaan kembali status ke <strong>NEW</strong> untuk melakukan perubahan.
+              </p>
+              <div className="space-y-2">
+                <Label>Alasan Perubahan</Label>
+                <Textarea
+                  placeholder="Contoh: Perubahan jumlah item atas permintaan customer..."
+                  value={reopenReason}
+                  onChange={(e) => setReopenReason(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">Batal</Button>
+              </DialogClose>
+              <Button
+                onClick={async () => {
+                  if (!reopenReason.trim()) {
+                    toast.error("Mohon isi alasan perubahan");
+                    return;
+                  }
+                  setLoading(true);
+                  try {
+                    const newNote = `${formData.note ? formData.note + "\n" : ""}${REOPEN_SYSTEM_PREFIXES.REQUEST}: ${reopenReason}`;
+                    const result = await updateSalesOrderAction(salesOrder!.id!, { note: newNote });
+                    if (result?.success) {
+                      toast.success("Permintaan reopen telah diajukan via Note ke Manager");
+                      handleInputChange("note", newNote);
+                      setShowReopenDialog(false);
+                      setReopenReason("");
+                    }
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+              >
+                {loading ? "Mengirim..." : "Kirim Permintaan"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </form>
     </div>
   );
