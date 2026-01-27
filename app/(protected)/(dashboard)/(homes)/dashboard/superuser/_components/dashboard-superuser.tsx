@@ -24,21 +24,21 @@ export default function DashboardSuperuser() {
   const businessStats = [
     {
       title: t("page.dashboard.revenue"),
-      value: salesData ? `Rp ${salesData.totalRevenue.toLocaleString("id-ID")}` : "-",
+      value: salesData ? `Rp ${salesData.summary.salesOrders.rp.toLocaleString("id-ID")}` : "-",
       icon: Wallet,
       iconBg: "bg-emerald-600",
       gradientFrom: "from-emerald-600/10",
     },
     {
       title: t("page.dashboard.stat_sales"),
-      value: salesData ? salesData.totalOrder : "-",
+      value: salesData ? salesData.summary.salesOrders.qty : "-",
       icon: FileText,
       iconBg: "bg-blue-600",
       gradientFrom: "from-blue-600/10",
     },
     {
       title: t("page.dashboard.stat_quotations"),
-      value: salesData ? salesData.totalQuotation : "-",
+      value: salesData ? salesData.summary.quotations.qty : "-",
       icon: Medal,
       iconBg: "bg-amber-500",
       gradientFrom: "from-amber-600/10",
