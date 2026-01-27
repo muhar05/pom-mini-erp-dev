@@ -60,12 +60,14 @@ export default function OpportunitiesTable({
   onEdit,
   onDelete,
 }: OpportunitiesTableProps) {
-  // Filter hanya status dengan prefix "opp"
+  // Filter status yang didefinisikan sebagai Opportunity
   const filteredData = data.filter(
     (item) =>
       item.status === "opp_prospecting" ||
       item.status === "opp_lost" ||
-      item.status === "opp_sq",
+      item.status === "opp_sq" ||
+      item.status === "opp_qualified" ||
+      item.status === "lead_qualified",
   );
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -152,9 +154,7 @@ export default function OpportunitiesTable({
                   <TableCell>{formatCurrency(item.potential_value)}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusVariant(item.status)}>
-                      {item.status === "opp_sq"
-                        ? "SQ"
-                        : formatStatusDisplay(item.status)}
+                      {formatStatusDisplay(item.status)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -184,7 +184,7 @@ export default function OpportunitiesTable({
                             {isSales(currentUser) && (
                               <DropdownMenuItem
                                 onClick={() => handleConvertSQ(item.id)}
-                                disabled={item.status !== "opp_prospecting"}
+                                disabled={item.status !== "opp_prospecting" && item.status !== "opp_qualified" && item.status !== "lead_qualified"}
                                 className="cursor-pointer"
                               >
                                 <Repeat className="mr-2 h-4 w-4" />

@@ -1,68 +1,69 @@
 import ChangePasswordTabContent from "@/app/(protected)/(dashboard)/view-profile/components/change-password-tab-content";
 import EditProfileTabContent from "@/app/(protected)/(dashboard)/view-profile/components/edit-profile-tab-content";
-import NotificationPasswordTabContent from "@/app/(protected)/(dashboard)/view-profile/components/notification-password-tab-content";
 import ViewProfileSidebar from "@/app/(protected)/(dashboard)/view-profile/components/view-profile-sidebar";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Metadata } from "next";
+import { User, ShieldCheck } from 'lucide-react';
 
-const metadata: Metadata = {
-  title: "View Profile & User Details | WowDash Admin Dashboard",
-  description:
-    "Access detailed user profiles and personal information in the WowDash Admin Dashboard built with Next.js and Tailwind CSS.",
+export const metadata: Metadata = {
+  title: "Profile | POM MINI ERP",
+  description: "Kelola informasi profil dan keamanan akun Anda.",
 };
 
+/**
+ * Main Profile Page.
+ * Organized into two main sections: Account Information and Account Security.
+ */
 const ViewProfile = () => {
   return (
-    <>
-      <DashboardBreadcrumb title="View Profile" text="View Profile" />
+    <div className="flex flex-col gap-6">
+      <DashboardBreadcrumb title="User Profile" text="Profile" />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Profile Sidebar (Live Data) */}
         <div className="col-span-12 lg:col-span-4">
           <ViewProfileSidebar />
         </div>
 
+        {/* Profile Tabs Content */}
         <div className="col-span-12 lg:col-span-8">
-          <Card className="card">
-            <CardContent className="px-0">
-              <Tabs defaultValue="editProfile" className="gap-4">
-                <TabsList className="active-gradient bg-transparent dark:bg-transparent rounded-none h-[50px]">
+          <Card className="border-none shadow-sm h-full">
+            <CardContent className="p-0">
+              <Tabs defaultValue="editProfile" className="w-full">
+                <TabsList className="w-full justify-start rounded-none border-b border-neutral-100 dark:border-neutral-800 bg-transparent h-auto p-0">
                   <TabsTrigger
                     value="editProfile"
-                    className="py-2.5 px-4 font-semibold text-sm inline-flex items-center gap-3 dark:bg-transparent text-neutral-600 hover:text-primary dark:text-white dark:hover:text-blue-500 data-[state=active]:bg-gradient border-0 border-t-2 border-neutral-200 dark:border-neutral-500 data-[state=active]:border-primary dark:data-[state=active]:border-primary rounded-[0] data-[state=active]:shadow-none cursor-pointer"
+                    className="flex items-center gap-2 py-4 px-6 font-bold text-sm text-neutral-500 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent transition-all"
                   >
-                    Edit Profile
+                    <User className="w-4 h-4" />
+                    Informasi Akun
                   </TabsTrigger>
                   <TabsTrigger
                     value="changePassword"
-                    className="py-2.5 px-4 font-semibold text-sm inline-flex items-center gap-3 dark:bg-transparent text-neutral-600 hover:text-primary dark:text-white dark:hover:text-blue-500 data-[state=active]:bg-gradient border-0 border-t-2 border-neutral-200 dark:border-neutral-500 data-[state=active]:border-primary dark:data-[state=active]:border-primary rounded-[0] data-[state=active]:shadow-none cursor-pointer"
+                    className="flex items-center gap-2 py-4 px-6 font-bold text-sm text-neutral-500 data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent transition-all"
                   >
-                    Change Password
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="NotificationPassword"
-                    className="py-2.5 px-4 font-semibold text-sm inline-flex items-center gap-3 dark:bg-transparent text-neutral-600 hover:text-primary dark:text-white dark:hover:text-blue-500 data-[state=active]:bg-gradient border-0 border-t-2 border-neutral-200 dark:border-neutral-500 data-[state=active]:border-primary dark:data-[state=active]:border-primary rounded-[0] data-[state=active]:shadow-none cursor-pointer"
-                  >
-                    Notification Password
+                    <ShieldCheck className="w-4 h-4" />
+                    Keamanan Akun
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="editProfile">
-                  <EditProfileTabContent />
-                </TabsContent>
-                <TabsContent value="changePassword">
-                  <ChangePasswordTabContent />
-                </TabsContent>
-                <TabsContent value="NotificationPassword">
-                  <NotificationPasswordTabContent />
-                </TabsContent>
+                <div className="p-2">
+                  <TabsContent value="editProfile" className="mt-0 outline-none">
+                    <EditProfileTabContent />
+                  </TabsContent>
+                  <TabsContent value="changePassword" className="mt-0 outline-none">
+                    <ChangePasswordTabContent />
+                  </TabsContent>
+                </div>
               </Tabs>
             </CardContent>
           </Card>
         </div>
       </div>
-    </>
+    </div>
   );
 };
+
 export default ViewProfile;

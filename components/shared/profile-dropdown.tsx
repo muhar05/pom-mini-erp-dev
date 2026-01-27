@@ -16,7 +16,6 @@ import Link from "next/link";
 
 const ProfileDropdown = () => {
   const session = useSession();
-  console.log("PROFILE DROPDOWN SESSION:", session);      
 
   return (
     <DropdownMenu>
@@ -72,14 +71,6 @@ const ProfileDropdown = () => {
                 className="text-black dark:text-white hover:text-primary dark:hover:text-primary flex items-center gap-3"
               >
                 <User className="w-5 h-5" /> My Profile
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/company"
-                className="text-black dark:text-white hover:text-primary dark:hover:text-primary flex items-center gap-3"
-              >
-                <Settings className="w-5 h-5" /> Settings
               </Link>
             </li>
             <li>

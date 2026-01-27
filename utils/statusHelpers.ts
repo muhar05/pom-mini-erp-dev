@@ -105,6 +105,18 @@ export function getStatusName(status: string): string {
 export function formatStatusDisplay(status: string | null | undefined): string {
   if (!status) return "Open";
 
+  // Specific Label Overrides
+  const overrides: Record<string, string> = {
+    "lead_qualified": "Opportunity",
+    "opp_qualified": "Opportunity",
+    "opp_sq": "SQ",
+    "sq_win": "SO/Won",
+    "sq_revised": "Revision",
+    "sq_lost": "Lost/Rejected",
+  };
+
+  if (overrides[status]) return overrides[status];
+
   // Extract the name part after prefix
   const statusName = getStatusName(status);
 
@@ -275,17 +287,19 @@ export function isValidStatusTransition(
 }
 
 // Status options for forms
-export const LEAD_STATUS_OPTIONS = (
-  Object.values(LEAD_STATUSES) as string[]
-).map((status) => ({
-  value: status,
-  label: formatStatusDisplay(status),
-}));
+export const LEAD_STATUS_OPTIONS = [
+  { value: LEAD_STATUSES.NEW, label: "New" },
+  { value: LEAD_STATUSES.CONTACTED, label: "Contacted" },
+  { value: LEAD_STATUSES.INTERESTED, label: "Interested" },
+  { value: LEAD_STATUSES.QUALIFIED, label: "Opportunity" },
+  { value: LEAD_STATUSES.UNQUALIFIED, label: "Unqualified" },
+];
 
 export const OPPORTUNITY_STATUS_OPTIONS = [
-  { value: OPPORTUNITY_STATUSES.QUALIFIED, label: "Qualified" },
-  { value: OPPORTUNITY_STATUSES.LOST, label: "Lost" },
+  { value: OPPORTUNITY_STATUSES.QUALIFIED, label: "Opportunity" },
+  { value: OPPORTUNITY_STATUSES.PROSPECTING, label: "Prospecting" },
   { value: OPPORTUNITY_STATUSES.SQ, label: "SQ" },
+  { value: OPPORTUNITY_STATUSES.LOST, label: "Lost" },
 ];
 
 export const SQ_STATUS_OPTIONS = [
@@ -323,11 +337,19 @@ export const BOQ_STATUS_OPTIONS = (Object.values(BOQ_STATUSES) as string[]).map(
  * Opportunity Form Behavior Helpers
  */
 export function canEditOpportunity(status: string | null | undefined): boolean {
-  return status === OPPORTUNITY_STATUSES.PROSPECTING;
+  return (
+    status === OPPORTUNITY_STATUSES.PROSPECTING ||
+    status === OPPORTUNITY_STATUSES.QUALIFIED ||
+    status === "lead_qualified"
+  );
 }
 
 export function canConvertToSQ(status: string | null | undefined): boolean {
-  return status === OPPORTUNITY_STATUSES.PROSPECTING;
+  return (
+    status === OPPORTUNITY_STATUSES.PROSPECTING ||
+    status === OPPORTUNITY_STATUSES.QUALIFIED ||
+    status === "lead_qualified"
+  );
 }
 
 const CUSTOMER_INFO_FIELDS = [
@@ -349,5 +371,9 @@ export function isFieldEditableForStatus(
   if (field === "status") return true;
   if (CUSTOMER_INFO_FIELDS.includes(field)) return false;
 
-  return status === OPPORTUNITY_STATUSES.PROSPECTING;
+  return (
+    status === OPPORTUNITY_STATUSES.PROSPECTING ||
+    status === OPPORTUNITY_STATUSES.QUALIFIED ||
+    status === "lead_qualified"
+  );
 }

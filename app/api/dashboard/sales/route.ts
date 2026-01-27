@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { isSuperuser, isManagerSales, isSales } from "@/utils/leadHelpers";
+import { SQ_STATUSES, SO_STATUSES, OPPORTUNITY_STATUSES, formatStatusDisplay } from "@/utils/statusHelpers";
 
 function parseDate(dateStr?: string) {
   if (!dateStr) return undefined;
@@ -17,158 +18,276 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
+    const start = parseDate(searchParams.get("start") || undefined);
+    const end = parseDate(searchParams.get("end") || undefined);
+    const yearStr = searchParams.get("year");
+    const year = yearStr ? parseInt(yearStr) : new Date().getFullYear();
 
-    let userId = searchParams.get("user_id");
+    let userIdStr = searchParams.get("user_id");
+    let targetUserId: number | undefined = undefined;
 
     // Force Sales to only see their own data
     if (isSales(user)) {
-      userId = user.id?.toString() || null;
+      targetUserId = Number(user.id);
+    } else if (userIdStr && userIdStr !== "all") {
+      targetUserId = Number(userIdStr);
     }
-    const start = parseDate(searchParams.get("start") || undefined);
-    const end = parseDate(searchParams.get("end") || undefined);
 
-    // Build where clause for sales_orders
-    const salesOrderWhere: any = {
-      status: { not: "CANCELLED" },
+    // --- Basic Where Clauses ---
+    const dateFilter: any = {};
+    if (start) dateFilter.gte = start;
+    if (end) dateFilter.lte = end;
+
+    const wrappedDateFilter = Object.keys(dateFilter).length > 0 ? { created_at: dateFilter } : {};
+
+    const buildWhere = (idField: string = "user_id") => {
+      const w: any = {};
+      if (targetUserId) w[idField] = targetUserId;
+      if (Object.keys(dateFilter).length > 0) w.created_at = dateFilter;
+      return w;
     };
-    if (userId) salesOrderWhere.user_id = Number(userId);
-    if (start || end) {
-      salesOrderWhere.created_at = {};
-      if (start) salesOrderWhere.created_at.gte = start;
-      if (end) salesOrderWhere.created_at.lte = end;
-    }
 
-    // Build where clause for quotations
-    const quotationWhere: any = {};
-    if (userId) quotationWhere.user_id = Number(userId);
-    if (start || end) {
-      quotationWhere.created_at = {};
-      if (start) quotationWhere.created_at.gte = start;
-      if (end) quotationWhere.created_at.lte = end;
-    }
+    const leadWhere = buildWhere("id_user");
+    const quotationWhere = buildWhere("user_id");
+    const soWhere = buildWhere("user_id");
 
-    // Aggregate total revenue
-    const totalRevenueResult = await prisma.sales_orders.aggregate({
-      _sum: { grand_total: true },
-      where: salesOrderWhere,
+    // --- LEADS ---
+    const leadsRaw = await prisma.leads.findMany({
+      where: leadWhere,
+      select: { status: true, source: true, potential_value: true },
     });
 
-    // Count total orders
-    const totalOrder = await prisma.sales_orders.count({
-      where: salesOrderWhere,
-    });
+    const totalLeads = leadsRaw.length;
+    const leadsByStatus = Array.from(
+      leadsRaw.reduce((acc, curr) => {
+        const s = curr.status || "UNKNOWN";
+        acc.set(s, (acc.get(s) || 0) + 1);
+        return acc;
+      }, new Map<string, number>())
+    ).map(([status, count]) => ({ status, count }));
 
-    // Count total quotations
-    const totalQuotation = await prisma.quotations.count({
+    const leadSourceData = Array.from(
+      leadsRaw.reduce((acc, curr) => {
+        const s = curr.source || "Unknown";
+        acc.set(s, (acc.get(s) || 0) + 1);
+        return acc;
+      }, new Map<string, number>())
+    ).map(([source, count]) => ({ source, count }));
+
+    // --- OPPORTUNITIES ---
+    // Defined as leads with status "opp_prospecting", "opp_qualified", "opp_sq", "opp_lost", or "lead_qualified"
+    const oppsRaw = leadsRaw.filter(l =>
+      l.status === OPPORTUNITY_STATUSES.PROSPECTING ||
+      l.status === OPPORTUNITY_STATUSES.QUALIFIED ||
+      l.status === OPPORTUNITY_STATUSES.SQ ||
+      l.status === OPPORTUNITY_STATUSES.LOST ||
+      l.status === "lead_qualified"
+    );
+    const totalOppQty = oppsRaw.length;
+    const totalOppRp = oppsRaw.reduce((sum, curr) => sum + Number(curr.potential_value || 0), 0);
+
+    const oppsByStatus = Array.from(
+      oppsRaw.reduce((acc, curr) => {
+        const s = curr.status || "UNKNOWN";
+        const val = acc.get(s) || { count: 0, rp: 0 };
+        acc.set(s, { count: val.count + 1, rp: val.rp + Number(curr.potential_value || 0) });
+        return acc;
+      }, new Map<string, { count: number, rp: number }>())
+    ).map(([status, data]) => ({ status, ...data }));
+
+    // --- QUOTATIONS ---
+    const quotationsRaw = await prisma.quotations.findMany({
       where: quotationWhere,
+      select: { status: true, grand_total: true, note: true },
     });
 
-    // Monthly revenue
+    const totalSqQty = quotationsRaw.length;
+    const totalSqRp = quotationsRaw.reduce((sum, curr) => sum + Number(curr.grand_total || 0), 0);
+
+    const sqByStatus = Array.from(
+      quotationsRaw.reduce((acc, curr) => {
+        const s = curr.status || "UNKNOWN";
+        const val = acc.get(s) || { count: 0, rp: 0 };
+        acc.set(s, { count: val.count + 1, rp: val.rp + Number(curr.grand_total || 0) });
+        return acc;
+      }, new Map<string, { count: number, rp: number }>())
+    ).map(([status, data]) => ({ status, ...data }));
+
+    const sqWaitingApproval = quotationsRaw.filter(q =>
+      q.status === SQ_STATUSES.DRAFT || q.status === SQ_STATUSES.REVISED || q.status === SQ_STATUSES.WAITING_APPROVAL
+    );
+    const sqApproved = quotationsRaw.filter(q => q.status === SQ_STATUSES.APPROVED || q.status === SQ_STATUSES.SENT);
+
+    // Lost Reason Pie Chart
+    const lostSqRaw = quotationsRaw.filter(q => q.status === SQ_STATUSES.LOST);
+    const lostReasonData = Array.from(
+      lostSqRaw.reduce((acc, curr) => {
+        const r = curr.note || "No reason given"; // Note usually contains the reason for lost
+        acc.set(r, (acc.get(r) || 0) + 1);
+        return acc;
+      }, new Map<string, number>())
+    ).map(([reason, count]) => ({ reason, count }));
+
+    // --- SALES ORDERS (SO WON) ---
+    const soRaw = await prisma.sales_orders.findMany({
+      where: {
+        ...soWhere,
+        status: { not: SO_STATUSES.CANCELLED },
+      },
+      select: { grand_total: true, created_at: true },
+    });
+
+    const totalSoWonQty = soRaw.length;
+    const totalSoWonRp = soRaw.reduce((sum, curr) => sum + Number(curr.grand_total || 0), 0);
+    const winrate = totalSqQty > 0 ? (totalSoWonQty / totalSqQty) * 100 : 0;
+
+    // --- CHARTS ---
+    // Pipeline: SQ Status counts
+    const pipelineData = Object.values(SQ_STATUSES).map(status => ({
+      status: formatStatusDisplay(status),
+      count: quotationsRaw.filter(q => q.status === status).length,
+    })).filter(d => d.count > 0);
+
+    // Funnel: Lead -> Opp -> SQ -> SO
+    const funnelData = [
+      { stage: "Lead", count: totalLeads },
+      { stage: "Opportunity", count: totalOppQty },
+      { stage: "Quotation", count: totalSqQty },
+      { stage: "Sales Order", count: totalSoWonQty },
+    ];
+
+    // Revenue Chart (Monthly) - Filtered by Year
+    const revenueWhere = { ...soWhere, created_at: { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`), not: undefined } };
     const monthlyRaw = await prisma.sales_orders.groupBy({
       by: ["created_at"],
-      where: salesOrderWhere,
+      where: {
+        ...revenueWhere,
+        status: { not: SO_STATUSES.CANCELLED },
+      },
       _sum: { grand_total: true },
+      _count: { id: true },
     });
 
-    // Format monthly revenue: group by month
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    const monthlyMap: Record<string, number> = {};
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthlyMap = new Map<number, { qty: number, rp: number }>();
+    for (let i = 0; i < 12; i++) monthlyMap.set(i, { qty: 0, rp: 0 });
+
     for (const row of monthlyRaw) {
-      const date = new Date(row.created_at as Date);
-      const key = `${date.getFullYear()}-${date.getMonth()}`;
-      monthlyMap[key] =
-        (monthlyMap[key] || 0) + Number(row._sum.grand_total || 0);
+      if (!row.created_at) continue;
+      const m = new Date(row.created_at).getMonth();
+      const val = monthlyMap.get(m)!;
+      monthlyMap.set(m, {
+        qty: val.qty + (row._count.id || 0),
+        rp: val.rp + Number(row._sum.grand_total || 0)
+      });
     }
-    const monthlyRevenue = Object.entries(monthlyMap).map(([key, total]) => {
-      const [year, monthIdx] = key.split("-");
-      return {
-        month: `${monthNames[Number(monthIdx)]} ${year}`,
-        total,
-      };
-    });
 
-    // Order status
-    const orderStatusRaw = await prisma.sales_orders.groupBy({
-      by: ["sale_status"],
-      where: salesOrderWhere,
-      _count: { sale_status: true },
-    });
-    const orderStatus = orderStatusRaw.map((row) => ({
-      status: row.sale_status || "UNKNOWN",
-      total: row._count.sale_status,
+    const revenueChartData = Array.from(monthlyMap.entries()).map(([idx, data]) => ({
+      month: monthNames[idx],
+      ...data
     }));
 
-    // 4. Sales performance (For Manager/Superuser)
+    // --- ACTIVITY USER ---
+    const activityWhere: any = {};
+    if (isSales(user)) {
+      activityWhere.user_id = Number(user.id);
+    } else if (targetUserId) {
+      activityWhere.user_id = targetUserId;
+    }
+
+    const logsRaw = await prisma.user_logs.findMany({
+      where: activityWhere,
+      take: 20,
+      orderBy: { created_at: "desc" },
+      include: { users: { select: { name: true } } }
+    });
+
+    const activities = logsRaw.map(log => ({
+      id: log.id.toString(),
+      user: log.users.name,
+      action: log.activity,
+      date: log.created_at,
+    }));
+
+    // --- SALES PERFORMANCE (MANAGER ONLY) ---
     let salesPerformance: any[] = [];
     if (isSuperuser(user) || isManagerSales(user)) {
-      // Ambil daftar sales
       const salesUsers = await prisma.users.findMany({
-        where: { role_id: 2 }, // ID 2 adalah sales
+        where: { role_id: 2 },
         select: { id: true, name: true },
       });
 
       salesPerformance = await Promise.all(
         salesUsers.map(async (s) => {
           const sId = Number(s.id);
-          const [leadsCount, quotationsCount, soStats] = await Promise.all([
-            prisma.leads.count({
-              where: {
-                OR: [{ id_user: sId }, { assigned_to: sId }],
-              },
+          const [lCount, oRaw, qRaw, soStats] = await Promise.all([
+            prisma.leads.count({ where: { ...wrappedDateFilter, OR: [{ id_user: sId }, { assigned_to: sId }] } }),
+            prisma.leads.findMany({
+              where: { ...wrappedDateFilter, OR: [{ id_user: sId }, { assigned_to: sId }], status: { in: [OPPORTUNITY_STATUSES.PROSPECTING, OPPORTUNITY_STATUSES.QUALIFIED, OPPORTUNITY_STATUSES.SQ, OPPORTUNITY_STATUSES.LOST, "lead_qualified"] } },
+              select: { potential_value: true }
             }),
-            prisma.quotations.count({
-              where: { user_id: sId },
+            prisma.quotations.findMany({
+              where: { ...wrappedDateFilter, user_id: sId },
+              select: { grand_total: true }
             }),
             prisma.sales_orders.aggregate({
-              where: { user_id: sId, status: { not: "CANCELLED" } },
+              where: { ...wrappedDateFilter, user_id: sId, status: { not: SO_STATUSES.CANCELLED } },
               _count: { id: true },
               _sum: { grand_total: true },
             }),
           ]);
 
+          const oQty = oRaw.length;
+          const oRp = oRaw.reduce((sum, curr) => sum + Number(curr.potential_value || 0), 0);
+          const qQty = qRaw.length;
+          const qRp = qRaw.reduce((sum, curr) => sum + Number(curr.grand_total || 0), 0);
+          const soQty = soStats._count.id;
+          const soRp = Number(soStats._sum.grand_total || 0);
+
           return {
             sales_name: s.name,
-            total_leads: leadsCount,
-            total_quotations: quotationsCount,
-            total_orders: soStats._count.id,
-            total_revenue: Number(soStats._sum.grand_total || 0),
+            leads_qty: lCount,
+            opp_qty: oQty,
+            opp_rp: oRp,
+            sq_qty: qQty,
+            sq_rp: qRp,
+            so_qty: soQty,
+            so_rp: soRp,
+            winrate: qQty > 0 ? (soQty / qQty) * 100 : 0
           };
         })
       );
-
-      // Urutkan berdasarkan revenue atau jumlah order (misal revenue DESC)
-      salesPerformance.sort((a, b) => b.total_revenue - a.total_revenue);
+      salesPerformance.sort((a, b) => b.so_rp - a.so_rp);
     }
 
-    return NextResponse.json(
-      {
-        totalRevenue: Number(totalRevenueResult._sum.grand_total || 0),
-        totalOrder,
-        totalQuotation,
-        monthlyRevenue,
-        orderStatus,
-        salesPerformance,
+    return NextResponse.json({
+      summary: {
+        leads: { qty: totalLeads, byStatus: leadsByStatus },
+        opportunities: { qty: totalOppQty, rp: totalOppRp, byStatus: oppsByStatus },
+        quotations: {
+          qty: totalSqQty,
+          rp: totalSqRp,
+          waitingApproval: { qty: sqWaitingApproval.length, rp: sqWaitingApproval.reduce((s, c) => s + Number(c.grand_total || 0), 0) },
+          approved: { qty: sqApproved.length, rp: sqApproved.reduce((s, c) => s + Number(c.grand_total || 0), 0) },
+          byStatus: sqByStatus
+        },
+        salesOrders: { qty: totalSoWonQty, rp: totalSoWonRp, winrate }
       },
-      { status: 200 },
-    );
+      charts: {
+        pipeline: pipelineData,
+        funnel: funnelData,
+        leadSource: leadSourceData,
+        lostReason: lostReasonData,
+        revenue: revenueChartData
+      },
+      activities,
+      salesPerformance
+    });
+
   } catch (error) {
     console.error("Dashboard sales API error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch dashboard sales data" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch dashboard sales data" }, { status: 500 });
   }
 }
+
+

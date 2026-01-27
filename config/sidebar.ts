@@ -191,7 +191,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       title: "Dashboard",
       labelKey: "sidebar.dashboard",
       icon: LayoutDashboard,
-      items: [{ title: "Sales", labelKey: "sidebar.sales_orders", url: "/dashboard/sales" }],
+      items: [{ title: "Sales", labelKey: "sidebar.sales", url: "/dashboard/sales" }],
     },
     {
       title: "CRM",

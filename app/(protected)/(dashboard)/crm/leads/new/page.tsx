@@ -51,14 +51,13 @@ export default async function NewLeadPage() {
         text="Create a new lead entry"
       />
       <div className="grid grid-cols-1 gap-6 mt-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Lead Information</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 pt-8">
           <LeadForm
             mode="create"
             onSubmit={createLeadAction}
             products={products}
-            // customers={customers}
-            // companies={companies}
+          // customers={customers}
+          // companies={companies}
           />
         </div>
       </div>

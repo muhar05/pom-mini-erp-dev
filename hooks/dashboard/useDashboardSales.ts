@@ -1,24 +1,49 @@
 import { useCallback, useEffect, useState } from "react";
 
 export interface DashboardSalesData {
-  totalRevenue: number;
-  totalOrder: number;
-  totalQuotation: number;
-  monthlyRevenue: { month: string; total: number }[];
-  orderStatus: { status: string; total: number }[];
+  summary: {
+    leads: { qty: number; byStatus: { status: string; count: number }[] };
+    opportunities: {
+      qty: number;
+      rp: number;
+      byStatus: { status: string; count: number; rp: number }[];
+    };
+    quotations: {
+      qty: number;
+      rp: number;
+      waitingApproval: { qty: number; rp: number };
+      approved: { qty: number; rp: number };
+      byStatus: { status: string; count: number; rp: number }[];
+    };
+    salesOrders: { qty: number; rp: number; winrate: number };
+  };
+  charts: {
+    pipeline: { status: string; count: number }[];
+    funnel: { stage: string; count: number }[];
+    leadSource: { source: string; count: number }[];
+    lostReason: { reason: string; count: number }[];
+    revenue: { month: string; qty: number; rp: number }[];
+  };
+  activities: { id: string; user: string; action: string; date: string }[];
   salesPerformance?: {
     sales_name: string;
-    total_leads: number;
-    total_quotations: number;
-    total_orders: number;
-    total_revenue: number;
+    leads_qty: number;
+    opp_qty: number;
+    opp_rp: number;
+    sq_qty: number;
+    sq_rp: number;
+    so_qty: number;
+    so_rp: number;
+    winrate: number;
   }[];
 }
+
 
 export function useDashboardSales(params?: {
   user_id?: string | number;
   start?: string;
   end?: string;
+  year?: number;
 }) {
   const [data, setData] = useState<DashboardSalesData | null>(null);
   const [loading, setLoading] = useState(true);

@@ -39,7 +39,18 @@ export const { handlers, auth } = NextAuth({
         // MODE PASSWORD
         if (mode === "password") {
           if (!user.password_hash) return null;
-          if (input !== user.password_hash) return null;
+
+          // Support both plain text (legacy) and hashed passwords
+          const isMatch = input === user.password_hash || await (async () => {
+            try {
+              const bcrypt = await import("bcryptjs");
+              return await bcrypt.compare(input, user.password_hash);
+            } catch (e) {
+              return false;
+            }
+          })();
+
+          if (!isMatch) return null;
         }
 
         // MODE OTP

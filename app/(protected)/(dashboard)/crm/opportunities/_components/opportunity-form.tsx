@@ -144,7 +144,7 @@ export default function OpportunityForm({
     isProductInterestChanged || isPotentialValueChanged || isNoteChanged || (isManager && isAssignmentChanged);
 
   const isEditable = !isManager && canEditOpportunity(formData.status);
-  const isProspecting = formData.status === OPPORTUNITY_STATUSES.PROSPECTING;
+  const isProspecting = canEditOpportunity(formData.status);
 
   // Rule: Sales hanya bisa convert jika status Prospecting DAN dia adalah owner/assigned
   const isOwnerOrAssigned = Number(formData.id_user) === Number(currentUser?.id) || Number(formData.assigned_to) === Number(currentUser?.id);

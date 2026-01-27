@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { OPPORTUNITY_STATUS_OPTIONS } from "@/utils/statusHelpers";
 
 interface OpportunitiesFilterProps {
   onFilterChange: (filters: {
@@ -45,14 +46,7 @@ export default function OpportunitiesFilter({
 
   const statusOptions = [
     { value: "all", label: "All Status" },
-    { value: "opp_new", label: "New" },
-    { value: "opp_qualified", label: "Qualified" },
-    { value: "opp_proposal", label: "Proposal" },
-    { value: "opp_negotiation", label: "Negotiation" },
-    { value: "opp_won", label: "Won" },
-    { value: "opp_lost", label: "Lost" },
-    { value: "opp_cancelled", label: "Cancelled" },
-    { value: "opp_sq", label: "SQ" },
+    ...OPPORTUNITY_STATUS_OPTIONS,
   ];
 
   return (

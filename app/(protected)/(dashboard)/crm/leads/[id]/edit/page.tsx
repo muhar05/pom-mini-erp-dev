@@ -30,8 +30,7 @@ export default async function EditLeadPage(props: Promise<EditLeadPageProps>) {
         text="Update lead information"
       />
       <div className="grid grid-cols-1 gap-6 mt-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Edit Lead Information</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 pt-8">
           <LeadForm
             mode="edit"
             lead={leadForForm}
