@@ -180,7 +180,7 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       icon: Settings,
       items: [
         { title: "Customer List", labelKey: "sidebar.customers", url: "/customers", icon: UserRound },
-        { title: "Company List", labelKey: "sidebar.master_data", url: "/companies", icon: Building2 },
+        { title: "Company List", labelKey: "sidebar.company", url: "/companies", icon: Building2 },
         { title: "Product List", labelKey: "sidebar.products", url: "/products", icon: Package },
         { title: "Vendor List", labelKey: "sidebar.purchasing", url: "/purchasing/vendors", icon: Building2 },
       ],
@@ -238,6 +238,25 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
           labelKey: "sidebar.products",
           url: "/products",
           icon: Package,
+        },
+        {
+          title: "Company List",
+          labelKey: "sidebar.company",
+          url: "/companies",
+          icon: Building2,
+        },
+      ],
+    },
+    {
+      title: "Settings",
+      labelKey: "sidebar.settings",
+      icon: Settings,
+      items: [
+        {
+          title: "Term of Payment",
+          labelKey: "sidebar.term_of_payment",
+          url: "/settings/term-of-payment",
+          icon: Banknote,
         },
       ],
     },

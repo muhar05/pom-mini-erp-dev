@@ -69,10 +69,7 @@ export default function ManagerSalesPendingTaskPage() {
   const [permissions, setPermissions] = useState<any>(null);
 
   // State untuk update status
-  const [selectedQuotation, setSelectedQuotation] =
-    useState<PendingQuotation | null>(null);
-  const [newStatus, setNewStatus] = useState("");
-  const [updateNote, setUpdateNote] = useState("");
+  const [notes, setNotes] = useState<Record<number, string>>({});
   const [updating, setUpdating] = useState(false);
 
   // Set user info when session changes
@@ -89,16 +86,21 @@ export default function ManagerSalesPendingTaskPage() {
   }, [refetch]);
 
   // Quick approve function
-  const handleQuickApprove = async (quotationId: number) => {
+  const handleQuickApprove = async (quotationId: number, note?: string) => {
     try {
       setUpdating(true);
       const result = await approveQuotationAction(
         quotationId,
-        "Approved by manager",
+        note || "Approved by manager",
       );
 
       if (result?.success) {
         toast.success("Quotation approved successfully");
+        setNotes(prev => {
+          const newNotes = { ...prev };
+          delete newNotes[quotationId];
+          return newNotes;
+        });
         refetch(); // Refresh data
       } else {
         toast.error(result?.message || "Failed to approve quotation");
@@ -112,16 +114,21 @@ export default function ManagerSalesPendingTaskPage() {
   };
 
   // Quick reject function
-  const handleQuickReject = async (quotationId: number, reason: string) => {
+  const handleQuickReject = async (quotationId: number, note?: string) => {
     try {
       setUpdating(true);
       const result = await rejectQuotationAction(
         quotationId,
-        reason || "Rejected by manager",
+        note || "Rejected by manager",
       );
 
       if (result?.success) {
-        toast.success("Quotation rejected successfully");
+        toast.success("Quotation rejected and moved to Draft");
+        setNotes(prev => {
+          const newNotes = { ...prev };
+          delete newNotes[quotationId];
+          return newNotes;
+        });
         refetch(); // Refresh data
       } else {
         toast.error(result?.message || "Failed to reject quotation");
@@ -132,54 +139,6 @@ export default function ManagerSalesPendingTaskPage() {
     } finally {
       setUpdating(false);
     }
-  };
-
-  // Custom update status
-  const handleCustomUpdate = async () => {
-    if (!selectedQuotation || !newStatus) return;
-
-    try {
-      setUpdating(true);
-      const updateData: any = {
-        status: newStatus,
-      };
-
-      if (updateNote) {
-        updateData.note = updateNote;
-      }
-
-      const result = await updateQuotationAction(
-        selectedQuotation.id,
-        updateData,
-      );
-
-      if (result?.success) {
-        toast.success("Quotation updated successfully");
-        setSelectedQuotation(null);
-        setNewStatus("");
-        setUpdateNote("");
-        refetch(); // Refresh data
-      } else {
-        toast.error(result?.message || "Failed to update quotation");
-      }
-    } catch (error) {
-      console.error("Error updating quotation:", error);
-      toast.error("Error updating quotation");
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  // Get available status options for manager
-  const getAvailableStatusOptions = (): StatusOption[] => {
-    if (!permissions) return [];
-
-    return permissions.allowedStatuses.map(
-      (status: string): StatusOption => ({
-        value: status,
-        label: formatStatusDisplay(status),
-      }),
-    );
   };
 
   const mappedPendingQuotations: PendingQuotation[] = pendingQuotations.map(
@@ -319,8 +278,8 @@ export default function ManagerSalesPendingTaskPage() {
                     className="border-l-4 border-l-yellow-400"
                   >
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2 flex-1">
+                      <div className="flex flex-col md:flex-row items-start justify-between gap-4">
+                        <div className="space-y-2 flex-1 w-full">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="font-mono">
                               {quotation.quotation_no}
@@ -365,51 +324,52 @@ export default function ManagerSalesPendingTaskPage() {
                           </div>
 
                           {quotation.note && (
-                            <div className="text-sm">
-                              <span className="font-medium">Note:</span>
-                              <p className="text-muted-foreground">
+                            <div className="text-sm bg-muted/50 p-2 rounded">
+                              <span className="font-medium">Existing Note:</span>
+                              <p className="text-muted-foreground italic">
                                 {quotation.note}
                               </p>
                             </div>
                           )}
+
+                          <div className="mt-4 space-y-2">
+                            <Label htmlFor={`note-${quotation.id}`} className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              Decision Note
+                            </Label>
+                            <Textarea
+                              id={`note-${quotation.id}`}
+                              placeholder="Write a reason for accept/reject..."
+                              value={notes[quotation.id] || ""}
+                              onChange={(e) => setNotes(prev => ({ ...prev, [quotation.id]: e.target.value }))}
+                              rows={2}
+                              className="resize-none"
+                            />
+                          </div>
                         </div>
 
-                        <div className="flex gap-2 ml-4">
+                        <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto">
                           <Button
                             size="sm"
                             variant="default"
-                            onClick={() => handleQuickApprove(quotation.id)}
+                            onClick={() => handleQuickApprove(quotation.id, notes[quotation.id])}
                             disabled={updating}
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-green-600 hover:bg-green-700 flex-1"
                           >
                             <CheckCircle className="h-4 w-4 mr-1" />
-                            Approve
+                            Accept
                           </Button>
 
                           <Button
                             size="sm"
                             variant="destructive"
                             onClick={() =>
-                              handleQuickReject(quotation.id, "Needs revision")
+                              handleQuickReject(quotation.id, notes[quotation.id])
                             }
                             disabled={updating}
+                            className="flex-1"
                           >
                             <XCircle className="h-4 w-4 mr-1" />
                             Reject
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedQuotation(
-                                quotation as PendingQuotation,
-                              );
-                              setNewStatus(quotation.status || "");
-                            }}
-                            disabled={updating}
-                          >
-                            Custom
                           </Button>
                         </div>
                       </div>
@@ -420,68 +380,6 @@ export default function ManagerSalesPendingTaskPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Custom Update Modal */}
-        {selectedQuotation && (
-          <Card className="border-2 border-blue-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Update Quotation: {selectedQuotation.quotation_no}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={newStatus} onValueChange={setNewStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableStatusOptions().map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="note">Note (Optional)</Label>
-                <Textarea
-                  id="note"
-                  value={updateNote}
-                  onChange={(e) => setUpdateNote(e.target.value)}
-                  placeholder="Add a note for this status change..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedQuotation(null);
-                    setNewStatus("");
-                    setUpdateNote("");
-                  }}
-                  disabled={updating}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCustomUpdate}
-                  disabled={updating || !newStatus}
-                >
-                  {updating ? "Updating..." : "Update Quotation"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </>
   );

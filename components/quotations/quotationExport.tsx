@@ -21,6 +21,7 @@ type Props = {
   currency: string;
 
   customerName: string;
+  customerCompany?: string; // Add this
   customerAddress: string;
   customerEmail?: string;
 
@@ -51,10 +52,11 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
       paymentTerm,
       currency,
       customerName,
+      customerCompany, // Destructure this
       customerAddress,
       customerEmail,
-      companyName,
-      companyAddress,
+      companyName = "PT. Prima Otomasi Mandiri",
+      companyAddress = "The Savia, Ruko Savia Blok C.2 No.18\nRT.001/008 Kel Ciater Kecamatan Serpong\nKota Tangerang Selatan Banten 15310\nIndonesia",
       companyPhone,
       items,
       notes,
@@ -158,6 +160,8 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
           <div style={{ flex: 1, paddingRight: "20px" }}>
             {/* Company Info */}
             <div style={{ marginBottom: "20px" }}>
+              {/* Force enforce the defaults if the prop passed is empty or suspicious, but relying on default parameters is better if parent sends undefined. 
+                  However, to be safe since user insists, I will use the destructured variables which have defaults. */}
               <h1 style={{ margin: 0, fontSize: "16px", fontWeight: "bold" }}>{companyName}</h1>
               <p style={{ margin: "5px 0 0 0", fontSize: '12px', whiteSpace: "pre-line", lineHeight: "1.2" }}>
                 {companyAddress}
@@ -178,23 +182,23 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
             </div>
 
             {/* Customer Details */}
-            <div>
-              {/* Assuming customerName represents the Company (PT) which should be bold per request. 
-                        If it represents a person, we treat it as the primary bold header here as well. */}
+            <div style={{
+              backgroundColor: "#e6f4e6",
+              padding: "10px",
+              fontSize: "12px",
+              borderRadius: "4px",
+            }}>
               <div style={{ fontWeight: "bold", fontSize: "14px", marginBottom: "4px" }}>{customerName}</div>
 
               {customerEmail && (
                 <div style={{ marginBottom: "8px", fontSize: "12px" }}>Email: {customerEmail}</div>
               )}
 
-              {/* Customer Address with Light Green Background */}
-              <div style={{
-                backgroundColor: "#e6f4e6",
-                padding: "10px",
-                fontSize: "12px",
-                borderRadius: "4px",
-                whiteSpace: "pre-line"
-              }}>
+              {customerCompany && (
+                <div style={{ marginBottom: "8px", fontSize: "12px", fontWeight: "bold" }}>{customerCompany}</div>
+              )}
+
+              <div style={{ whiteSpace: "pre-line" }}>
                 {customerAddress}
               </div>
             </div>
@@ -206,7 +210,7 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
             <img
               src="/assets/pom-logo.png"
               alt={companyName}
-              style={{ maxHeight: "60px", marginBottom: "10px", objectFit: "contain" }}
+              style={{ maxHeight: "80px", marginBottom: "10px", objectFit: "contain" }}
             />
 
             {/* Title */}
@@ -276,66 +280,85 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
           </tbody>
         </table>
 
-        {/* Summary Table */}
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <table style={{ width: "350px", borderCollapse: "collapse" }}>
-            <tbody>
-              <tr>
-                <td style={styles.summaryTd}>Total</td>
-                <td style={{ ...styles.summaryTd, textAlign: "right" }}>{fmt(subtotal)}</td>
-              </tr>
-              {diskon1 > 0 && (
-                <tr>
-                  <td style={styles.summaryTd}>Diskon 1 ({diskon1}%)</td>
-                  <td style={{ ...styles.summaryTd, textAlign: "right" }}>-{fmt(discount1Amount)}</td>
-                </tr>
-              )}
-              {diskon2 > 0 && (
-                <tr>
-                  <td style={styles.summaryTd}>Diskon 2 ({diskon2}%)</td>
-                  <td style={{ ...styles.summaryTd, textAlign: "right" }}>-{fmt(discount2Amount)}</td>
-                </tr>
-              )}
-              {discount > 0 && (
-                <tr>
-                  <td style={styles.summaryTd}>Additional Discount ({discount}%)</td>
-                  <td style={{ ...styles.summaryTd, textAlign: "right" }}>-{fmt(additionalDiscountAmount)}</td>
-                </tr>
-              )}
+        {/* Notes & Summary Side-by-Side */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: "20px" }}>
 
-              {(diskon1 > 0 || diskon2 > 0 || discount > 0) && (
-                <tr style={{ borderTop: '1px solid #ddd' }}>
-                  <td style={styles.summaryTd}>Total After Discount</td>
-                  <td style={{ ...styles.summaryTd, textAlign: "right" }}>{fmt(afterAllDiscount)}</td>
+          {/* Notes Section (Left) */}
+          <div style={{ width: "55%", fontSize: "11px" }}>
+            <div style={{
+              borderTop: "1px solid #000",
+              borderBottom: "1px solid #000",
+              padding: "10px 0",
+              fontStyle: "italic",
+              minHeight: "100px" // Ensure height matches summary somewhat
+            }}>
+              <strong>Notes:</strong>
+              <div style={{ marginTop: '4px' }}>
+                {notes && <div style={{ marginBottom: '2px' }}>- {notes}</div>}
+                {project && <div>- Project: {project}</div>}
+              </div>
+            </div>
+            {/* Dashed Line below Notes */}
+            <div style={{ borderBottom: "1px dashed #000", marginTop: "10px", width: "100%" }}></div>
+          </div>
+
+          {/* Summary Table (Right) */}
+          <div style={{ width: "40%" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <tbody>
+                <tr>
+                  <td style={styles.summaryTd}>Total</td>
+                  <td style={{ ...styles.summaryTd, textAlign: "right" }}>{fmt(subtotal)}</td>
                 </tr>
-              )}
 
-              <tr>
-                <td style={styles.summaryTd}>VAT (11%)</td>
-                <td style={{ ...styles.summaryTd, textAlign: "right" }}>{fmt(vat)}</td>
-              </tr>
-              <tr style={{ fontWeight: "bold", backgroundColor: "#e6f4e6" }}>
-                <td style={styles.summaryTd}>Grand Total</td>
-                <td style={{ ...styles.summaryTd, textAlign: "right" }}>{fmt(grandTotal)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                {diskon2 > 0 ? (
+                  <tr>
+                    <td style={styles.summaryTd}>Diskon Company ({diskon2}%)</td>
+                    <td style={{ ...styles.summaryTd, textAlign: "right" }}>-{fmt(discount2Amount)}</td>
+                  </tr>
+                ) : (
+                  diskon1 > 0 && (
+                    <tr>
+                      <td style={styles.summaryTd}>Diskon 1 ({diskon1}%)</td>
+                      <td style={{ ...styles.summaryTd, textAlign: "right" }}>-{fmt(discount1Amount)}</td>
+                    </tr>
+                  )
+                )}
 
-        {/* Notes */}
-        <div style={{ marginTop: "20px", fontStyle: "italic", fontSize: "11px" }}>
-          <strong>Notes:</strong>
-          <div style={{ marginTop: '4px' }}>
-            {notes && <div style={{ marginBottom: '2px' }}>- {notes}</div>}
-            {project && <div>- Project: {project}</div>}
+                {discount > 0 && (
+                  <tr>
+                    <td style={styles.summaryTd}>Additional Discount ({discount}%)</td>
+                    <td style={{ ...styles.summaryTd, textAlign: "right" }}>-{fmt(additionalDiscountAmount)}</td>
+                  </tr>
+                )}
+
+                {(diskon1 > 0 || diskon2 > 0 || discount > 0) && (
+                  <tr style={{ borderTop: '1px solid #ddd' }}>
+                    <td style={styles.summaryTd}>Total After Discount</td>
+                    <td style={{ ...styles.summaryTd, textAlign: "right" }}>{fmt(afterAllDiscount)}</td>
+                  </tr>
+                )}
+
+                <tr>
+                  <td style={styles.summaryTd}>VAT (11%)</td>
+                  <td style={{ ...styles.summaryTd, textAlign: "right" }}>{fmt(vat)}</td>
+                </tr>
+                <tr style={{ fontWeight: "bold", backgroundColor: "#008000", color: "#fff", borderTop: "2px solid #000" }}>
+                  <td style={styles.summaryTd}>Grand Total</td>
+                  <td style={{ ...styles.summaryTd, textAlign: "right" }}>{fmt(grandTotal)}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
         {/* Footer / Signature */}
-        <div style={{ marginTop: "50px" }}>
-          <p style={{ margin: 0 }}>Best Regards,</p>
-          <div style={{ height: "80px" }}></div>
-          <strong style={{ fontSize: '13px' }}>{signatureName || "PT. PRIMA OTOMASI MANDIRI"}</strong>
+        <div style={{ marginTop: "50px", width: "100%", textAlign: "left" }}>
+          <div style={{ textAlign: "center", width: "200px", marginLeft: "20px" }}>
+            <p style={{ margin: 0 }}>Best Regards,</p>
+            <div style={{ height: "80px" }}></div>
+            <strong style={{ fontSize: '13px', display: 'block', borderBottom: '1px solid #000', paddingBottom: '2px' }}>{signatureName}</strong>
+          </div>
         </div>
 
         {/* Page Count Mockup (visual only since we are generating PDF) */}
@@ -359,15 +382,17 @@ const SalesQuotationExport = forwardRef<SQExportHandle, Props>(
 
 const styles = {
   th: {
-    backgroundColor: "#e6f4e6",
-    border: "1px solid #ddd",
+    backgroundColor: "#008000",
+    color: "#fff",
+    borderTop: "1px solid #000",
+    borderBottom: "1px solid #000",
     padding: "8px",
     textAlign: "center" as const,
     fontWeight: "bold",
     fontSize: "12px"
   },
   td: {
-    border: "1px solid #ddd",
+    borderBottom: "1px solid #ddd",
     padding: "8px",
     verticalAlign: "top"
   },

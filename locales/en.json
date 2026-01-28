@@ -75,7 +75,8 @@
         "manager_sales": "Manager Sales",
         "manager_purchasing": "Manager Purchasing",
         "roles": "Roles",
-        "company": "Company"
+        "company": "Company",
+        "term_of_payment": "Term Of Payment"
     },
     "sales_order": {
         "no": "SO Number",

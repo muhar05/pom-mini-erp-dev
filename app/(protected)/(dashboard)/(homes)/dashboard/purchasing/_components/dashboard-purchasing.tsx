@@ -23,7 +23,9 @@ export default function DashboardPurchasing() {
         try {
             setLoading(true);
             const res = await getPurchasingDashboardDataAction();
-            setData(res);
+            if (res.success) {
+                setData(res.data);
+            }
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
         } finally {

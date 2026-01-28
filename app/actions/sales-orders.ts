@@ -1246,13 +1246,17 @@ export async function getPurchasingDashboardDataAction() {
     });
 
     // Categorize data
-    const safeData = salesOrders.map((so: any) => ({
-      ...safeSalesOrder(so),
-      customer_name: so.customers?.customer_name,
-      user_name: so.user?.name,
-      has_po: so.purchase_orders?.length > 0,
-      has_sr: so.stock_reservations?.length > 0
-    }));
+    const safeData = salesOrders.map((so: any) => {
+      const safeSO = safeSalesOrder(so);
+      return {
+        ...safeSO,
+        customer_name: so.customers?.customer_name || "Unknown Customer",
+        user_name: so.user?.name || "System",
+        sales_owner: so.user?.name || "System",
+        has_po: so.purchase_orders?.length > 0,
+        has_sr: so.stock_reservations?.length > 0
+      };
+    });
 
     const readyToProcess = safeData.filter((so: any) => so.sale_status === SALE_STATUSES.PR);
     const inProcess = safeData.filter((so: any) =>

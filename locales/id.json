@@ -75,7 +75,8 @@
         "manager_sales": "Manajer Penjualan",
         "manager_purchasing": "Manajer Pembelian",
         "roles": "Role",
-        "company": "Perusahaan"
+        "company": "Perusahaan",
+        "term_of_payment": "Jenis Pembayaran"
     },
     "sales_order": {
         "no": "Nomor SO",

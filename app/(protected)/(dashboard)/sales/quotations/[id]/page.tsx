@@ -311,7 +311,10 @@ export default function QuotationDetailPage() {
               )}
               {/* Print Button - Available for finalized statuses */}
               {[QUOTATION_STATUSES.APPROVED, QUOTATION_STATUSES.SENT, QUOTATION_STATUSES.WIN, QUOTATION_STATUSES.CONVERTED].includes(quotation.status as any) && (
-                <PrintButton printRef={printRef} />
+                <PrintButton
+                  printRef={printRef}
+                  title={`${quotation.quotation_no} - ${customerDetail?.company?.company_name || customerDetail?.customer_name || "Client"}`}
+                />
               )}
 
               {/* Convert to SO Button - Hidden for Lost, Win, Converted */}
@@ -656,8 +659,9 @@ export default function QuotationDetailPage() {
             customerName={customerDetail?.customer_name || "-"}
             customerAddress={customerDetail?.address || "-"}
             customerEmail={customerDetail?.email ?? undefined}
-            companyName={customerDetail?.company?.company_name || ""}
-            companyAddress={customerDetail?.company?.address || ""}
+            customerCompany={customerDetail?.company?.company_name || ""}
+            companyName="PT. Prima Otomasi Mandiri"
+            companyAddress={"The Savia, Ruko Savia Blok C.2 No.18\nRT.001/008 Kel Ciater Kecamatan Serpong\nKota Tangerang Selatan Banten 15310\nIndonesia"}
             items={quotationDetail.map((item: any) => ({
               partNo: item.product_code || "",
               desc: item.product_name,
@@ -667,8 +671,8 @@ export default function QuotationDetailPage() {
             }))}
             notes={quotation.note}
             project={quotation.project}
-            signatureName={quotation.sales_name}
-            fileName={`quotation_${quotation.quotation_no}.pdf`}
+            signatureName={quotation.user?.name || "Sales"}
+            fileName={`${quotation.quotation_no} - ${customerDetail?.company?.company_name || customerDetail?.customer_name || "Client"}.pdf`}
             discount={additionalDiscountPercent}
             discountAmount={additionalDiscountAmount}
             diskon1={companyLevelDiscount1}

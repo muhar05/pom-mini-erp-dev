@@ -6,11 +6,14 @@ import { Button } from "../ui/button";
 
 export function PrintButton({
   printRef,
+  title,
 }: {
   printRef: RefObject<HTMLDivElement>;
+  title?: string;
 }) {
   const handlePrint = useReactToPrint({
     contentRef: printRef,
+    documentTitle: title,
     pageStyle: `
       @page { size: A4; margin: 20mm; }
       body { -webkit-print-color-adjust: exact; }
