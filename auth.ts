@@ -122,11 +122,12 @@ export const { handlers, auth } = NextAuth({
     },
 
     async session({ session, token }) {
-      session.user.id = token.id;
-      session.user.name = token.name;
-      session.user.email = token.email;
-      session.user.role_id = token.role_id;
-      session.user.role_name = token.role_name;
+      const user = session.user as any;
+      user.id = token.id as string;
+      user.name = token.name ?? null;
+      user.email = token.email ?? null;
+      user.role_id = token.role_id as string;
+      user.role_name = token.role_name as string | undefined;
       return session;
     },
   },

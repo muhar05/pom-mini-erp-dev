@@ -15,14 +15,16 @@ declare module "next-auth" {
       name: string | null;
       email: string | null;
       role_id: string;
-      role_name?: string; // <= tambahkan
-    } & DefaultSession["user"];
+      role_name?: string;
+    };
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
+    name?: string | null;
+    email?: string | null;
     role_id: string;
     role_name?: string; // <= tambahkan
   }
