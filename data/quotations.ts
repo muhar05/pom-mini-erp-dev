@@ -55,19 +55,74 @@ export async function getQuotationByIdDb(id: number) {
 
 
 // GET ALL
-export async function getAllQuotationsDb(user?: any) {
+export async function getAllQuotationsDb(
+  user?: any,
+  filters?: {
+    search?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }
+) {
   if (!user) throw new Error("Unauthorized");
 
   const userId = typeof user.id === "string" ? Number(user.id) : user.id;
   const isManager = isSuperuser(user) || isManagerSales(user);
 
-  let where: any = undefined;
+  let where: any = { AND: [] };
 
   if (!isManager && isSales(user)) {
-    where = { user_id: userId };
+    where.AND.push({ user_id: userId });
   } else if (!isManager) {
     throw new Error("Forbidden access");
   }
+
+  // Search filter
+  if (filters?.search) {
+    where.AND.push({
+      OR: [
+        { quotation_no: { contains: filters.search, mode: "insensitive" } },
+        {
+          customer: {
+            OR: [
+              { customer_name: { contains: filters.search, mode: "insensitive" } },
+              {
+                company: {
+                  company_name: { contains: filters.search, mode: "insensitive" },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+  }
+
+  // Status filter - Handle both prefixed and non-prefixed legacy data
+  if (filters?.status && filters.status !== "all") {
+    const statusVal = filters.status;
+    const leanStatus = statusVal.startsWith("sq_")
+      ? statusVal.replace("sq_", "")
+      : statusVal;
+
+    where.AND.push({
+      OR: [{ status: statusVal }, { status: leanStatus }],
+    });
+  }
+
+  // Date filter
+  if (filters?.dateFrom || filters?.dateTo) {
+    const dateRange: any = {};
+    if (filters.dateFrom) dateRange.gte = new Date(filters.dateFrom);
+    if (filters.dateTo) {
+      const dateTo = new Date(filters.dateTo);
+      dateTo.setHours(23, 59, 59, 999);
+      dateRange.lte = dateTo;
+    }
+    where.AND.push({ created_at: dateRange });
+  }
+
+  if (where.AND.length === 0) where = undefined;
 
   return prisma.quotations.findMany({
     orderBy: { created_at: "desc" },

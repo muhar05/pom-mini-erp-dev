@@ -2,18 +2,16 @@
 
 import { useSession } from "@/contexts/session-context";
 import DashboardPurchasing from "./_components/dashboard-purchasing";
-import { isSuperuser } from "@/utils/userHelpers";
+import { isSuperuser, isPurchasing, isManagerPurchasing } from "@/utils/userHelpers";
 
 export default function DashboardPurchasingPage() {
   const session = useSession();
   const user = session?.user;
-  const role = user?.role_name;
+  const isP = isPurchasing(user);
+  const isMP = isManagerPurchasing(user);
+  const isS = isSuperuser(user);
 
-  if (!session) {
-    return <div className="p-8 text-center">Loading dashboard...</div>;
-  }
-
-  if (role === "purchasing" || isSuperuser(user)) {
+  if (isP || isMP || isS) {
     return <DashboardPurchasing />;
   }
 

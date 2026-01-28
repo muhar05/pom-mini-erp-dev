@@ -32,7 +32,7 @@ import {
 } from "@/data/sales-orders";
 import { checkSalesOrderOwnership, checkQuotationOwnership } from "@/utils/auth-utils";
 import { ZodError } from "zod";
-import { isManagerSales, isSuperuser } from "@/utils/userHelpers";
+import { isManagerSales, isSuperuser, isManagerPurchasing } from "@/utils/userHelpers";
 
 // Helper to generate sale order number following pattern: SO2515020001
 async function generateSaleOrderNo(): Promise<string> {
@@ -289,6 +289,24 @@ export async function updateSalesOrderAction(
 
     const currentSO = await getSalesOrderByIdDb(id);
 
+    // Ownership & Role Authorization
+    const isOwner = Number(currentSO.user_id) === Number(user.id);
+    const isManager = isManagerSales(user);
+    const isSU = isSuperuser(user);
+    const isSalesRole = isSales(user);
+    const isPurchasingRole = isPurchasing(user);
+    const isNew = currentSO.sale_status === SALE_STATUSES.NEW || !currentSO.sale_status;
+
+    // RULE: If SO is NEW, only owner or Sales Manager can edit
+    if (isNew && !isOwner && !isManager && !isSU) {
+      throw new Error("You do not have permission to edit this Sales Order in the NEW stage.");
+    }
+
+    // Purchasing cannot edit at NEW status
+    if (isNew && isPurchasingRole && !isSU) {
+      throw new Error("Purchasing team cannot edit Sales Orders in the NEW stage.");
+    }
+
     const { quotation_id, customer_id, boq_items, ...rest } = validatedData;
 
     // Constraint: Cannot edit detail (items/qty) if status is not NEW
@@ -330,22 +348,16 @@ export async function updateSalesOrderAction(
       }
     }
 
-    // Manager Role Constraint: Cannot edit detail if manager
-    if (isManagerSales(user) && !isSuperuser(user)) {
-      throw new Error("Manager Sales cannot edit Sales Order details");
-    }
-
     // ROLE & FIELD RESTRICTION: Limit what can be updated based on status
-    const isNew = currentSO.sale_status === SALE_STATUSES.NEW;
     const userRole = ((user as any).role_name || user.roles?.role_name || "sales").toLowerCase();
 
-    // If not NEW, restrict fields to: note, sale_status, file_po_customer
+    // If not NEW, restrict fields to: note, sale_status
     if (!isNew && !isSuperuser(user)) {
-      const allowedFields = ["note", "sale_status", "file_po_customer"];
+      const allowedFields = ["note", "sale_status"];
       const attemptKeys = Object.keys(rest).filter(k => (rest as any)[k] !== undefined);
       const invalidKeys = attemptKeys.filter(k => !allowedFields.includes(k));
 
-      if (invalidKeys.length > 0 && boq_items === undefined) {
+      if (invalidKeys.length > 0) {
         throw new Error(`Fields ${invalidKeys.join(", ")} cannot be updated after the NEW stage.`);
       }
     }
@@ -368,8 +380,21 @@ export async function updateSalesOrderAction(
           }
         }
 
-        if ((newStatus === SALE_STATUSES.PR || newStatus === SALE_STATUSES.RECEIVED) && !isSales(user)) {
+        if (newStatus === SALE_STATUSES.RECEIVED && !isSales(user)) {
           throw new Error("Only Sales team can set this status");
+        }
+        if (newStatus === SALE_STATUSES.PR) {
+          if (!isSales(user)) {
+            throw new Error("Only Sales team (owner or manager) can handover to Purchasing (PR).");
+          }
+
+          // Validation: Must have items to create PR
+          const itemsCount = await prisma.sale_order_detail.count({
+            where: { sale_id: BigInt(id) }
+          });
+          if (itemsCount === 0) {
+            throw new Error("Cannot create Purchase Request: Sales Order has no items.");
+          }
         }
         if ([SALE_STATUSES.PO, SALE_STATUSES.SR, SALE_STATUSES.FAR, SALE_STATUSES.DR].includes(newStatus as any) && !isPurchasing(user)) {
           throw new Error("Only Purchasing team can set this status");
@@ -651,10 +676,19 @@ export async function updateSalesOrderStatusAction(id: string, newStatus: string
     }
 
     // 2. Validate role authorization
-    const userRole = ((user as any).role_name || user.roles?.role_name || "sales").toLowerCase();
-    const isSU = userRole === "superuser";
+    const isOwner = Number(currentSO.user_id) === Number(user.id);
+    const isManager = isManagerSales(user);
+    const isSU = isSuperuser(user);
+    const userRole = ((user as any).role_name || user.roles?.role_name || "unknown").toLowerCase();
 
     if (!isSU) {
+      // ONLY owner or Manager Sales can trigger the NEW -> PR handover
+      if (oldStatus === SALE_STATUSES.NEW && newStatus === SALE_STATUSES.PR) {
+        if (!isOwner && !isManager) {
+          throw new Error("Only the Sales Order owner or Manager Sales can perform the handover to Purchasing.");
+        }
+      }
+
       // NEW RESTRICTION: PR -> NEW only allowed for Manager Sales or Superuser
       if (oldStatus === SALE_STATUSES.PR && newStatus === SALE_STATUSES.NEW) {
         if (!isManagerSales(user)) {
@@ -669,8 +703,22 @@ export async function updateSalesOrderStatusAction(id: string, newStatus: string
         }
       }
 
-      if ((newStatus === SALE_STATUSES.PR || newStatus === SALE_STATUSES.RECEIVED) && !isSales(user)) {
+      if (newStatus === SALE_STATUSES.RECEIVED && !isSales(user)) {
         throw new Error("Only Sales team can set this status");
+      }
+
+      if (newStatus === SALE_STATUSES.PR) {
+        if (!isSales(user)) {
+          throw new Error("Only Sales team (owner or manager) can handover to Purchasing (PR).");
+        }
+
+        // Validation: Must have items to create PR
+        const itemsCount = await prisma.sale_order_detail.count({
+          where: { sale_id: BigInt(id) }
+        });
+        if (itemsCount === 0) {
+          throw new Error("Cannot create Purchase Request: Sales Order has no items.");
+        }
       }
       if ([SALE_STATUSES.PO, SALE_STATUSES.SR, SALE_STATUSES.FAR, SALE_STATUSES.DR].includes(newStatus as any) && !isPurchasing(user)) {
         throw new Error("Only Purchasing team can set this status");
@@ -698,9 +746,10 @@ export async function updateSalesOrderStatusAction(id: string, newStatus: string
     });
 
     // 4.5. Trigger stock check/PO generation if moving from NEW to PR
-    if (oldStatus === SALE_STATUSES.NEW && newStatus === SALE_STATUSES.PR) {
-      await handlePostConfirmationProcess(updatedSO);
-    }
+    // DEPRECATED: Workflow is now manual handover via Purchasing Dashboard
+    // if (oldStatus === SALE_STATUSES.NEW && newStatus === SALE_STATUSES.PR) {
+    //   await handlePostConfirmationProcess(updatedSO);
+    // }
 
     // 5. Audit Log
     await prisma.user_logs.create({
@@ -1161,6 +1210,78 @@ export async function convertQuotationToSalesOrderAction(quotationId: number) {
     return {
       success: false,
       message: "An unexpected error occurred while converting quotation",
+    };
+  }
+}
+
+/**
+ * Fetch Sales Orders for Purchasing Dashboard
+ * Categorized by their readiness for Purchasing actions.
+ */
+export async function getPurchasingDashboardDataAction() {
+  try {
+    const session = await auth();
+    const userProfile = session?.user;
+
+    if (!userProfile) {
+      throw new Error("Unauthorized");
+    }
+
+    const isAuthorized = isSuperuser(userProfile) || isPurchasing(userProfile) || isManagerPurchasing(userProfile);
+    if (!isAuthorized) {
+      throw new Error("Forbidden: Only Purchasing can access this data");
+    }
+
+    // Fetch all SOs relevant for purchasing
+    const salesOrders = await (prisma.sales_orders as any).findMany({
+      include: {
+        customers: true,
+        user: true,
+        purchase_orders: true,
+        stock_reservations: true,
+      },
+      orderBy: {
+        created_at: "desc",
+      },
+    });
+
+    // Categorize data
+    const safeData = salesOrders.map((so: any) => ({
+      ...safeSalesOrder(so),
+      customer_name: so.customers?.customer_name,
+      user_name: so.user?.name,
+      has_po: so.purchase_orders?.length > 0,
+      has_sr: so.stock_reservations?.length > 0
+    }));
+
+    const readyToProcess = safeData.filter((so: any) => so.sale_status === SALE_STATUSES.PR);
+    const inProcess = safeData.filter((so: any) =>
+      so.sale_status === SALE_STATUSES.PO ||
+      so.sale_status === SALE_STATUSES.SR
+    );
+    // Stages from FAR onwards are considered completed by Purchasing
+    const completedPurchasing = safeData.filter((so: any) =>
+      [SALE_STATUSES.FAR, SALE_STATUSES.DR, SALE_STATUSES.DELIVERY, SALE_STATUSES.COMPLETED].includes(so.sale_status)
+    );
+
+    return {
+      success: true,
+      data: {
+        readyToProcess,
+        inProcess,
+        completedPurchasing,
+        counts: {
+          ready: readyToProcess.length,
+          inProcess: inProcess.length,
+          completed: completedPurchasing.length,
+        }
+      }
+    };
+  } catch (error) {
+    console.error("Error fetching purchasing dashboard data:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to fetch dashboard data",
     };
   }
 }

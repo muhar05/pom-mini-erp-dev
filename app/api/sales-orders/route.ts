@@ -4,15 +4,25 @@ import { isSuperuser, isSales, isManagerSales } from "@/utils/leadHelpers";
 import { getAllSalesOrdersDb, createSalesOrderDb } from "@/data/sales-orders";
 
 // GET: Ambil semua sales orders
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   const user = session?.user;
   if (!user || (!isSuperuser(user) && !isSales(user) && !isManagerSales(user))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const filters = {
+    search: searchParams.get("search") || undefined,
+    status: searchParams.get("status") || undefined,
+    saleStatus: searchParams.get("saleStatus") || undefined,
+    paymentStatus: searchParams.get("paymentStatus") || undefined,
+    dateFrom: searchParams.get("dateFrom") || undefined,
+    dateTo: searchParams.get("dateTo") || undefined,
+  };
+
   try {
-    const salesOrders = await getAllSalesOrdersDb(user);
+    const salesOrders = await getAllSalesOrdersDb(user, filters);
 
     // Konversi BigInt dan Decimal ke format yang aman, termasuk nested relations
     const safeSalesOrders = salesOrders.map((so: any) => ({

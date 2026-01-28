@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Upload, FileText, X, Download, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 
 interface POFileUploadProps {
@@ -11,6 +12,7 @@ interface POFileUploadProps {
   currentFile?: string | null;
   onUploadSuccess?: (fileName: string) => void;
   onDeleteSuccess?: () => void;
+  disabled?: boolean;
 }
 
 export default function POFileUpload({
@@ -18,6 +20,7 @@ export default function POFileUpload({
   currentFile,
   onUploadSuccess,
   onDeleteSuccess,
+  disabled = false,
 }: POFileUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -121,7 +124,7 @@ export default function POFileUpload({
                   variant="outline"
                   size="sm"
                   onClick={handleDelete}
-                  disabled={deleting}
+                  disabled={deleting || disabled}
                   className="text-red-600 hover:text-red-700"
                 >
                   {deleting ? (
@@ -135,8 +138,11 @@ export default function POFileUpload({
           ) : (
             // No file - show upload area
             <div
-              className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
+                disabled ? "bg-muted/30 cursor-not-allowed opacity-60" : "cursor-pointer hover:border-primary/50"
+              )}
+              onClick={() => !disabled && fileInputRef.current?.click()}
             >
               {uploading ? (
                 <div className="flex flex-col items-center gap-2">

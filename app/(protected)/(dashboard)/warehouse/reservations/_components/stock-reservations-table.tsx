@@ -25,6 +25,7 @@ type StockReservation = {
   status: string;
   created_at: string;
   updated_at: string;
+  sales_order_no?: string;
 };
 
 interface StockReservationsTableProps {
@@ -87,7 +88,13 @@ export default function StockReservationsTable({
           >
             <TableCell>{idx + 1}</TableCell>
             <TableCell className="font-medium">{sr.sr_no}</TableCell>
-            <TableCell>{sr.so_no}</TableCell>
+            <TableCell>
+              {sr.sales_order_no ? (
+                <span className="font-mono text-blue-600 font-bold">{sr.sales_order_no}</span>
+              ) : (
+                <span className="text-gray-400">Non-SO</span>
+              )}
+            </TableCell>
             <TableCell>{sr.customer_name}</TableCell>
             <TableCell>{sr.reserved_by}</TableCell>
             <TableCell>{sr.warehouse}</TableCell>
@@ -107,8 +114,8 @@ export default function StockReservationsTable({
             <TableCell onClick={(e) => e.stopPropagation()}>
               <StockReservationActions
                 stockReservation={sr}
-                onEdit={() => {}}
-                onDelete={() => {}}
+                onEdit={() => { }}
+                onDelete={() => { }}
               />
             </TableCell>
           </TableRow>

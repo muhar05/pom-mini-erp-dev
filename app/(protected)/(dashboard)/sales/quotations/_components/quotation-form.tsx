@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 import BoqTable, { BoqItem } from "./BoqTable";
 import { getAllCustomersAction } from "@/app/actions/customers";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { SQ_STATUS_OPTIONS } from "@/utils/statusHelpers";
+import { SQ_STATUS_OPTIONS, SQ_LOST_REASONS } from "@/utils/statusHelpers";
 import { toast } from "react-hot-toast";
 import { useSession } from "@/contexts/session-context";
 import { users } from "@/types/models";
@@ -69,6 +69,7 @@ type QuotationFormData = {
   tax: number;
   grand_total: number;
   status: string;
+  lost_reason?: string;
   note?: string;
   target_date?: string;
   payment_term_id?: number | null;
@@ -89,6 +90,7 @@ type Quotation = {
   tax: number;
   grand_total: number;
   status: string;
+  lost_reason?: string;
   target_date?: string;
   top?: string;
   valid_until?: string;
@@ -143,6 +145,7 @@ export default function QuotationForm({
     tax: quotation?.tax ?? 0,
     grand_total: quotation?.grand_total ?? 0,
     status: quotation?.status || "draft",
+    lost_reason: quotation?.lost_reason || "",
     note: quotation?.note || "",
     target_date: quotation?.target_date || "",
     payment_term_id: quotation?.payment_term_id ?? null,
@@ -375,7 +378,8 @@ export default function QuotationForm({
         item.product_name &&
         item.quantity > 0 &&
         item.unit_price >= 0,
-    );
+    ) &&
+    (formData.status !== QUOTATION_STATUSES.LOST || !!formData.lost_reason);
 
   // Ambil data customer detail setiap kali customer_id berubah
   const { customer: customerDetail, loading: customerLoading } =
@@ -459,6 +463,11 @@ export default function QuotationForm({
       setPendingStatus(newStatus);
       setShowRevisionDialog(true);
       return;
+    }
+
+    // Clear lost_reason if status changed from LOST to something else
+    if (formData.status === QUOTATION_STATUSES.LOST && newStatus !== QUOTATION_STATUSES.LOST) {
+      handleInputChange("lost_reason", "");
     }
 
     handleInputChange("status", newStatus);
@@ -763,6 +772,37 @@ export default function QuotationForm({
                         </Select>
                       )}
                   </div>
+
+                  {/* LOST REASON FIELD */}
+                  {formData.status === QUOTATION_STATUSES.LOST && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <Label htmlFor="lost_reason" className="flex items-center gap-1">
+                        Lost Reason
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={formData.lost_reason || ""}
+                        onValueChange={(value) => handleInputChange("lost_reason", value)}
+                        disabled={isFormDisabled}
+                      >
+                        <SelectTrigger id="lost_reason" className={cn(!formData.lost_reason && "border-red-500")}>
+                          <SelectValue placeholder="Select a reason" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SQ_LOST_REASONS.map((reason) => (
+                            <SelectItem key={reason} value={reason}>
+                              {reason}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {formData.lost_reason === "Others" && (
+                        <p className="text-xs text-amber-600 font-medium">
+                          Please provide more details in the Additional Notes below.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <Separator />

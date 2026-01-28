@@ -26,6 +26,7 @@ type PurchaseOrder = {
   status: string;
   created_at: string;
   updated_at: string;
+  sales_order_no?: string;
 };
 
 interface PurchaseOrdersTableProps {
@@ -76,6 +77,7 @@ export default function PurchaseOrdersTable({
           <TableHead>Delivery Date</TableHead>
           <TableHead>Payment Term</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>SO Reference</TableHead>
           <TableHead>Action</TableHead>
         </TableRow>
       </TableHeader>
@@ -110,11 +112,18 @@ export default function PurchaseOrdersTable({
                 {po.status}
               </span>
             </TableCell>
+            <TableCell>
+              {po.sales_order_no ? (
+                <span className="font-mono text-blue-600 font-bold">{po.sales_order_no}</span>
+              ) : (
+                <span className="text-gray-400">Non-SO</span>
+              )}
+            </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
               <PurchaseOrderActions
                 purchaseOrder={po}
-                onEdit={() => {}}
-                onDelete={() => {}}
+                onEdit={() => { }}
+                onDelete={() => { }}
               />
             </TableCell>
           </TableRow>
@@ -134,6 +143,6 @@ export default function PurchaseOrdersTable({
           </TableRow>
         )}
       </TableBody>
-    </Table>
+    </Table >
   );
 }

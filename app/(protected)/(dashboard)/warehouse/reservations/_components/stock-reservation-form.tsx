@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,26 +14,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
+import { createStockReservationAction } from "@/app/actions/stock-reservations";
+import { getSalesOrderByIdAction } from "@/app/actions/sales-orders";
+import { toast } from "react-hot-toast";
+import { SALE_STATUSES } from "@/utils/salesOrderPermissions";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { InfoIcon, AlertTriangle, Package } from "lucide-react";
 
 type StockReservation = {
   id?: string;
-  sr_no: string;
-  so_no: string;
-  customer_name: string;
-  reserved_by: string;
-  warehouse: string;
-  items_count: number;
-  total_qty: number;
-  reservation_date: string;
-  expiry_date: string;
+  sale_id?: string;
   status: string;
-  notes?: string;
+  note?: string;
+  type: string;
+  item_detail: any;
 };
 
 interface StockReservationFormProps {
   mode: "add" | "edit";
-  stockReservation?: StockReservation;
+  stockReservation?: any;
   onClose?: () => void;
   onSuccess?: () => void;
 }
@@ -42,258 +43,175 @@ export default function StockReservationForm({
   onClose,
   onSuccess,
 }: StockReservationFormProps) {
+  const searchParams = useSearchParams();
+  const saleIdFromUrl = searchParams.get("sale_id");
+
   const [formData, setFormData] = useState<StockReservation>({
-    sr_no: stockReservation?.sr_no || "",
-    so_no: stockReservation?.so_no || "",
-    customer_name: stockReservation?.customer_name || "",
-    reserved_by: stockReservation?.reserved_by || "",
-    warehouse: stockReservation?.warehouse || "Main Warehouse",
-    items_count: stockReservation?.items_count || 0,
-    total_qty: stockReservation?.total_qty || 0,
-    reservation_date: stockReservation?.reservation_date || "",
-    expiry_date: stockReservation?.expiry_date || "",
-    status: stockReservation?.status || "Reserved",
-    notes: stockReservation?.notes || "",
+    sale_id: stockReservation?.sale_id || saleIdFromUrl || "",
+    status: stockReservation?.status || "RESERVED",
+    note: stockReservation?.note || "",
+    type: stockReservation?.type || "SO_RESERVATION",
+    item_detail: stockReservation?.item_detail || {},
   });
 
+  const [salesOrder, setSalesOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [fetchingSO, setFetchingSO] = useState(false);
 
-  const handleInputChange = (
-    field: keyof StockReservation,
-    value: string | number
-  ) => {
+  useEffect(() => {
+    const fetchSO = async () => {
+      if (formData.sale_id && formData.type === "SO_RESERVATION") {
+        try {
+          setFetchingSO(true);
+          const res = await getSalesOrderByIdAction(formData.sale_id);
+          setSalesOrder(res);
+        } catch (error) {
+          console.error("Error fetching SO:", error);
+        } finally {
+          setFetchingSO(false);
+        }
+      }
+    };
+
+    fetchSO();
+  }, [formData.sale_id, formData.type]);
+
+  const handleInputChange = (field: keyof StockReservation, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formData.type === "SO_RESERVATION" && salesOrder && salesOrder.sale_status !== SALE_STATUSES.PO && mode === "add") {
+      toast.error("Sales Order harus berstatus PO untuk melakukan Stock Reservation.");
+      return;
+    }
+
     setLoading(true);
-
     try {
-      // TODO: Implement actual API call
-      console.log("Submitting stock reservation:", formData);
+      const result = await createStockReservationAction(formData);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      onSuccess?.();
-    } catch (error) {
-      console.error("Error saving stock reservation:", error);
+      if (result.success) {
+        toast.success("Stock Reservation created successfully");
+        onSuccess?.();
+      } else {
+        toast.error(result.message || "Failed to create reservation");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
   };
 
+  const isRestricted = formData.type === "SO_RESERVATION" && salesOrder && salesOrder.sale_status !== SALE_STATUSES.PO && mode === "add";
+
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="shadow-lg border-t-4 border-t-green-600">
       <CardHeader>
-        <CardTitle>
-          {mode === "add"
-            ? "Create New Stock Reservation"
-            : "Edit Stock Reservation"}
+        <CardTitle className="text-xl flex items-center gap-2">
+          <Package className="w-5 h-5 text-green-600" />
+          {mode === "add" ? "New Stock Reservation" : "Edit Stock Reservation"}
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {salesOrder && formData.type === "SO_RESERVATION" && (
+          <Alert className="mb-6 bg-green-50 border-green-200">
+            <InfoIcon className="h-4 w-4 text-green-600" />
+            <AlertTitle className="text-green-800 font-bold">Referenced Sales Order: {salesOrder.sale_no}</AlertTitle>
+            <AlertDescription className="text-green-700 text-xs">
+              Status SO: <span className="font-bold uppercase">{salesOrder.sale_status}</span> |
+              Customer: {salesOrder.customers?.customer_name}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {isRestricted && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Peringatan!</AlertTitle>
+            <AlertDescription>
+              Stock Reservation hanya bisa dibuat jika Sales Order berstatus **PO**.
+              Status saat ini: **{salesOrder.sale_status}**.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Reservation Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Reservation Information</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="sr_no">SR Number *</Label>
-                <Input
-                  id="sr_no"
-                  value={formData.sr_no}
-                  onChange={(e) => handleInputChange("sr_no", e.target.value)}
-                  placeholder="Auto-generated"
-                  disabled={mode === "edit"}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="so_no">SO Reference *</Label>
-                <Input
-                  id="so_no"
-                  value={formData.so_no}
-                  onChange={(e) => handleInputChange("so_no", e.target.value)}
-                  placeholder="Select Sales Order"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="customer_name">Customer Name *</Label>
-                <Input
-                  id="customer_name"
-                  value={formData.customer_name}
-                  onChange={(e) =>
-                    handleInputChange("customer_name", e.target.value)
-                  }
-                  placeholder="Enter customer name"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="reserved_by">Reserved By *</Label>
-                <Input
-                  id="reserved_by"
-                  value={formData.reserved_by}
-                  onChange={(e) =>
-                    handleInputChange("reserved_by", e.target.value)
-                  }
-                  placeholder="Enter staff name"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="warehouse">Warehouse *</Label>
-                <Select
-                  value={formData.warehouse}
-                  onValueChange={(value) =>
-                    handleInputChange("warehouse", value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select warehouse" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Main Warehouse">
-                      Main Warehouse
-                    </SelectItem>
-                    <SelectItem value="Secondary Warehouse">
-                      Secondary Warehouse
-                    </SelectItem>
-                    <SelectItem value="Transit Warehouse">
-                      Transit Warehouse
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => handleInputChange("status", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Reserved">Reserved</SelectItem>
-                    <SelectItem value="Fulfilled">Fulfilled</SelectItem>
-                    <SelectItem value="Partially Fulfilled">
-                      Partially Fulfilled
-                    </SelectItem>
-                    <SelectItem value="Cancelled">Cancelled</SelectItem>
-                    <SelectItem value="Expired">Expired</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="reservation_date">Reservation Date *</Label>
-                <Input
-                  id="reservation_date"
-                  type="date"
-                  value={formData.reservation_date}
-                  onChange={(e) =>
-                    handleInputChange("reservation_date", e.target.value)
-                  }
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="expiry_date">Expiry Date *</Label>
-                <Input
-                  id="expiry_date"
-                  type="date"
-                  value={formData.expiry_date}
-                  onChange={(e) =>
-                    handleInputChange("expiry_date", e.target.value)
-                  }
-                  required
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="type">Reservation Type</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => handleInputChange("type", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SO_RESERVATION">Based on Sales Order</SelectItem>
+                  <SelectItem value="FREE_RESERVATION">Free (Non-SO)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-
-          {/* Item Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Item Information</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="items_count">Number of Items *</Label>
-                <Input
-                  id="items_count"
-                  type="number"
-                  value={formData.items_count}
-                  onChange={(e) =>
-                    handleInputChange("items_count", parseInt(e.target.value))
-                  }
-                  placeholder="0"
-                  min="0"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="total_qty">Total Quantity *</Label>
-                <Input
-                  id="total_qty"
-                  type="number"
-                  value={formData.total_qty}
-                  onChange={(e) =>
-                    handleInputChange("total_qty", parseInt(e.target.value))
-                  }
-                  placeholder="0"
-                  min="0"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Notes */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Additional Information</h3>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => handleInputChange("notes", e.target.value)}
-                placeholder="Add any additional notes or special instructions..."
-                rows={4}
-              />
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => handleInputChange("status", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="RESERVED">RESERVED</SelectItem>
+                  <SelectItem value="FULFILLED">FULFILLED</SelectItem>
+                  <SelectItem value="CANCELLED">CANCELLED</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {formData.type === "SO_RESERVATION" && (
+              <div className="space-y-2 md:col-span-2">
+                <Label>Sales Order ID</Label>
+                <Input
+                  value={formData.sale_id || ""}
+                  onChange={(e) => handleInputChange("sale_id", e.target.value)}
+                  placeholder="Enter SO ID or UUID"
+                />
+                <p className="text-[10px] text-muted-foreground italic">Input manual ID jika tidak lewat dashboard.</p>
+              </div>
+            )}
           </div>
 
-          {/* Form Actions */}
-          <div className="flex gap-4 justify-end pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="note">Notes / Keterangan</Label>
+            <Textarea
+              id="note"
+              value={formData.note}
+              onChange={(e) => handleInputChange("note", e.target.value)}
+              placeholder="Tulis alasan reservasi atau detail lainnya..."
+              rows={3}
+            />
+          </div>
+
+          <div className="flex gap-4 justify-end pt-4 border-t">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={loading}
             >
-              Cancel
+              Batal
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading
-                ? mode === "add"
-                  ? "Creating..."
-                  : "Updating..."
-                : mode === "add"
-                ? "Create Stock Reservation"
-                : "Update Stock Reservation"}
+            <Button
+              type="submit"
+              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={loading || isRestricted || fetchingSO}
+            >
+              {loading ? "Memproses..." : "Create Reservation"}
             </Button>
           </div>
         </form>

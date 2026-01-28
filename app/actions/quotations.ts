@@ -6,7 +6,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isSuperuser, isSales, isManagerSales } from "@/utils/userHelpers";
 import { canAccessQuotation } from "@/utils/quotationAccess";
-import { SQ_STATUSES } from "@/utils/statusHelpers";
+import { SQ_STATUSES, SQ_LOST_REASONS } from "@/utils/statusHelpers";
 import {
   validateQuotationFormData,
   CreateQuotationData,
@@ -146,6 +146,12 @@ export async function updateQuotationAction(
     data.status = SQ_STATUSES.DRAFT;
   }
 
+  // --- LOST REASON LOGIC ---
+  // Clear lost_reason if status changed from Lost to something else
+  if (currentQuotation.status === QUOTATION_STATUSES.LOST && data.status && data.status !== QUOTATION_STATUSES.LOST) {
+    (data as any).lost_reason = null;
+  }
+
   // Handle lead ownership if tied to a lead
   const leadId = currentQuotation.lead_id;
   if (leadId) {
@@ -206,6 +212,19 @@ export async function updateQuotationAction(
 
       if (!validation.valid) {
         throw new Error(`Validation failed: ${validation.errors.join(", ")}`);
+      }
+    }
+
+    // Server-side validation for Lost Reason
+    if (data.status === QUOTATION_STATUSES.LOST) {
+      if (!data.lost_reason) {
+        throw new Error("Lost Reason is required when status is Lost/Rejected.");
+      }
+      if (!SQ_LOST_REASONS.includes(data.lost_reason as any)) {
+        throw new Error("Invalid Lost Reason value.");
+      }
+      if (data.lost_reason === "Others" && (!data.note || data.note.trim() === "")) {
+        throw new Error("Keterangan tambahan di note wajib diisi jika memilih 'Others'.");
       }
     }
 
@@ -278,6 +297,24 @@ export async function updateQuotationAction(
     };
 
     revalidatePath("/sales/quotations");
+
+    // Logging if status is LOST
+    if (data.status === QUOTATION_STATUSES.LOST) {
+      try {
+        await prisma.user_logs.create({
+          data: {
+            user_id: Number(user.id),
+            activity: "SQ_LOST",
+            method: "PATCH",
+            old_data: { status: currentQuotation.status },
+            new_data: { status: data.status, lost_reason: data.lost_reason },
+          },
+        });
+      } catch (logError) {
+        console.error("Failed to log SQ_LOST activity:", logError);
+      }
+    }
+
     return {
       success: true,
       message: "Quotation updated successfully",

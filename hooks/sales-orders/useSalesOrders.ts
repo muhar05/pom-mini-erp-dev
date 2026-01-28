@@ -58,7 +58,16 @@ export interface SalesOrder {
   } | null;
 }
 
-export function useSalesOrders() {
+interface SalesOrderFilters {
+  search?: string;
+  status?: string;
+  saleStatus?: string;
+  paymentStatus?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export function useSalesOrders(filters?: SalesOrderFilters) {
   const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +75,16 @@ export function useSalesOrders() {
   const fetchSalesOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/sales-orders");
+      const params = new URLSearchParams();
+      if (filters?.search) params.append("search", filters.search);
+      if (filters?.status && filters.status !== "all") params.append("status", filters.status);
+      if (filters?.saleStatus && filters.saleStatus !== "all") params.append("saleStatus", filters.saleStatus);
+      if (filters?.paymentStatus && filters.paymentStatus !== "all") params.append("paymentStatus", filters.paymentStatus);
+      if (filters?.dateFrom) params.append("dateFrom", filters.dateFrom);
+      if (filters?.dateTo) params.append("dateTo", filters.dateTo);
+
+      const url = `/api/sales-orders${params.toString() ? `?${params.toString()}` : ""}`;
+      const response = await fetch(url);
 
       if (!response.ok) {
         throw new Error("Failed to fetch sales orders");
@@ -84,7 +102,14 @@ export function useSalesOrders() {
 
   useEffect(() => {
     fetchSalesOrders();
-  }, []);
+  }, [
+    filters?.search,
+    filters?.status,
+    filters?.saleStatus,
+    filters?.paymentStatus,
+    filters?.dateFrom,
+    filters?.dateTo
+  ]);
 
   const refresh = () => {
     fetchSalesOrders();

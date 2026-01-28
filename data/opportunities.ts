@@ -53,15 +53,27 @@ export async function getOpportunityByIdDb(id: number) {
 }
 
 // GET ALL
-export async function getAllOpportunitiesDb(user?: any) {
+export async function getAllOpportunitiesDb(
+  user?: any,
+  filters?: {
+    search?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }
+) {
   if (!user) throw new Error("Unauthorized");
 
   const userId = typeof user.id === "string" ? Number(user.id) : user.id;
   const isManager = isSuperuser(user) || isManagerSales(user);
 
-  const baseWhere: any = {
+  const where: any = { AND: [] };
+
+  // 1. Base status filter for opportunities
+  where.AND.push({
     status: {
       in: [
+        "lead_qualified",
         "opp_qualified",
         "opp_prospecting",
         "opp_lost",
@@ -70,21 +82,51 @@ export async function getAllOpportunitiesDb(user?: any) {
         "converted",
       ],
     },
-  };
+  });
 
-  // Jika bukan manager/admin, filter milik sendiri
+  // 2. Role-based filter
   if (!isManager && isSales(user)) {
-    baseWhere.OR = [
-      { id_user: userId },
-      { assigned_to: userId }
-    ];
+    where.AND.push({
+      OR: [{ id_user: userId }, { assigned_to: userId }],
+    });
   } else if (!isManager) {
     throw new Error("Forbidden access");
   }
 
+  // 3. Search filter
+  if (filters?.search) {
+    where.AND.push({
+      OR: [
+        { lead_name: { contains: filters.search, mode: "insensitive" } },
+        { reference_no: { contains: filters.search, mode: "insensitive" } },
+        { company: { contains: filters.search, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  // 4. Status override filter
+  if (filters?.status && filters.status !== "all") {
+    where.AND.push({ status: filters.status });
+  }
+
+  // 5. Date filters
+  if (filters?.dateFrom || filters?.dateTo) {
+    const dateRange: any = {};
+    if (filters.dateFrom) dateRange.gte = new Date(filters.dateFrom);
+    if (filters.dateTo) {
+      const dateTo = new Date(filters.dateTo);
+      dateTo.setHours(23, 59, 59, 999);
+      dateRange.lte = dateTo;
+    }
+    where.AND.push({ created_at: dateRange });
+  }
+
   return prisma.leads.findMany({
-    where: baseWhere,
+    where: where.AND.length > 0 ? where : undefined,
     orderBy: { created_at: "desc" },
-    include: { users_leads_id_userTousers: true },
+    include: {
+      users_leads_id_userTousers: true,
+      users_leads_assigned_toTousers: true,
+    },
   });
 }

@@ -13,6 +13,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { formatCurrency } from "@/utils/formatCurrency";
 import {
@@ -31,6 +40,7 @@ import {
   getSalesOrderByIdAction,
   updateSalesOrderStatusAction,
   updateSalesOrderItemStatusAction,
+  updateSalesOrderNoteAction,
 } from "@/app/actions/sales-orders";
 import LoadingSkeleton from "@/components/loading-skeleton";
 import SalesOrderExport, {
@@ -116,7 +126,8 @@ function getItemStatusBadgeClass(status: string): string {
   }
 }
 
-import { SALE_STATUSES, ITEM_STATUSES, ITEM_STATUS_DETAILS } from "@/utils/salesOrderPermissions";
+import { SALE_STATUSES, ITEM_STATUSES, ITEM_STATUS_DETAILS, REOPEN_SYSTEM_PREFIXES, hasPendingReopenRequest } from "@/utils/salesOrderPermissions";
+import { AlertCircle, RotateCcw } from "lucide-react";
 
 export default function SalesOrderDetailPage() {
   const params = useParams();
@@ -128,6 +139,10 @@ export default function SalesOrderDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<SOExportHandle>(null);
+
+  // Reopen Request State
+  const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
+  const [reopenReason, setReopenReason] = useState("");
 
   const fetchSalesOrder = async () => {
     try {
@@ -174,6 +189,36 @@ export default function SalesOrderDetailPage() {
       setActionLoading(false);
     }
   };
+
+  const handleRequestReopen = async () => {
+    if (!reopenReason.trim()) {
+      toast.error("Please provide a reason for reopening");
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const systemNote = REOPEN_SYSTEM_PREFIXES.REQUEST + " " + reopenReason;
+      const result = await updateSalesOrderNoteAction(salesOrder.id, systemNote);
+
+      if (result.success) {
+        toast.success("Reopen request sent to manager");
+        setIsReopenModalOpen(false);
+        setReopenReason("");
+        fetchSalesOrder();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error("Failed to send request");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const isReopenPending = useMemo(() => {
+    return hasPendingReopenRequest(salesOrder?.note);
+  }, [salesOrder?.note]);
 
   const handleUpdateItemStatus = async (itemId: string, newStatus: string) => {
     setActionLoading(true);
@@ -271,6 +316,35 @@ export default function SalesOrderDetailPage() {
       />
 
       <div className="w-full mx-auto py-4 space-y-6">
+        {/* Info Banners */}
+        {salesOrder.sale_status === SALE_STATUSES.PR && (
+          <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-4 rounded-r-lg shadow-sm">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-indigo-500" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-indigo-700 font-medium">
+                  {isReopenPending
+                    ? "Permintaan Reopen sedang menunggu persetujuan Manager Sales."
+                    : "Sales Order sudah diserahkan ke Purchasing (PR). Data sudah terkunci untuk Sales."}
+                </p>
+                {!isReopenPending && permissions?.canRequestReopen && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0 h-auto text-indigo-600 font-bold mt-1"
+                    onClick={() => setIsReopenModalOpen(true)}
+                  >
+                    Request Reopen SO (Minta Perubahan Data)
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Existing Header Section */}
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -839,6 +913,41 @@ export default function SalesOrderDetailPage() {
           />
         </div>
       </div>
+
+      {/* Reopen Modal */}
+      <Dialog open={isReopenModalOpen} onOpenChange={setIsReopenModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-indigo-500" />
+              Request Reopen Sales Order
+            </DialogTitle>
+            <DialogDescription>
+              Silakan masukkan alasan mengapa Anda butuh membuka kembali (reopen) Sales Order ini. Permintaan akan dikirimkan ke Manager Sales.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="Contoh: Perlu update kuantitas karena revisi customer..."
+              value={reopenReason}
+              onChange={(e) => setReopenReason(e.target.value)}
+              className="min-h-[100px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReopenModalOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              className="bg-indigo-600 hover:bg-indigo-700"
+              onClick={handleRequestReopen}
+              disabled={actionLoading || !reopenReason.trim()}
+            >
+              {actionLoading ? "Mengirim..." : "Kirim Permintaan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <style jsx global>{`
         @media print {

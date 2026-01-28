@@ -46,10 +46,6 @@ type ComponentSalesOrder = {
 export default function SalesOrdersPage() {
   const { user } = useSession();
   const { t } = useI18n();
-  const { salesOrders, loading, error, refresh } = useSalesOrders();
-
-  const standsAsSales = ["sales", "manager-sales", "superuser"].includes((user?.role_name || "").toLowerCase());
-
   const [filters, setFilters] = useState<{
     search?: string;
     status?: string;
@@ -58,6 +54,9 @@ export default function SalesOrdersPage() {
     dateFrom?: string;
     dateTo?: string;
   }>({});
+  const { salesOrders, loading, error, refresh } = useSalesOrders(filters);
+
+  const standsAsSales = ["sales", "manager-sales", "superuser"].includes((user?.role_name || "").toLowerCase());
 
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -122,52 +121,7 @@ export default function SalesOrdersPage() {
     });
   };
 
-  // Filter & search logic
-  const filteredData = salesOrders.filter((so) => {
-    // Get customer for search matching
-    const customer = so.customers || so.quotation?.customer;
-
-    const searchMatch =
-      !filters.search ||
-      so.sale_no.toLowerCase().includes(filters.search.toLowerCase()) ||
-      (so.quotation?.quotation_no &&
-        so.quotation.quotation_no
-          .toLowerCase()
-          .includes(filters.search.toLowerCase())) ||
-      (customer?.customer_name &&
-        customer.customer_name
-          .toLowerCase()
-          .includes(filters.search.toLowerCase()));
-
-    const statusMatch = !filters.status || so.status === filters.status;
-    const saleStatusMatch =
-      !filters.saleStatus || so.sale_status === filters.saleStatus;
-    const paymentStatusMatch =
-      !filters.paymentStatus || so.payment_status === filters.paymentStatus;
-
-    let dateMatch = true;
-    if (filters.dateFrom || filters.dateTo) {
-      const soDate = so.created_at ? new Date(so.created_at) : null;
-      if (soDate) {
-        if (filters.dateFrom) {
-          dateMatch = dateMatch && soDate >= new Date(filters.dateFrom);
-        }
-        if (filters.dateTo) {
-          dateMatch = dateMatch && soDate <= new Date(filters.dateTo);
-        }
-      }
-    }
-
-    return (
-      searchMatch &&
-      statusMatch &&
-      saleStatusMatch &&
-      paymentStatusMatch &&
-      dateMatch
-    );
-  });
-
-  const convertedData = convertToComponentFormat(filteredData);
+  const convertedData = convertToComponentFormat(salesOrders);
   const pageSize = 10;
   const totalPages = Math.ceil(convertedData.length / pageSize);
   const pagedData = convertedData.slice(

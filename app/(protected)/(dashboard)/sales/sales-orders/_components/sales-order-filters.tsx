@@ -1,6 +1,5 @@
 "use client";
 
-import CustomSelect from "@/components/shared/custom-select";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -10,6 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search } from "lucide-react";
+import { useSession } from "@/contexts/session-context";
+import { isManagerSales, isSuperuser } from "@/utils/userHelpers";
 
 interface SalesOrderFiltersProps {
   filters: {
@@ -20,20 +21,17 @@ interface SalesOrderFiltersProps {
     dateFrom?: string;
     dateTo?: string;
   };
-  onFilterChange: (filters: {
-    search?: string;
-    status?: string;
-    saleStatus?: string;
-    paymentStatus?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  }) => void;
+  onFilterChange: (filters: any) => void;
 }
 
 export default function SalesOrderFilters({
   filters,
   onFilterChange,
 }: SalesOrderFiltersProps) {
+  const session = useSession();
+  const user = session?.user;
+  const canShowDateFilters = user && (isManagerSales(user) || isSuperuser(user));
+
   const handleSearchChange = (value: string) => {
     onFilterChange({ ...filters, search: value });
   };
@@ -57,6 +55,14 @@ export default function SalesOrderFilters({
       ...filters,
       paymentStatus: value === "all" ? undefined : value,
     });
+  };
+
+  const handleDateFromChange = (value: string) => {
+    onFilterChange({ ...filters, dateFrom: value });
+  };
+
+  const handleDateToChange = (value: string) => {
+    onFilterChange({ ...filters, dateTo: value });
   };
 
   return (
@@ -119,6 +125,25 @@ export default function SalesOrderFilters({
           <SelectItem value="OVERDUE">Overdue</SelectItem>
         </SelectContent>
       </Select>
+
+      {canShowDateFilters && (
+        <div className="flex gap-2 items-center">
+          <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Dari</label>
+          <Input
+            type="date"
+            value={filters.dateFrom || ""}
+            onChange={(e) => handleDateFromChange(e.target.value)}
+            className="w-auto h-10"
+          />
+          <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Sampai</label>
+          <Input
+            type="date"
+            value={filters.dateTo || ""}
+            onChange={(e) => handleDateToChange(e.target.value)}
+            className="w-auto h-10"
+          />
+        </div>
+      )}
     </div>
   );
 }

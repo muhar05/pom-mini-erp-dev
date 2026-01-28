@@ -48,8 +48,8 @@ function normalizeStatusToNewFormat(status: string): string {
     qualified: LEAD_STATUSES.QUALIFIED,
     unqualified: LEAD_STATUSES.UNQUALIFIED,
     invalid: LEAD_STATUSES.UNQUALIFIED,
-    converted: "prospecting", // Ubah ke prospecting
-    lead_converted: "prospecting", // Ubah ke prospecting
+    converted: OPPORTUNITY_STATUSES.PROSPECTING,
+    lead_converted: OPPORTUNITY_STATUSES.PROSPECTING,
     leadqualified: LEAD_STATUSES.QUALIFIED,
   };
 
@@ -113,7 +113,7 @@ export async function updateLeadAction(formData: FormData) {
 
     // Ownership check
     checkLeadOwnership(oldLead, user);
-    if (oldLead.status === "prospecting") {
+    if (oldLead.status === OPPORTUNITY_STATUSES.PROSPECTING || oldLead.status === "prospecting") {
       throw new Error("Lead cannot be edited after conversion.");
     }
 
@@ -160,7 +160,7 @@ export async function updateLeadAction(formData: FormData) {
       if (isSales(user)) {
         // Sales tidak bisa ubah ke status tertentu
         const restrictedStatuses = [
-          "prospecting", // ganti dari LEAD_STATUSES.CONVERTED
+          OPPORTUNITY_STATUSES.PROSPECTING,
           LEAD_STATUSES.UNQUALIFIED,
         ];
         if (restrictedStatuses.includes(validatedData.status as any)) {
@@ -223,7 +223,7 @@ export async function deleteLeadAction(formData: FormData) {
     checkLeadOwnership(lead, user);
 
     const normalizedStatus = normalizeStatusToNewFormat(lead.status || "");
-    if (normalizedStatus === "prospecting") {
+    if (normalizedStatus === OPPORTUNITY_STATUSES.PROSPECTING || normalizedStatus === "prospecting") {
       return {
         success: false,
         message: "Lead is already Converted. Are you sure you want to delete?",

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isSuperuser, isPurchasing, isManagerPurchasing } from "@/utils/userHelpers";
+import { SALE_STATUSES } from "@/utils/salesOrderPermissions";
 import {
     createPurchaseOrderDb,
     updatePurchaseOrderDb,
@@ -75,6 +76,27 @@ export async function createPurchaseOrderAction(data: any) {
             status: "DRAFT",
         };
 
+        // IF tied to a Sales Order, validate and update status
+        if (data.sale_id) {
+            const saleId = BigInt(data.sale_id);
+            const salesOrder = await prisma.sales_orders.findUnique({
+                where: { id: saleId }
+            });
+
+            if (!salesOrder) throw new Error("Sales Order not found");
+            if (salesOrder.sale_status !== SALE_STATUSES.PR && !isSuperuser(user)) {
+                throw new Error("Purchase Order only can be created from Sales Order with status PR");
+            }
+
+            // Automate SO status update to PO
+            await prisma.sales_orders.update({
+                where: { id: saleId },
+                data: { sale_status: SALE_STATUSES.PO }
+            });
+
+            prismaData.sale_id = saleId;
+        }
+
         if (data.supplier_id) {
             prismaData.supplier = { connect: { id: BigInt(data.supplier_id) } };
             delete prismaData.supplier_id;
@@ -82,6 +104,7 @@ export async function createPurchaseOrderAction(data: any) {
 
         const po = await createPurchaseOrderDb(prismaData);
         revalidatePath("/purchasing/purchase-orders");
+        revalidatePath(`/sales/sales-orders/${data.sale_id}`);
         return { success: true, data: serializeDecimal(po) };
     } catch (error: any) {
         return { success: false, message: error.message };

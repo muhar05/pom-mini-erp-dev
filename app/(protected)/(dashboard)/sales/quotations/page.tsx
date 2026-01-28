@@ -10,18 +10,19 @@ import { useI18n } from "@/contexts/i18n-context";
 
 export default function QuotationsPage() {
   const { t } = useI18n();
-  const { quotations, loading, refetch } = useQuotations(); // Gunakan refetch
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<{
+    search?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }>({
+    search: "",
+    status: "all",
+  });
 
-  // Filter quotations berdasarkan search
-  const filteredQuotations = quotations.filter(
-    (q: any) =>
-      q.quotation_no?.toLowerCase().includes(search.toLowerCase()) ||
-      q.customer_name?.toLowerCase().includes(search.toLowerCase()),
-  );
+  const { quotations, loading, refetch } = useQuotations(filters);
 
-  // Setelah filter
-  const mappedQuotations = filteredQuotations.map((q: any) => ({
+  const mappedQuotations = quotations.map((q: any) => ({
     ...q,
     grand_total: q.grand_total ?? q.total_amount ?? 0,
     total_amount: q.grand_total ?? q.total_amount ?? 0,
@@ -43,7 +44,7 @@ export default function QuotationsPage() {
           Term of Payment
         </Button>
       </div>
-      <QuotationFilters search={search} setSearch={setSearch} />
+      <QuotationFilters filters={filters} setFilters={setFilters} />
       <div className="grid grid-cols-1 gap-6 mt-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">{t("page.quotations.list")}</h2>

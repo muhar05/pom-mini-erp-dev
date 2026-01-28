@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SALE_STATUSES, ITEM_STATUSES, isSuperuser, isSales, isPurchasing, isWarehouse, isFinance, isManagerSales, getSalesOrderPermissions, REOPEN_SYSTEM_PREFIXES, hasPendingReopenRequest } from "@/utils/salesOrderPermissions";
+import { SALE_STATUSES, ITEM_STATUSES, isSuperuser, isSales, isPurchasing, isWarehouse, isFinance, isManagerSales, getSalesOrderPermissions, REOPEN_SYSTEM_PREFIXES, hasPendingReopenRequest, isFieldEditable } from "@/utils/salesOrderPermissions";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -453,7 +453,11 @@ export default function SalesOrderForm({
                   </div>
                   <div className="space-y-2">
                     <Label>Record Status</Label>
-                    <Select value={formData.status} onValueChange={v => handleInputChange("status", v)}>
+                    <Select
+                      value={formData.status}
+                      onValueChange={v => handleInputChange("status", v)}
+                      disabled={!isSuperuser(user)}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -469,7 +473,11 @@ export default function SalesOrderForm({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Sale Workflow Status</Label>
-                    <Select value={formData.sale_status} onValueChange={v => handleInputChange("sale_status", v)}>
+                    <Select
+                      value={formData.sale_status}
+                      onValueChange={v => handleInputChange("sale_status", v)}
+                      disabled={permissions?.availableActions.length === 0}
+                    >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {Object.entries(SALE_STATUSES).filter(([_, value]) => {
@@ -494,14 +502,22 @@ export default function SalesOrderForm({
                           if (isSales(user)) {
                             // Manager Sales dan Superuser boleh PR -> NEW (reopen)
                             const canReopen = isManagerSales(user) && currentStatus === SALE_STATUSES.PR;
+
+                            // Sales can move to PR
                             const allowed = [SALE_STATUSES.NEW, SALE_STATUSES.PR, SALE_STATUSES.RECEIVED, SALE_STATUSES.COMPLETED, SALE_STATUSES.CANCELLED];
+
                             if (canReopen && value === SALE_STATUSES.NEW) return true;
                             return (allowed as string[]).includes(value);
                           }
                           if (isPurchasing(user)) {
-                            // Purchasing boleh PR -> NEW
+                            // Purchasing boleh PR -> NEW (untuk cancel/reject PR)
                             if (currentStatus === SALE_STATUSES.PR && value === SALE_STATUSES.NEW) return true;
-                            return ([SALE_STATUSES.PR, SALE_STATUSES.PO, SALE_STATUSES.SR, SALE_STATUSES.FAR, SALE_STATUSES.DR, SALE_STATUSES.CANCELLED] as string[]).includes(value);
+
+                            // Purchasing TIDAK boleh pemicu NEW -> PR
+                            const allowed = [SALE_STATUSES.PR, SALE_STATUSES.PO, SALE_STATUSES.SR, SALE_STATUSES.FAR, SALE_STATUSES.DR, SALE_STATUSES.CANCELLED];
+                            if (currentStatus === SALE_STATUSES.NEW && value === SALE_STATUSES.PR) return false;
+
+                            return (allowed as string[]).includes(value);
                           }
                           if (isWarehouse(user)) {
                             return ([SALE_STATUSES.DELIVERY, SALE_STATUSES.DELIVERED, SALE_STATUSES.CANCELLED] as string[]).includes(value);
@@ -573,7 +589,11 @@ export default function SalesOrderForm({
 
                 <div className="space-y-2">
                   <Label>Reference Quotation (Optional)</Label>
-                  <Select value={formData.quotation_id?.toString() || "none"} onValueChange={handleQuotationSelect}>
+                  <Select
+                    value={formData.quotation_id?.toString() || "none"}
+                    onValueChange={handleQuotationSelect}
+                    disabled={permissions && !isFieldEditable("quotation_id", permissions)}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Manual / No Quote</SelectItem>
@@ -594,7 +614,7 @@ export default function SalesOrderForm({
                 <SalesOrderItemsTable
                   items={formData.boq_items}
                   user={user}
-                  editable={mode === "add" || formData.sale_status === SALE_STATUSES.NEW}
+                  editable={mode === "add" || (permissions && isFieldEditable("items", permissions))}
                   onChange={(newItems) => handleInputChange("boq_items", newItems)}
                   onStatusUpdated={() => {
                     // Logic to refresh data if needed
@@ -616,6 +636,7 @@ export default function SalesOrderForm({
                   onChange={e => handleInputChange("note", e.target.value)}
                   placeholder="Insert notes here..."
                   rows={4}
+                  disabled={permissions && !isFieldEditable("note", permissions)}
                 />
               </CardContent>
             </Card>
@@ -664,7 +685,15 @@ export default function SalesOrderForm({
                         <Label className="text-xs text-muted-foreground uppercase">Level</Label>
                         <div className="p-2 border rounded mt-1">{companyLevelName || "-"} ({companyLevelDiscount1}% / {companyLevelDiscount2}%)</div>
                       </div>
-                      <Button variant="outline" size="sm" type="button" onClick={() => setIsCustomerEditMode(true)}>Change Customer</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => setIsCustomerEditMode(true)}
+                        disabled={permissions && !isFieldEditable("customer_id", permissions)}
+                      >
+                        Change Customer
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -705,6 +734,7 @@ export default function SalesOrderForm({
                       value={formData.discount}
                       onChange={e => handleInputChange("discount", parseFloat(e.target.value) || 0)}
                       className="h-8"
+                      disabled={permissions && !isFieldEditable("discount", permissions)}
                     />
                   </div>
 
@@ -744,6 +774,7 @@ export default function SalesOrderForm({
                   currentFile={formData.file_po_customer}
                   onUploadSuccess={handlePOUploadSuccess}
                   onDeleteSuccess={() => setFormData(prev => ({ ...prev, file_po_customer: "" }))}
+                  disabled={permissions && !isFieldEditable("file_po_customer", permissions)}
                 />
               </CardContent>
             </Card>

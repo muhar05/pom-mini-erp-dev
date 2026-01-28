@@ -10,13 +10,16 @@ import { useI18n } from "@/contexts/i18n-context";
 
 export default function OpportunitiesPage() {
   const { t } = useI18n();
-  const { opportunities, loading, setOpportunities } = useOpportunities();
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState<{
+    search?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }>({});
+  const { opportunities, loading, refresh } = useOpportunities(filters);
 
-  const handleRefreshData = async () => {
-    const response = await fetch("/api/opportunities");
-    const data = await response.json();
-    setOpportunities(data);
+  const handleFilterChange = (newFilters: any) => {
+    setFilters(newFilters);
   };
 
   const session = useSession();
@@ -28,7 +31,7 @@ export default function OpportunitiesPage() {
         title={t("page.opportunities.title")}
         text={t("page.opportunities.details")}
       />
-      <OpportunitiesFilter onFilterChange={setFilters} filters={filters} />
+      <OpportunitiesFilter onFilterChange={handleFilterChange} filters={filters} />
       <div className="grid grid-cols-1 gap-6 mt-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">{t("page.opportunities.list")}</h2>
@@ -44,7 +47,7 @@ export default function OpportunitiesPage() {
           ) : (
             <OpportunitiesTable
               data={opportunities}
-              onDelete={handleRefreshData}
+              onDelete={refresh}
               currentUser={currentUser}
             />
           )}

@@ -33,6 +33,19 @@ export const SQ_STATUSES = {
   CONVERTED: "sq_converted", // Sudah berubah menjadi SO
 } as const;
 
+export const SQ_LOST_REASONS = [
+  "Price too high",
+  "Budget constraints",
+  "Better alternative found",
+  "Feature limitation",
+  "Lack of urgency",
+  "Stronger relationship or trust with a competitor",
+  "Slow follow-up",
+  "Unfavorable terms of payment",
+  "Buyer chose an alternative solution",
+  "Others",
+] as const;
+
 // Sales Order Status Enum
 export const SO_STATUSES = {
   DRAFT: "so_draft",

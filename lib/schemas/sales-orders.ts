@@ -135,15 +135,13 @@ export function validateSalesOrderFormData(
     data = { ...formData };
   }
 
-  // Ensure boq_items has default value if not provided
-  if (!data.boq_items) {
-    data.boq_items = [];
-  }
-
   // Validate based on mode
   if (mode === "create") {
+    // For creation, Zod will handle the [].default([]) if missing
     return createSalesOrderSchema.parse(data);
   } else {
+    // For update, we WANT boq_items to be undefined if not provided 
+    // so that the action knows not to touch them.
     return updateSalesOrderSchema.parse(data);
   }
 }

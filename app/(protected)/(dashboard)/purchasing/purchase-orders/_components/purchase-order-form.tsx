@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,27 +14,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
+import { createPurchaseOrderAction, updatePurchaseOrderAction } from "@/app/actions/purchase-orders";
+import { getSalesOrderByIdAction } from "@/app/actions/sales-orders";
+import { toast } from "react-hot-toast";
+import { SALE_STATUSES } from "@/utils/salesOrderPermissions";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { InfoIcon, AlertTriangle } from "lucide-react";
 
 type PurchaseOrder = {
   id?: string;
   po_no: string;
-  pr_no: string;
-  vendor_name: string;
-  vendor_email: string;
-  contact_person: string;
-  items_count: number;
-  total_amount: number;
-  order_date: string;
-  delivery_date: string;
-  payment_term: string;
+  sale_id?: string;
+  supplier_id?: string;
+  total: number;
   status: string;
-  notes?: string;
+  note?: string;
+  po_detail_items: any[];
 };
 
 interface PurchaseOrderFormProps {
   mode: "add" | "edit";
-  purchaseOrder?: PurchaseOrder;
+  purchaseOrder?: any;
   onClose?: () => void;
   onSuccess?: () => void;
 }
@@ -43,272 +45,193 @@ export default function PurchaseOrderForm({
   onClose,
   onSuccess,
 }: PurchaseOrderFormProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const saleIdFromUrl = searchParams.get("sale_id");
+
   const [formData, setFormData] = useState<PurchaseOrder>({
     po_no: purchaseOrder?.po_no || "",
-    pr_no: purchaseOrder?.pr_no || "",
-    vendor_name: purchaseOrder?.vendor_name || "",
-    vendor_email: purchaseOrder?.vendor_email || "",
-    contact_person: purchaseOrder?.contact_person || "",
-    items_count: purchaseOrder?.items_count || 0,
-    total_amount: purchaseOrder?.total_amount || 0,
-    order_date: purchaseOrder?.order_date || "",
-    delivery_date: purchaseOrder?.delivery_date || "",
-    payment_term: purchaseOrder?.payment_term || "Net 30",
-    status: purchaseOrder?.status || "Open",
-    notes: purchaseOrder?.notes || "",
+    sale_id: purchaseOrder?.sale_id || saleIdFromUrl || "",
+    supplier_id: purchaseOrder?.supplier_id || "",
+    total: purchaseOrder?.total || 0,
+    status: purchaseOrder?.status || "DRAFT",
+    note: purchaseOrder?.note || "",
+    po_detail_items: purchaseOrder?.po_detail_items || [],
   });
 
+  const [salesOrder, setSalesOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [fetchingSO, setFetchingSO] = useState(false);
 
-  const handleInputChange = (
-    field: keyof PurchaseOrder,
-    value: string | number
-  ) => {
+  useEffect(() => {
+    const fetchSO = async () => {
+      if (formData.sale_id) {
+        try {
+          setFetchingSO(true);
+          const res = await getSalesOrderByIdAction(formData.sale_id);
+          setSalesOrder(res);
+
+          // If add mode and from SO, prepopulate total and items (if empty)
+          if (mode === "add" && formData.po_detail_items.length === 0) {
+            setFormData(prev => ({
+              ...prev,
+              total: res.total || 0,
+              // Map SO items to PO items if needed, simplified here
+            }));
+          }
+        } catch (error) {
+          console.error("Error fetching SO:", error);
+          toast.error("Sales Order tidak ditemukan atau terjadi kesalahan.");
+        } finally {
+          setFetchingSO(false);
+        }
+      }
+    };
+
+    fetchSO();
+  }, [formData.sale_id, mode]);
+
+  const handleInputChange = (field: keyof PurchaseOrder, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (salesOrder && salesOrder.sale_status !== SALE_STATUSES.PR && mode === "add") {
+      toast.error("Sales Order harus berstatus PR untuk membuat PO.");
+      return;
+    }
+
     setLoading(true);
-
     try {
-      // TODO: Implement actual API call
-      console.log("Submitting purchase order:", formData);
+      const result = mode === "add"
+        ? await createPurchaseOrderAction(formData)
+        : await updatePurchaseOrderAction(purchaseOrder.id, formData);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      onSuccess?.();
-    } catch (error) {
-      console.error("Error saving purchase order:", error);
+      if (result.success) {
+        toast.success(mode === "add" ? "Purchase Order created" : "Purchase Order updated");
+        onSuccess?.();
+      } else {
+        toast.error(result.message || "Failed to save Purchase Order");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
   };
 
+  const isRestricted = salesOrder && salesOrder.sale_status !== SALE_STATUSES.PR && mode === "add";
+
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="shadow-lg border-t-4 border-t-blue-600">
       <CardHeader>
-        <CardTitle>
-          {mode === "add" ? "Create New Purchase Order" : "Edit Purchase Order"}
+        <CardTitle className="text-xl">
+          {mode === "add" ? "Create Purchase Order" : "Edit Purchase Order"}
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {salesOrder && (
+          <Alert className="mb-6 bg-blue-50 border-blue-200">
+            <InfoIcon className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-800 font-bold">Referenced Sales Order: {salesOrder.sale_no}</AlertTitle>
+            <AlertDescription className="text-blue-700">
+              Status SO: <span className="font-bold uppercase">{salesOrder.sale_status}</span> |
+              Customer: {salesOrder.customers?.customer_name} |
+              Total: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(salesOrder.total)}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {isRestricted && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Peringatan! Status Tidak Sesuai</AlertTitle>
+            <AlertDescription>
+              PO hanya bisa dibuat jika Sales Order berstatus **PR**.
+              Saat ini status SO adalah **{salesOrder.sale_status}**.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Order Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Order Information</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="po_no">PO Number *</Label>
-                <Input
-                  id="po_no"
-                  value={formData.po_no}
-                  onChange={(e) => handleInputChange("po_no", e.target.value)}
-                  placeholder="Auto-generated"
-                  disabled={mode === "edit"}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="pr_no">PR Reference *</Label>
-                <Input
-                  id="pr_no"
-                  value={formData.pr_no}
-                  onChange={(e) => handleInputChange("pr_no", e.target.value)}
-                  placeholder="Select Purchase Request"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => handleInputChange("status", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Open">Open</SelectItem>
-                    <SelectItem value="Confirmed">Confirmed</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
-                    <SelectItem value="Received">Received</SelectItem>
-                    <SelectItem value="Cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="payment_term">Payment Term *</Label>
-                <Select
-                  value={formData.payment_term}
-                  onValueChange={(value) =>
-                    handleInputChange("payment_term", value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="Net 7">Net 7</SelectItem>
-                    <SelectItem value="Net 15">Net 15</SelectItem>
-                    <SelectItem value="Net 30">Net 30</SelectItem>
-                    <SelectItem value="Net 45">Net 45</SelectItem>
-                    <SelectItem value="Net 60">Net 60</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="order_date">Order Date *</Label>
-                <Input
-                  id="order_date"
-                  type="date"
-                  value={formData.order_date}
-                  onChange={(e) =>
-                    handleInputChange("order_date", e.target.value)
-                  }
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="delivery_date">Delivery Date *</Label>
-                <Input
-                  id="delivery_date"
-                  type="date"
-                  value={formData.delivery_date}
-                  onChange={(e) =>
-                    handleInputChange("delivery_date", e.target.value)
-                  }
-                  required
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="po_no">PO Number (Optional)</Label>
+              <Input
+                id="po_no"
+                value={formData.po_no}
+                onChange={(e) => handleInputChange("po_no", e.target.value)}
+                placeholder="Auto-generated if empty"
+              />
             </div>
-          </div>
-
-          {/* Vendor Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Vendor Information</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="vendor_name">Vendor Name *</Label>
-                <Input
-                  id="vendor_name"
-                  value={formData.vendor_name}
-                  onChange={(e) =>
-                    handleInputChange("vendor_name", e.target.value)
-                  }
-                  placeholder="Select vendor"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="vendor_email">Vendor Email</Label>
-                <Input
-                  id="vendor_email"
-                  type="email"
-                  value={formData.vendor_email}
-                  onChange={(e) =>
-                    handleInputChange("vendor_email", e.target.value)
-                  }
-                  placeholder="vendor@email.com"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="contact_person">Contact Person *</Label>
-                <Input
-                  id="contact_person"
-                  value={formData.contact_person}
-                  onChange={(e) =>
-                    handleInputChange("contact_person", e.target.value)
-                  }
-                  placeholder="Enter contact person name"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Item Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Item Information</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="items_count">Number of Items *</Label>
-                <Input
-                  id="items_count"
-                  type="number"
-                  value={formData.items_count}
-                  onChange={(e) =>
-                    handleInputChange("items_count", parseInt(e.target.value))
-                  }
-                  placeholder="0"
-                  min="0"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="total_amount">Total Amount (IDR) *</Label>
-                <Input
-                  id="total_amount"
-                  type="number"
-                  value={formData.total_amount}
-                  onChange={(e) =>
-                    handleInputChange("total_amount", parseInt(e.target.value))
-                  }
-                  placeholder="0"
-                  min="0"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Notes */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Additional Information</h3>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => handleInputChange("notes", e.target.value)}
-                placeholder="Add any additional notes or requirements..."
-                rows={4}
+              <Label htmlFor="status">PO Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => handleInputChange("status", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DRAFT">DRAFT</SelectItem>
+                  <SelectItem value="OPEN">OPEN</SelectItem>
+                  <SelectItem value="ORDERED">ORDERED</SelectItem>
+                  <SelectItem value="RECEIVED">RECEIVED</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="total">Total Amount (Estimated)</Label>
+              <Input
+                id="total"
+                type="number"
+                value={formData.total}
+                onChange={(e) => handleInputChange("total", parseFloat(e.target.value))}
+                placeholder="0"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Sales Order ID (Reference)</Label>
+              <Input
+                value={formData.sale_id || "Manual / Non-SO"}
+                disabled
+                className="bg-gray-50"
               />
             </div>
           </div>
 
-          {/* Form Actions */}
-          <div className="flex gap-4 justify-end pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="note">Notes</Label>
+            <Textarea
+              id="note"
+              value={formData.note}
+              onChange={(e) => handleInputChange("note", e.target.value)}
+              placeholder="Tulis catatan di sini..."
+              rows={3}
+            />
+          </div>
+
+          <div className="flex gap-4 justify-end pt-4 border-t">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={loading}
             >
-              Cancel
+              Batal
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading
-                ? mode === "add"
-                  ? "Creating..."
-                  : "Updating..."
-                : mode === "add"
-                ? "Create Purchase Order"
-                : "Update Purchase Order"}
+            <Button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={loading || isRestricted || fetchingSO}
+            >
+              {loading ? "Menyimpan..." : (mode === "add" ? "Create Purchase Order" : "Update Purchase Order")}
             </Button>
           </div>
         </form>

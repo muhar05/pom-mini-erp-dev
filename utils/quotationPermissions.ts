@@ -70,14 +70,14 @@ export function canEditQuotationByStatus(user: any, status: string): boolean {
 
   const currentStatus = status.toLowerCase();
 
-  // Hanya bisa edit jika status Draft
-  if (isSales(user)) {
-    return currentStatus === QUOTATION_STATUSES.DRAFT;
+  // Manager Sales tidak boleh edit isi, hanya approve/reject (lewat action status)
+  if (isManagerSales(user)) {
+    return false;
   }
 
-  // Manager Sales tidak boleh edit jika sudah Approved
-  if (isManagerSales(user)) {
-    return currentStatus !== QUOTATION_STATUSES.APPROVED;
+  // Sales Hanya bisa edit jika status Draft
+  if (isSales(user)) {
+    return currentStatus === QUOTATION_STATUSES.DRAFT;
   }
 
   return false;

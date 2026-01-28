@@ -47,6 +47,7 @@ export const createQuotationSchema = z.object({
     .string()
     .max(1000, "Note must be less than 1000 characters")
     .optional(),
+  lost_reason: z.string().max(255).optional(),
   target_date: z.string().optional(), // ISO date string
 });
 
@@ -62,6 +63,7 @@ export const updateQuotationSchema = z.object({
   grand_total: z.number().min(0).optional(),
   status: z.string().max(50).optional(),
   note: z.string().max(1000).optional(),
+  lost_reason: z.string().max(255).optional(),
   target_date: z.string().optional(),
 });
 

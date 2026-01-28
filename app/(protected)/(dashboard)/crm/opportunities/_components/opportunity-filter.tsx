@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,10 +26,16 @@ interface OpportunitiesFilterProps {
   };
 }
 
+import { useSession } from "@/contexts/session-context";
+import { isManagerSales, isSuperuser } from "@/utils/userHelpers";
+
 export default function OpportunitiesFilter({
   onFilterChange,
   filters,
 }: OpportunitiesFilterProps) {
+  const session = useSession();
+  const user = session?.user;
+  const canShowDateFilters = user && (isManagerSales(user) || isSuperuser(user));
   const handleSearchChange = (value: string) => {
     onFilterChange({ ...filters, search: value });
   };
@@ -74,22 +82,24 @@ export default function OpportunitiesFilter({
         </SelectContent>
       </Select>
 
-      <div className="flex gap-2 items-center">
-        <label className="text-sm font-medium">Dari</label>
-        <Input
-          type="date"
-          value={filters.dateFrom || ""}
-          onChange={(e) => handleDateFromChange(e.target.value)}
-          className="w-auto"
-        />
-        <label className="text-sm font-medium">Sampai</label>
-        <Input
-          type="date"
-          value={filters.dateTo || ""}
-          onChange={(e) => handleDateToChange(e.target.value)}
-          className="w-auto"
-        />
-      </div>
+      {canShowDateFilters && (
+        <div className="flex gap-2 items-center">
+          <label className="text-sm font-medium">Dari</label>
+          <Input
+            type="date"
+            value={filters.dateFrom || ""}
+            onChange={(e) => handleDateFromChange(e.target.value)}
+            className="w-auto h-10"
+          />
+          <label className="text-sm font-medium">Sampai</label>
+          <Input
+            type="date"
+            value={filters.dateTo || ""}
+            onChange={(e) => handleDateToChange(e.target.value)}
+            className="w-auto h-10"
+          />
+        </div>
+      )}
     </div>
   );
 }

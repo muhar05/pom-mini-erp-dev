@@ -62,41 +62,47 @@ const serializePO = (po: any) => {
         } : null,
         user: po.user,
         assigned_user: po.assigned_user,
+        sale_id: po.sale_id ? po.sale_id.toString() : null,
+        sales_order_no: po.sales_order?.sale_no || null,
+        sales_order: po.sales_order,
     };
 };
 
 export async function createPurchaseOrderDb(input: any) {
-    const po = await prisma.purchase_orders.create({
+    const po = await (prisma.purchase_orders as any).create({
         data: input,
         include: {
             supplier: true,
             user: true,
             assigned_user: true,
+            sales_order: true,
         },
     });
     return serializePO(po);
 }
 
 export async function updatePurchaseOrderDb(id: string, data: any) {
-    const po = await prisma.purchase_orders.update({
+    const po = await (prisma.purchase_orders as any).update({
         where: { id: BigInt(id) },
         data,
         include: {
             supplier: true,
             user: true,
             assigned_user: true,
+            sales_order: true,
         },
     });
     return serializePO(po);
 }
 
 export async function getPurchaseOrderByIdDb(id: string) {
-    const po = await prisma.purchase_orders.findUnique({
+    const po = await (prisma.purchase_orders as any).findUnique({
         where: { id: BigInt(id) },
         include: {
             supplier: true,
             user: true,
             assigned_user: true,
+            sales_order: true,
         },
     });
     return serializePO(po);
@@ -122,13 +128,14 @@ export async function getAllPurchaseOrdersDb(user: any) {
         throw new Error("Forbidden access");
     }
 
-    const pos = await prisma.purchase_orders.findMany({
+    const pos = await (prisma.purchase_orders as any).findMany({
         where,
         orderBy: { created_at: "desc" },
         include: {
             supplier: true,
             user: true,
             assigned_user: true,
+            sales_order: true,
         },
     });
 

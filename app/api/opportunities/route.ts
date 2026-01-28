@@ -3,7 +3,7 @@ import { formatStatusDisplay } from "@/utils/statusHelpers";
 import { getAllOpportunitiesDb } from "@/data/opportunities";
 import { auth } from "@/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   const user = session?.user;
 
@@ -11,8 +11,16 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const filters = {
+    search: searchParams.get("search") || undefined,
+    status: searchParams.get("status") || undefined,
+    dateFrom: searchParams.get("dateFrom") || undefined,
+    dateTo: searchParams.get("dateTo") || undefined,
+  };
+
   // Ambil data dari data layer
-  const opportunities = await getAllOpportunitiesDb(user);
+  const opportunities = await getAllOpportunitiesDb(user, filters);
 
   // Mapping ke struktur frontend, hitung total harga
   const data = await Promise.all(
@@ -22,7 +30,10 @@ export async function GET() {
       customer_name: opportunity.lead_name,
       customer_email: opportunity.email ?? "",
       id_user: opportunity.id_user ?? null,
-      sales_pic: opportunity.users_leads_id_userTousers?.name ?? "",
+      sales_pic:
+        opportunity.users_leads_assigned_toTousers?.name ??
+        opportunity.users_leads_id_userTousers?.name ??
+        "-",
       type: opportunity.type ?? "",
       company: opportunity.company ?? "",
       potential_value: opportunity.potential_value

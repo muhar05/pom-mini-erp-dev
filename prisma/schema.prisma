@@ -61,6 +61,7 @@ model quotations {
   grand_total      Decimal?       @default(0) @db.Decimal(18, 2)
   status           String?        @default("draft") @db.VarChar(50)
   note             String?
+  lost_reason      String?        @db.VarChar(255)
   target_date      DateTime?      @db.Date
   created_at       DateTime?      @default(now()) @db.Timestamp(6)
   updated_at       DateTime?      @default(now()) @db.Timestamp(6)
@@ -221,11 +222,13 @@ model purchase_orders {
   status          String?   @default("DRAFT") @db.VarChar(30)
   supplier_do     String?   @db.VarChar(255)
   supplier_so     String?   @db.VarChar(255)
+  sale_id         BigInt?
   created_at      DateTime? @default(now()) @db.Timestamp(6)
   
   user            users?    @relation("UserToPurchaseOrders", fields: [user_id], references: [id])
   assigned_user   users?    @relation("AssignedToPurchaseOrders", fields: [assigned_to], references: [id])
   supplier        suppliers? @relation(fields: [supplier_id], references: [id])
+  sales_order     sales_orders? @relation("SalesOrderToPurchaseOrders", fields: [sale_id], references: [id])
 }
 
 
@@ -265,6 +268,8 @@ model sales_orders {
   payment_term_id  Int?
   payment_term     payment_terms? @relation(fields: [payment_term_id], references: [id])
   revision_no      Int            @default(1)
+  purchase_orders  purchase_orders[] @relation("SalesOrderToPurchaseOrders")
+  stock_reservations stock_reservations[] @relation("SalesOrderToStockReservations")
 }
 
 model stock_reservations {
@@ -275,9 +280,11 @@ model stock_reservations {
   status      String?    @default("RESERVED") @db.VarChar(30)
   user_id     Int?
   note        String?
+  sale_id     BigInt?
   created_at  DateTime? @default(now()) @db.Timestamp(6)
   
   user        users?    @relation("UserToStockReservations", fields: [user_id], references: [id])
+  sales_order sales_orders? @relation("SalesOrderToStockReservations", fields: [sale_id], references: [id])
 }
 
 model suppliers {

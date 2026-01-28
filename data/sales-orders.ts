@@ -424,31 +424,83 @@ export async function getSalesOrderByIdDb(id: string) {
 }
 
 // GET ALL
-export async function getAllSalesOrdersDb(user?: any) {
+export async function getAllSalesOrdersDb(
+  user?: any,
+  filters?: {
+    search?: string;
+    status?: string;
+    saleStatus?: string;
+    paymentStatus?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }
+) {
   if (!user) throw new Error("Unauthorized");
 
   const userId = typeof user.id === "string" ? Number(user.id) : user.id;
   const isManager = isSuperuser(user) || isManagerSales(user);
 
-  let where: any = undefined;
+  let where: any = { AND: [] };
 
   if (!isManager && isSales(user)) {
-    where = { user_id: userId };
+    where.AND.push({ user_id: userId });
   } else if (
     isPurchasing(user) || isManagerPurchasing(user) ||
     isFinance(user) || isManagerFinance(user) ||
     isWarehouse(user) || isManagerWarehouse(user)
   ) {
-    // Allow access to all (Read Only via UI)
-    where = {};
+    // PURCHASING & SUPPORT: Only see SO with status PR and above
+    // (Everything except NEW, OPEN, DRAFT, NULL)
+    where.AND.push({
+      NOT: {
+        sale_status: {
+          in: ["NEW", "OPEN", "DRAFT"]
+        }
+      }
+    });
+    // Ensure it's not null either if it's possible
+    where.AND.push({
+      sale_status: { not: null }
+    });
   } else if (!isManager) {
     throw new Error("Forbidden access");
   }
 
-  if (isPurchasing(user) || isFinance(user) || isWarehouse(user)) {
-    // Allow access to all (Read Only via UI) or filter by status relevant to them
-    where = {};
+  // 1. Search Filter
+  if (filters?.search) {
+    where.AND.push({
+      OR: [
+        { sale_no: { contains: filters.search, mode: 'insensitive' } },
+        { customers: { customer_name: { contains: filters.search, mode: 'insensitive' } } },
+        { quotation: { quotation_no: { contains: filters.search, mode: 'insensitive' } } }
+      ]
+    });
   }
+
+  // 2. Status Filters
+  if (filters?.status && filters.status !== "all") {
+    where.AND.push({ status: filters.status });
+  }
+  if (filters?.saleStatus && filters.saleStatus !== "all") {
+    where.AND.push({ sale_status: filters.saleStatus });
+  }
+  if (filters?.paymentStatus && filters.paymentStatus !== "all") {
+    where.AND.push({ payment_status: filters.paymentStatus });
+  }
+
+  // 3. Date Filters
+  if (filters?.dateFrom || filters?.dateTo) {
+    const dateRange: any = {};
+    if (filters.dateFrom) dateRange.gte = new Date(filters.dateFrom);
+    if (filters.dateTo) {
+      const dateTo = new Date(filters.dateTo);
+      dateTo.setHours(23, 59, 59, 999);
+      dateRange.lte = dateTo;
+    }
+    where.AND.push({ created_at: dateRange });
+  }
+
+  if (where.AND.length === 0) where = undefined;
 
 
   const salesOrders = await prisma.sales_orders.findMany({

@@ -103,10 +103,12 @@ export function getSalesOrderPermissions(
     case SALE_STATUSES.NEW:
     case "OPEN": // Handle legacy status
     case "DRAFT": // Handle legacy status
-      if (["sales", "superuser"].includes(userRole)) {
+      if (isSales(user)) {
         permissions.canEdit = true;
         permissions.canUpdateNote = true;
         permissions.canUploadPO = true;
+
+        // ONLY sales team (owner/manager) and superuser can move to PR
         availableActions.push("update_status_pr");
       }
       break;
@@ -121,10 +123,8 @@ export function getSalesOrderPermissions(
 
         if (status === SALE_STATUSES.PR) {
           availableActions.push("update_status_po");
-          if (["manager-sales", "superuser"].includes(userRole)) {
+          if (["manager-sales", "superuser", "manager-purchasing"].includes(userRole)) {
             availableActions.push("reopen_to_new");
-          } else if (userRole === "sales") {
-            permissions.canRequestReopen = true;
           }
         }
         if (status === SALE_STATUSES.PO) availableActions.push("update_status_sr");
@@ -132,6 +132,20 @@ export function getSalesOrderPermissions(
         if (status === SALE_STATUSES.FAR) availableActions.push("update_status_dr");
         if (status === SALE_STATUSES.DR) availableActions.push("update_status_delivery");
       }
+
+      // Sales/Manager Sales can request or perform reopen
+      if (["sales", "manager-sales", "superuser"].includes(userRole)) {
+        if (status === SALE_STATUSES.PR) {
+          if (["manager-sales", "superuser"].includes(userRole)) {
+            if (!availableActions.includes("reopen_to_new")) {
+              availableActions.push("reopen_to_new");
+            }
+          } else {
+            permissions.canRequestReopen = true;
+          }
+        }
+      }
+
       if (userRole === "finance" && status === SALE_STATUSES.FAR) {
         availableActions.push("approve_far");
       }
@@ -156,12 +170,28 @@ export function getSalesOrderPermissions(
       break;
   }
 
+  // Role based field authorization
+  const editableFields: string[] = [];
+
+  if (status === SALE_STATUSES.NEW || !status) {
+    if (isSales(user)) {
+      editableFields.push("note", "quotation_id", "customer_id", "payment_term_id", "items", "file_po_customer");
+    }
+  } else if (status === SALE_STATUSES.PR) {
+    if (["sales", "manager-sales", "purchasing", "manager-purchasing", "superuser"].includes(userRole)) {
+      editableFields.push("note");
+    }
+  }
+
   // Cancel is generally restricted
   if (["superuser", "manager-sales"].includes(userRole) && status !== SALE_STATUSES.COMPLETED && status !== SALE_STATUSES.CANCELLED) {
     permissions.canCancel = true;
-    availableActions.push("cancel");
+    if (!availableActions.includes("cancel")) {
+      availableActions.push("cancel");
+    }
   }
 
+  permissions.editableFields = editableFields;
   permissions.availableActions = availableActions;
   return permissions;
 }

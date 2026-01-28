@@ -27,12 +27,19 @@ interface LeadsFilterProps {
   };
 }
 
+import { isManagerSales, isSuperuser } from "@/utils/userHelpers";
+import { useSession } from "@/contexts/session-context";
+
 export default function LeadsFilter({
   onFilterChange,
   filters,
 }: LeadsFilterProps) {
   const { t } = useI18n();
+  const session = useSession();
+  const user = session?.user;
   const [searchTerm, setSearchTerm] = useState(filters.search || "");
+
+  const canShowDateFilters = user && (isManagerSales(user) || isSuperuser(user));
 
   // Debounce search
   useEffect(() => {
@@ -52,6 +59,14 @@ export default function LeadsFilter({
 
   const handleStatusChange = (value: string) => {
     onFilterChange({ ...filters, status: value === "all" ? undefined : value });
+  };
+
+  const handleDateFromChange = (value: string) => {
+    onFilterChange({ ...filters, dateFrom: value });
+  };
+
+  const handleDateToChange = (value: string) => {
+    onFilterChange({ ...filters, dateTo: value });
   };
 
   const statusOptions = [
@@ -83,6 +98,25 @@ export default function LeadsFilter({
           ))}
         </SelectContent>
       </Select>
+
+      {canShowDateFilters && (
+        <div className="flex gap-2 items-center">
+          <label className="text-sm font-medium">{t("common.from") || "Dari"}</label>
+          <Input
+            type="date"
+            value={filters.dateFrom || ""}
+            onChange={(e) => handleDateFromChange(e.target.value)}
+            className="w-auto h-10"
+          />
+          <label className="text-sm font-medium">{t("common.to") || "Sampai"}</label>
+          <Input
+            type="date"
+            value={filters.dateTo || ""}
+            onChange={(e) => handleDateToChange(e.target.value)}
+            className="w-auto h-10"
+          />
+        </div>
+      )}
     </div>
   );
 }

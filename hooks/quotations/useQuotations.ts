@@ -20,13 +20,28 @@ export type QuotationTable = {
   lead_id?: number | null; // <-- Tambahkan
 };
 
-export function useQuotations() {
+interface QuotationFilters {
+  search?: string;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export function useQuotations(filters?: QuotationFilters) {
   const [quotationsData, setQuotationsData] = useState<QuotationTable[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchQuotations = useCallback(() => {
     setLoading(true);
-    fetch("/api/quotations")
+    const params = new URLSearchParams();
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.status && filters.status !== "all") params.append("status", filters.status);
+    if (filters?.dateFrom) params.append("dateFrom", filters.dateFrom);
+    if (filters?.dateTo) params.append("dateTo", filters.dateTo);
+
+    const url = `/api/quotations${params.toString() ? `?${params.toString()}` : ""}`;
+
+    fetch(url)
       .then((res) => {
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
@@ -65,7 +80,7 @@ export function useQuotations() {
         setQuotationsData([]);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [filters?.search, filters?.status, filters?.dateFrom, filters?.dateTo]);
 
   useEffect(() => {
     fetchQuotations();
