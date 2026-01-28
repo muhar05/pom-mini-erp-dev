@@ -185,68 +185,73 @@ export default function SalesOrderActions({
           </Button>
         )}
 
-        {/* More Actions Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-              title={t("common.actions")}
-            >
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {/* Download PDF */}
-            {/* <DropdownMenuItem onClick={handleDownloadPDF}>
-              <Download className="mr-2 h-4 w-4" />
-              {t("sales_order.actions.download")}
-            </DropdownMenuItem> */}
 
-            {/* Request Finance - Only after confirmed */}
-            {isActionAvailable("request_finance", permissions) && (
-              <DropdownMenuItem
-                onClick={() => {
-                  toast("Finance request feature coming soon", {
-                    icon: "ℹ️",
-                  });
-                }}
-              >
-                <CreditCard className="mr-2 h-4 w-4" />
-                {t("sales_order.actions.finance")}
-              </DropdownMenuItem>
-            )}
+        {/* More Actions Dropdown - Only show if there are available actions */}
+        {(isActionAvailable("request_finance", permissions) ||
+          isActionAvailable("create_delivery", permissions) ||
+          isActionAvailable("cancel", permissions)) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                  title={t("common.actions")}
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {/* Download PDF */}
+                {/* <DropdownMenuItem onClick={handleDownloadPDF}>
+                <Download className="mr-2 h-4 w-4" />
+                {t("sales_order.actions.download")}
+              </DropdownMenuItem> */}
 
-            {/* Create Delivery - Only after finance approved */}
-            {isActionAvailable("create_delivery", permissions) && (
-              <DropdownMenuItem
-                onClick={() => {
-                  toast("Delivery request feature coming soon", {
-                    icon: "ℹ️",
-                  });
-                }}
-              >
-                <Truck className="mr-2 h-4 w-4" />
-                {t("sales_order.actions.delivery")}
-              </DropdownMenuItem>
-            )}
+                {/* Request Finance - Only after confirmed */}
+                {isActionAvailable("request_finance", permissions) && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      toast("Finance request feature coming soon", {
+                        icon: "ℹ️",
+                      });
+                    }}
+                  >
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    {t("sales_order.actions.finance")}
+                  </DropdownMenuItem>
+                )}
 
-            {/* Cancel - Based on permissions */}
-            {isActionAvailable("cancel", permissions) && (
-              <DropdownMenuItem
-                onClick={() => {
-                  toast("Cancel feature coming soon", {
-                    icon: "ℹ️",
-                  });
-                }}
-              >
-                <XCircle className="mr-2 h-4 w-4" />
-                {t("sales_order.actions.cancel")}
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                {/* Create Delivery - Only after finance approved */}
+                {isActionAvailable("create_delivery", permissions) && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      toast("Delivery request feature coming soon", {
+                        icon: "ℹ️",
+                      });
+                    }}
+                  >
+                    <Truck className="mr-2 h-4 w-4" />
+                    {t("sales_order.actions.delivery")}
+                  </DropdownMenuItem>
+                )}
+
+                {/* Cancel - Based on permissions */}
+                {isActionAvailable("cancel", permissions) && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      toast("Cancel feature coming soon", {
+                        icon: "ℹ️",
+                      });
+                    }}
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    {t("sales_order.actions.cancel")}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
         {/* Delete - Only for superuser and specific statuses */}
         {permissions.canCancel && isSuperuser(user) && (

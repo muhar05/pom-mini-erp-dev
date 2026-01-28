@@ -908,8 +908,9 @@ export default function SalesOrderDetailPage() {
             status={salesOrder.status}
             saleStatus={salesOrder.sale_status}
             paymentStatus={salesOrder.payment_status}
+            diskon1={companyLevelDiscount1}
+            diskon2={companyLevelDiscount2}
             discount={additionalDiscountPercent}
-            discountAmount={additionalDiscountAmount}
           />
         </div>
       </div>

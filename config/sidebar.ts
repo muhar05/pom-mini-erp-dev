@@ -21,6 +21,7 @@ import {
   BadgeDollarSign,
   UserRound,
   Boxes,
+  Database,
 } from "lucide-react";
 
 export type MenuItem = {
@@ -222,15 +223,21 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       ],
     },
     {
-      title: "Stock",
-      labelKey: "sidebar.warehouse",
-      icon: Boxes,
+      title: "Master Data",
+      labelKey: "sidebar.master_data",
+      icon: Database,
       items: [
         {
-          title: "View Stock",
-          labelKey: "sidebar.warehouse",
-          url: "/warehouse/inventory/stocks",
-          icon: Boxes,
+          title: "Customer List",
+          labelKey: "sidebar.customers",
+          url: "/customers",
+          icon: UserRound,
+        },
+        {
+          title: "Product List",
+          labelKey: "sidebar.products",
+          url: "/products",
+          icon: Package,
         },
       ],
     },

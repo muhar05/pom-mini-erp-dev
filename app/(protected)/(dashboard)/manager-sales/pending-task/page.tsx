@@ -184,7 +184,7 @@ export default function ManagerSalesPendingTaskPage() {
 
   const mappedPendingQuotations: PendingQuotation[] = pendingQuotations.map(
     (q) => ({
-      id: q.id,
+      id: Number(q.id), // Convert string to number
       quotation_no: q.quotation_no,
       status: q.status || "",
       total: Number(q.total ?? 0),

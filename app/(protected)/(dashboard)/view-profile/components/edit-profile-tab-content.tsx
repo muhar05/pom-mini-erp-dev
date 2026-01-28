@@ -4,14 +4,19 @@ import React, { useEffect, useState } from 'react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from '@/components/ui/button';
-import { useSession } from '@/contexts/session-context';
+import { useSession as useSessionContext } from '@/contexts/session-context';
+import { useSession } from 'next-auth/react';
 import { updateProfileNameAction } from '@/app/actions/profile';
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 
+import { useRouter } from 'next/navigation';
+
 const EditProfileTabContent = () => {
-    const session = useSession();
-    const user = session?.user;
+    const sessionContext = useSessionContext();
+    const { update } = useSession();
+    const router = useRouter();
+    const user = sessionContext?.user;
 
     const [name, setName] = useState(user?.name || "");
     const [isLoading, setIsLoading] = useState(false);
@@ -27,15 +32,34 @@ const EditProfileTabContent = () => {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!isChanged) return;
+        console.log("=== handleSave called ===");
+        console.log("Current name state:", name);
+        console.log("User name from session:", user?.name);
+        console.log("Is changed:", isChanged);
+
+        if (!isChanged) {
+            console.log("No changes detected, skipping save");
+            return;
+        }
 
         setIsLoading(true);
         try {
+            console.log("Calling updateProfileNameAction with:", name);
             const result = await updateProfileNameAction(name);
+            console.log("Result from action:", result);
+
             if (result.success) {
                 toast.success(result.success);
+
+                // Trigger session update to fetch fresh user data
+                await update();
+                console.log("Session updated");
+
+                router.refresh();
+                console.log("Success: Router refreshed");
             } else if (result.error) {
                 toast.error(result.error);
+                console.log("Error from action:", result.error);
             }
         } catch (error) {
             console.error("Save profile error:", error);

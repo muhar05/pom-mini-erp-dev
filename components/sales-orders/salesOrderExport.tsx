@@ -42,8 +42,10 @@ type Props = {
   paymentStatus?: string;
 
   // Add discount props (similar to quotation export)
-  discount?: number; // discount percentage
-  discountAmount?: number; // discount amount in rupiah
+  discount?: number; // additional discount percentage
+  diskon1?: number; // company discount 1
+  diskon2?: number; // company discount 2
+  discountAmount?: number; // total discount amount in rupiah (for backward compatibility)
 };
 
 const SalesOrderExport = forwardRef<SOExportHandle, Props>(
@@ -68,18 +70,26 @@ const SalesOrderExport = forwardRef<SOExportHandle, Props>(
       saleStatus,
       paymentStatus,
       discount = 0,
+      diskon1 = 0,
+      diskon2 = 0,
       discountAmount = 0,
     } = props;
 
     const divRef = useRef<HTMLDivElement | null>(null);
 
-    // Fixed calculation to match the corrected logic from detail page
+    // Calculation matching quotation export logic
     const subtotal = items.reduce((s, it) => s + it.total, 0);
-    // discountAmount is already calculated correctly in the detail page
-    const finalDiscountAmount = discountAmount; // Use the passed discountAmount directly
-    const total = subtotal - finalDiscountAmount;
-    const vat = Math.round(total * 0.11);
-    const grandTotal = total + vat;
+
+    // Calculate discounts step by step
+    const discount1Amount = (subtotal * diskon1) / 100;
+    const afterDiscount1 = subtotal - discount1Amount;
+    const discount2Amount = diskon2 > 0 ? (afterDiscount1 * diskon2) / 100 : 0;
+    const afterDiscount2 = afterDiscount1 - discount2Amount;
+    const additionalDiscountAmount = discount > 0 ? (afterDiscount2 * discount) / 100 : 0;
+    const afterAllDiscount = afterDiscount2 - additionalDiscountAmount;
+
+    const vat = Math.round(afterAllDiscount * 0.11);
+    const grandTotal = afterAllDiscount + vat;
 
     const handleExport = async () => {
       if (!divRef.current) return;
@@ -295,18 +305,40 @@ const SalesOrderExport = forwardRef<SOExportHandle, Props>(
                 <td style={{ padding: "4px 8px" }}>Subtotal</td>
                 <td style={tdCellRight}>{fmt(subtotal)}</td>
               </tr>
-              {finalDiscountAmount > 0 && (
+              {diskon1 > 0 && (
                 <tr>
-                  <td style={{ padding: "4px 8px" }}>
-                    Discount {discount > 0 ? `(${discount}%)` : ""}
-                  </td>
-                  <td style={tdCellRight}>-{fmt(finalDiscountAmount)}</td>
+                  <td style={{ padding: "4px 8px" }}>Diskon 1 ({diskon1}%)</td>
+                  <td style={tdCellRight}>-{fmt(discount1Amount)}</td>
                 </tr>
               )}
-              <tr>
-                <td style={{ padding: "4px 8px" }}>Total</td>
-                <td style={tdCellRight}>{fmt(total)}</td>
-              </tr>
+              {diskon2 > 0 && (
+                <tr>
+                  <td style={{ padding: "4px 8px" }}>Diskon 2 ({diskon2}%)</td>
+                  <td style={tdCellRight}>-{fmt(discount2Amount)}</td>
+                </tr>
+              )}
+              {(diskon1 > 0 || diskon2 > 0) && (
+                <tr>
+                  <td style={{ padding: "4px 8px" }}>Setelah Diskon Company</td>
+                  <td style={tdCellRight}>{fmt(afterDiscount2)}</td>
+                </tr>
+              )}
+              {discount > 0 && (
+                <tr>
+                  <td style={{ padding: "4px 8px" }}>
+                    Additional Discount ({discount}%)
+                  </td>
+                  <td style={tdCellRight}>-{fmt(additionalDiscountAmount)}</td>
+                </tr>
+              )}
+              {(diskon1 > 0 || diskon2 > 0 || discount > 0) && (
+                <tr>
+                  <td style={{ padding: "4px 8px" }}>
+                    Setelah Semua Diskon (belum pajak)
+                  </td>
+                  <td style={tdCellRight}>{fmt(afterAllDiscount)}</td>
+                </tr>
+              )}
               <tr>
                 <td style={{ padding: "4px 8px" }}>VAT 11%</td>
                 <td style={tdCellRight}>{fmt(vat)}</td>

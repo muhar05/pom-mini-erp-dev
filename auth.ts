@@ -91,17 +91,40 @@ export const { handlers, auth } = NextAuth({
       return `${baseUrl}/dashboard`;
     },
 
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
+      // On sign in, store initial user data
       if (user) {
         token.id = user.id;
         token.role_id = user.role_id;
         token.role_name = user.role_name;
       }
+
+      // On subsequent requests or when triggered by update, fetch fresh data
+      if (token.id && (trigger === "update" || !user)) {
+        try {
+          const freshUser = await prisma.users.findUnique({
+            where: { id: Number(token.id) },
+            include: { roles: true },
+          });
+
+          if (freshUser) {
+            token.name = freshUser.name;
+            token.email = freshUser.email;
+            token.role_id = String(freshUser.role_id ?? "");
+            token.role_name = freshUser.roles?.role_name;
+          }
+        } catch (error) {
+          console.error("Error fetching fresh user data:", error);
+        }
+      }
+
       return token;
     },
 
     async session({ session, token }) {
       session.user.id = token.id;
+      session.user.name = token.name;
+      session.user.email = token.email;
       session.user.role_id = token.role_id;
       session.user.role_name = token.role_name;
       return session;

@@ -10,14 +10,22 @@ import bcrypt from "bcryptjs";
  * Restricted to the logged-in user only.
  */
 export async function updateProfileNameAction(name: string) {
+    console.log("=== updateProfileNameAction called ===");
+    console.log("Input name:", name);
+
     const session = await auth();
+    console.log("Session user ID:", session?.user?.id);
+
     if (!session?.user?.id) {
+        console.log("ERROR: Unauthorized - no session");
         return { error: "Unauthorized" };
     }
 
     const userId = Number(session.user.id);
+    console.log("Parsed userId:", userId);
 
     if (!name || name.trim().length < 2) {
+        console.log("ERROR: Name validation failed");
         return { error: "Name must be at least 2 characters" };
     }
 
@@ -27,16 +35,22 @@ export async function updateProfileNameAction(name: string) {
             select: { name: true },
         });
 
+        console.log("Current user in DB:", user);
+
         if (!user) {
+            console.log("ERROR: User not found in database");
             return { error: "User not found" };
         }
 
         const updatedName = name.trim();
+        console.log("Updating name to:", updatedName);
 
-        await prisma.users.update({
+        const updateResult = await prisma.users.update({
             where: { id: userId },
             data: { name: updatedName },
         });
+
+        console.log("Update result:", updateResult);
 
         // Audit log
         await prisma.user_logs.create({
@@ -48,7 +62,10 @@ export async function updateProfileNameAction(name: string) {
             },
         });
 
+        console.log("Audit log created successfully");
         revalidatePath("/view-profile");
+        console.log("Path revalidated");
+
         return { success: "Name updated successfully" };
     } catch (error) {
         console.error("Update profile name error:", error);

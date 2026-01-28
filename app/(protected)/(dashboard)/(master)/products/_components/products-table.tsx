@@ -69,7 +69,7 @@ export default function ProductsTable({
             <TableHead>Item Group</TableHead>
             <TableHead>Unit</TableHead>
             <TableHead>Price</TableHead>
-            {/* <TableHead>Stock</TableHead> */}
+            <TableHead>Stock</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Brand</TableHead>
             <TableHead>Created At</TableHead>
@@ -100,7 +100,7 @@ export default function ProductsTable({
               <TableCell>{product.item_group || "-"}</TableCell>
               <TableCell>{product.unit || "-"}</TableCell>
               <TableCell>{formatCurrency(product.price)}</TableCell>
-              {/* <TableCell>{product.stock || 0}</TableCell> */}
+              <TableCell className="font-medium">{product.stock || 0}</TableCell>
               <TableCell>
                 <span
                   className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStockBadgeClass(

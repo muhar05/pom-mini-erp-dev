@@ -1,5 +1,6 @@
 import { LoadingProvider } from "@/contexts/LoadingContext";
 import { I18nProvider } from "@/contexts/i18n-context";
+import { NextAuthProvider } from "@/components/providers/next-auth-provider";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -43,9 +44,11 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} antialiased`} suppressHydrationWarning>
-        <I18nProvider>
-          <LoadingProvider>{children}</LoadingProvider>
-        </I18nProvider>
+        <NextAuthProvider>
+          <I18nProvider>
+            <LoadingProvider>{children}</LoadingProvider>
+          </I18nProvider>
+        </NextAuthProvider>
       </body>
     </html>
   );

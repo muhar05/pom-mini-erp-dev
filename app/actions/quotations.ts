@@ -707,8 +707,11 @@ export async function approveQuotationAction(id: number, note?: string) {
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
+  // Ensure id is a number (handle Next.js serialization)
+  const quotationId = typeof id === 'string' ? Number(id) : id;
+
   // Ambil quotation
-  const quotation = await getQuotationByIdDb(id);
+  const quotation = await getQuotationByIdDb(quotationId);
   if (!quotation) throw new Error("Quotation not found");
 
   // Hanya manager sales atau superuser yang boleh approve
@@ -724,7 +727,7 @@ export async function approveQuotationAction(id: number, note?: string) {
     revision_no: (quotation.revision_no ?? 0) + 1,
   };
 
-  const updated = await updateQuotationDb(id, updateData);
+  const updated = await updateQuotationDb(quotationId, updateData);
 
   revalidatePath("/sales/quotations");
   return {
@@ -747,8 +750,11 @@ export async function rejectQuotationAction(id: number, note?: string) {
   const user = session?.user as users | undefined;
   if (!user) throw new Error("Unauthorized");
 
+  // Ensure id is a number (handle Next.js serialization)
+  const quotationId = typeof id === 'string' ? Number(id) : id;
+
   // Ambil quotation
-  const quotation = await getQuotationByIdDb(id);
+  const quotation = await getQuotationByIdDb(quotationId);
   if (!quotation) throw new Error("Quotation not found");
 
   // Hanya manager sales atau superuser yang boleh reject
@@ -764,7 +770,7 @@ export async function rejectQuotationAction(id: number, note?: string) {
     revision_no: (quotation.revision_no ?? 0) + 1,
   };
 
-  const updated = await updateQuotationDb(id, updateData);
+  const updated = await updateQuotationDb(quotationId, updateData);
 
   revalidatePath("/sales/quotations");
   return {
