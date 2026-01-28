@@ -206,7 +206,7 @@ export default function SalesOrdersPage() {
                   }
                   disabled={currentPage === totalPages}
                 >
-                  Next
+                  {t("common.next")}
                 </Button>
               </div>
             )}

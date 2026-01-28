@@ -41,7 +41,7 @@ export default function QuotationsPage() {
             (window.location.href = "/sales/quotations/term-of-payment")
           }
         >
-          Term of Payment
+          {t("page.quotations.term_of_payment")}
         </Button>
       </div>
       <QuotationFilters filters={filters} setFilters={setFilters} />

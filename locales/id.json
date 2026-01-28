@@ -11,6 +11,7 @@
         "loading": "Memuat...",
         "no_data": "Tidak ada data ditemukan",
         "back": "Kembali",
+        "next": "Selanjutnya",
         "status": "Status",
         "created_at": "Dibuat Pada",
         "total": "Total",
@@ -23,10 +24,28 @@
         "yes": "Ya",
         "no": "Tidak",
         "select": "Pilih",
+        "select_placeholder": "Pilih opsi",
         "mandatory": "Wajib diisi",
+        "mandatory_field": "{field} wajib diisi",
         "optional": "Opsional",
         "from": "Dari",
-        "to": "Sampai"
+        "to": "Sampai",
+        "notes": "Catatan",
+        "description": "Deskripsi",
+        "reference": "Referensi",
+        "date": "Tanggal",
+        "amount": "Jumlah",
+        "price": "Harga",
+        "qty": "Kuantitas",
+        "subtotal": "Subtotal",
+        "grand_total": "Grand Total",
+        "tax": "Pajak",
+        "discount": "Diskon",
+        "shipping": "Biaya Kirim",
+        "info": "Informasi",
+        "warning": "Peringatan",
+        "details": "Detail",
+        "close": "Tutup"
     },
     "sidebar": {
         "dashboard": "Dashboard",
@@ -76,9 +95,26 @@
             "finance": "Ajukan Finance",
             "delivery": "Buat Pengiriman",
             "cancel": "Batalkan Pesanan",
-            "delete": "Hapus Sales Order"
+            "delete": "Hapus Sales Order",
+            "request_reopen": "Minta Buka Kembali",
+            "approve_reopen": "Setujui Buka Kembali",
+            "reject_reopen": "Tolak Buka Kembali"
         },
         "delete_confirm_desc": "Apakah Anda yakin ingin menghapus sales order {no} untuk {customer}? Tindakan ini tidak dapat dibatalkan dan akan menghapus semua data terkait (permintaan pengiriman, invoice, pembayaran)."
+    },
+    "purchase_order": {
+        "no": "Nomor PO",
+        "supplier": "Pemasok",
+        "sale_ref": "Ref Sales Order",
+        "total": "Total Nilai",
+        "status": "Status PO",
+        "date": "Tanggal PO",
+        "actions": {
+            "create": "Buat Purchase Order",
+            "edit": "Edit Purchase Order",
+            "received": "Tandai Diterima",
+            "cancel": "Batalkan PO"
+        }
     },
     "page": {
         "dashboard": {
@@ -125,12 +161,13 @@
         "quotations": {
             "title": "Quotations",
             "list": "Daftar Quotation",
+            "term_of_payment": "Syarat Pembayaran",
             "create": "Tambah Quotation",
             "edit": "Edit Quotation",
             "details": "Detail Quotation"
         },
         "sales_order": {
-            "title": "Sales",
+            "title": "Sales Order",
             "list": "Daftar Sales Order",
             "create": "Tambah Sales Order",
             "edit": "Edit Sales Order",
@@ -139,12 +176,30 @@
         "purchasing": {
             "title": "Purchasing",
             "list": "Daftar Purchase Order",
+            "create": "Tambah Purchase Order",
             "details": "Detail Purchase Order"
         },
         "warehouse": {
             "title": "Warehouse",
             "list": "Daftar Stok",
-            "details": "Detail Stok"
+            "details": "Detail Stok",
+            "delivery_requests": "Permintaan Pengiriman",
+            "delivery_orders": "Surat Jalan",
+            "stock_reservations": "Reservasi Stok"
+        },
+        "finance": {
+            "title": "Finance",
+            "transactions": "Transaksi",
+            "approvals": "Persetujuan Keuangan"
+        },
+        "master_data": {
+            "title": "Master Data",
+            "products": "Daftar Produk",
+            "customers": "Daftar Pelanggan",
+            "vendors": "Daftar Vendor",
+            "companies": "Manajemen Perusahaan",
+            "users": "Manajemen User",
+            "roles": "Manajemen Role"
         },
         "settings": {
             "title": "Pengaturan",
@@ -155,6 +210,7 @@
     },
     "form": {
         "lead": {
+            "info": "Informasi Lead",
             "name": "Nama Lead",
             "contact": "Orang Kontak",
             "email": "Email",
@@ -164,7 +220,7 @@
             "type": "Tipe",
             "source": "Sumber",
             "status": "Status",
-            "products": "Produk Minati",
+            "products": "Produk Diminati",
             "potential_value": "Nilai Potensial",
             "note": "Catatan",
             "placeholders": {
@@ -174,25 +230,67 @@
                 "phone": "Contoh: +62 812...",
                 "company": "Masukkan nama perusahaan",
                 "location": "Pilih lokasi",
-                "potential_value": "Contoh: 1.000.000"
-            }
+                "potential_value": "Contoh: 1.000.000",
+                "note": "Catatan tambahan (opsional)"
+            },
+            "unqualified_confirm_title": "Konfirmasi Unqualified",
+            "unqualified_confirm_desc": "Apakah Anda yakin ingin mengganti status lead ini menjadi Unqualified? Lead yang tidak memenuhi kriteria akan ditandai secara permanen (kecuali diubah kembali nantinya).",
+            "unqualified_confirm_yes": "Ya, Simpan sebagai Unqualified"
         },
         "quotation": {
+            "info": "Informasi Quotation",
             "number": "Nomor Quotation",
             "customer": "Pelanggan",
             "target_date": "Tanggal Target",
-            "payment_term": "Term of Payment",
+            "payment_term": "Syarat Pembayaran",
             "shipping": "Biaya Kirim",
             "discount": "Diskon (%)",
             "tax": "Pajak (11%)",
             "subtotal": "Subtotal",
             "grand_total": "Grand Total",
+            "lost_reason": "Alasan Gagal",
+            "lost_reason_placeholder": "Pilih alasan",
+            "status_change_info_title": "Informasi Perubahan Status",
+            "status_change_info_desc": "Menyimpan perubahan pada quotation ini akan membatalkan antrean approval dan mengembalikan status ke Draft. Anda harus mengirim ulang untuk approval setelah menyimpan.",
             "items": {
                 "product": "Produk",
                 "qty": "Kuantitas",
                 "price": "Harga Satuan",
                 "total": "Total Harga"
             }
+        },
+        "purchase_order": {
+            "number": "Nomor PO",
+            "supplier": "Pemasok",
+            "sales_order": "Ref Sales Order",
+            "total": "Total Nilai",
+            "note": "Catatan",
+            "items": {
+                "product": "Produk",
+                "qty": "Kuantitas",
+                "price": "Harga",
+                "total": "Total"
+            }
+        },
+        "product": {
+            "name": "Nama Produk",
+            "code": "Kode Produk",
+            "group": "Grup Item",
+            "brand": "Merek",
+            "price": "Harga",
+            "stock": "Stok",
+            "unit": "Satuan",
+            "part_number": "Nomor Part",
+            "rack": "Lokasi Rak",
+            "description": "Deskripsi"
+        },
+        "customer": {
+            "name": "Nama Pelanggan",
+            "email": "Email",
+            "phone": "Telepon",
+            "address": "Alamat",
+            "type": "Tipe Pelanggan",
+            "company": "Referensi Perusahaan"
         }
     },
     "status": {
@@ -203,9 +301,31 @@
         "unqualified": "Unqualified",
         "prospecting": "Prospecting",
         "open": "Buka",
-        "sq_submitted": "Terkirim",
+        "sq_submitted": "Diterbitkan",
         "sq_approved": "Disetujui",
         "sq_rejected": "Ditolak",
+        "sq_waiting_approval": "Menunggu Persetujuan",
+        "sq_review": "Ditinjau",
+        "sq_sent": "Terkirim",
+        "sq_revised": "Direvisi",
+        "sq_lost": "Gagal",
+        "sq_win": "Berhasil",
+        "sq_converted": "Terkonversi",
+        "so_new": "Baru",
+        "so_pr": "PR",
+        "so_po": "PO",
+        "so_sr": "SR",
+        "so_far": "FAR",
+        "so_dr": "DR",
+        "so_delivery": "Delivery",
+        "so_delivered": "Terkirim",
+        "so_received": "Diterima",
+        "so_completed": "Selesai",
+        "so_cancelled": "Dibatalkan",
+        "po_draft": "Draft",
+        "po_ordered": "Dipesan",
+        "po_received": "Diterima",
+        "po_cancelled": "Dibatalkan",
         "converted": "Konversi",
         "processing": "Diproses",
         "completed": "Selesai",
@@ -219,12 +339,14 @@
         "success": {
             "create": "Berhasil membuat data baru",
             "update": "Berhasil memperbarui data",
-            "delete": "Berhasil menghapus data"
+            "delete": "Berhasil menghapus data",
+            "status_change": "Status berhasil diperbarui"
         },
         "error": {
             "generic": "Terjadi kesalahan sistem",
             "unauthorized": "Anda tidak memiliki akses",
-            "not_found": "Data tidak ditemukan"
+            "not_found": "Data tidak ditemukan",
+            "validation": "Validasi gagal"
         },
         "confirm": {
             "delete_title": "Apakah Anda yakin?",

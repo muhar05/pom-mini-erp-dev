@@ -203,7 +203,7 @@ export function isValidStatusTransition(
     lead: {
       [LEAD_STATUSES.NEW]: [LEAD_STATUSES.CONTACTED],
       [LEAD_STATUSES.CONTACTED]: [
-        LEAD_STATUSES.INTERESTED,
+        LEAD_STATUSES.QUALIFIED, // Allow direct jump to Qualified since Interested is hidden
         LEAD_STATUSES.UNQUALIFIED,
       ],
       [LEAD_STATUSES.INTERESTED]: [
@@ -303,7 +303,6 @@ export function isValidStatusTransition(
 export const LEAD_STATUS_OPTIONS = [
   { value: LEAD_STATUSES.NEW, label: "New" },
   { value: LEAD_STATUSES.CONTACTED, label: "Contacted" },
-  { value: LEAD_STATUSES.INTERESTED, label: "Interested" },
   { value: LEAD_STATUSES.QUALIFIED, label: "Opportunity" },
   { value: LEAD_STATUSES.UNQUALIFIED, label: "Unqualified" },
 ];

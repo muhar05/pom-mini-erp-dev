@@ -11,6 +11,7 @@
         "loading": "Loading...",
         "no_data": "No data found",
         "back": "Back",
+        "next": "Next",
         "status": "Status",
         "created_at": "Created At",
         "total": "Total",
@@ -23,10 +24,28 @@
         "yes": "Yes",
         "no": "No",
         "select": "Select",
+        "select_placeholder": "Select an option",
         "mandatory": "Mandatory",
+        "mandatory_field": "{field} is required",
         "optional": "Optional",
         "from": "From",
-        "to": "To"
+        "to": "To",
+        "notes": "Notes",
+        "description": "Description",
+        "reference": "Reference",
+        "date": "Date",
+        "amount": "Amount",
+        "price": "Price",
+        "qty": "Qty",
+        "subtotal": "Subtotal",
+        "grand_total": "Grand Total",
+        "tax": "Tax",
+        "discount": "Discount",
+        "shipping": "Shipping",
+        "info": "Information",
+        "warning": "Warning",
+        "details": "Details",
+        "close": "Close"
     },
     "sidebar": {
         "dashboard": "Dashboard",
@@ -76,9 +95,26 @@
             "finance": "Request Finance",
             "delivery": "Create Delivery",
             "cancel": "Cancel Order",
-            "delete": "Delete Sales Order"
+            "delete": "Delete Sales Order",
+            "request_reopen": "Request Reopen",
+            "approve_reopen": "Approve Reopen",
+            "reject_reopen": "Reject Reopen"
         },
         "delete_confirm_desc": "Are you sure you want to delete sales order {no} for {customer}? This action cannot be undone and will also remove all related data (delivery requests, invoices, payments)."
+    },
+    "purchase_order": {
+        "no": "PO Number",
+        "supplier": "Supplier",
+        "sale_ref": "Sales Order Ref",
+        "total": "Total Amount",
+        "status": "PO Status",
+        "date": "PO Date",
+        "actions": {
+            "create": "Create Purchase Order",
+            "edit": "Edit Purchase Order",
+            "received": "Mark as Received",
+            "cancel": "Cancel PO"
+        }
     },
     "page": {
         "dashboard": {
@@ -125,12 +161,13 @@
         "quotations": {
             "title": "Quotations",
             "list": "Quotation List",
+            "term_of_payment": "Term of Payment",
             "create": "Create Quotation",
             "edit": "Edit Quotation",
             "details": "Quotation Details"
         },
         "sales_order": {
-            "title": "Sales",
+            "title": "Sales Orders",
             "list": "Sales Order List",
             "create": "Create Sales Order",
             "edit": "Edit Sales Order",
@@ -139,12 +176,30 @@
         "purchasing": {
             "title": "Purchasing",
             "list": "Purchase Order List",
+            "create": "Create Purchase Order",
             "details": "Purchase Order Details"
         },
         "warehouse": {
             "title": "Warehouse",
             "list": "Stock List",
-            "details": "Stock Details"
+            "details": "Stock Details",
+            "delivery_requests": "Delivery Requests",
+            "delivery_orders": "Delivery Orders",
+            "stock_reservations": "Stock Reservations"
+        },
+        "finance": {
+            "title": "Finance",
+            "transactions": "Transactions",
+            "approvals": "Finance Approvals"
+        },
+        "master_data": {
+            "title": "Master Data",
+            "products": "Product List",
+            "customers": "Customer List",
+            "vendors": "Vendor List",
+            "companies": "Company Management",
+            "users": "User Management",
+            "roles": "Role Management"
         },
         "settings": {
             "title": "Settings",
@@ -155,6 +210,7 @@
     },
     "form": {
         "lead": {
+            "info": "Lead Information",
             "name": "Lead Name",
             "contact": "Contact Person",
             "email": "Email",
@@ -174,10 +230,15 @@
                 "phone": "Example: +62 812...",
                 "company": "Enter company name",
                 "location": "Select location",
-                "potential_value": "Example: 1,000,000"
-            }
+                "potential_value": "Example: 1,000,000",
+                "note": "Additional notes (optional)"
+            },
+            "unqualified_confirm_title": "Unqualified Confirmation",
+            "unqualified_confirm_desc": "Are you sure you want to mark this lead as Unqualified? This will be marked permanently (unless changed back later).",
+            "unqualified_confirm_yes": "Yes, set as Unqualified"
         },
         "quotation": {
+            "info": "Quotation Information",
             "number": "Quotation Number",
             "customer": "Customer",
             "target_date": "Target Date",
@@ -187,12 +248,49 @@
             "tax": "Tax (11%)",
             "subtotal": "Subtotal",
             "grand_total": "Grand Total",
+            "lost_reason": "Lost Reason",
+            "lost_reason_placeholder": "Select a reason",
+            "status_change_info_title": "Status Change Information",
+            "status_change_info_desc": "Saving changes while waiting for approval will revert the status back to Draft. You will need to resubmit for approval after saving.",
             "items": {
                 "product": "Product",
                 "qty": "Quantity",
                 "price": "Unit Price",
                 "total": "Total Price"
             }
+        },
+        "purchase_order": {
+            "number": "PO Number",
+            "supplier": "Supplier",
+            "sales_order": "Sales Order Ref",
+            "total": "Total Amount",
+            "note": "Notes",
+            "items": {
+                "product": "Product",
+                "qty": "Quantity",
+                "price": "Price",
+                "total": "Total"
+            }
+        },
+        "product": {
+            "name": "Product Name",
+            "code": "Product Code",
+            "group": "Item Group",
+            "brand": "Brand",
+            "price": "Price",
+            "stock": "Stock",
+            "unit": "Unit",
+            "part_number": "Part Number",
+            "rack": "Rack Location",
+            "description": "Description"
+        },
+        "customer": {
+            "name": "Customer Name",
+            "email": "Email",
+            "phone": "Phone",
+            "address": "Address",
+            "type": "Customer Type",
+            "company": "Company Reference"
         }
     },
     "status": {
@@ -206,6 +304,28 @@
         "sq_submitted": "Submitted",
         "sq_approved": "Approved",
         "sq_rejected": "Rejected",
+        "sq_waiting_approval": "Waiting Approval",
+        "sq_review": "Review",
+        "sq_sent": "Sent",
+        "sq_revised": "Revised",
+        "sq_lost": "Lost",
+        "sq_win": "Win",
+        "sq_converted": "Converted",
+        "so_new": "New",
+        "so_pr": "PR",
+        "so_po": "PO",
+        "so_sr": "SR",
+        "so_far": "FAR",
+        "so_dr": "DR",
+        "so_delivery": "Delivery",
+        "so_delivered": "Delivered",
+        "so_received": "Received",
+        "so_completed": "Completed",
+        "so_cancelled": "Cancelled",
+        "po_draft": "Draft",
+        "po_ordered": "Ordered",
+        "po_received": "Received",
+        "po_cancelled": "Cancelled",
         "converted": "Converted",
         "processing": "Processing",
         "completed": "Completed",
@@ -219,12 +339,14 @@
         "success": {
             "create": "Data created successfully",
             "update": "Data updated successfully",
-            "delete": "Data deleted successfully"
+            "delete": "Data deleted successfully",
+            "status_change": "Status updated successfully"
         },
         "error": {
             "generic": "A system error occurred",
             "unauthorized": "You do not have permission",
-            "not_found": "Data not found"
+            "not_found": "Data not found",
+            "validation": "Validation failed"
         },
         "confirm": {
             "delete_title": "Are you sure?",
