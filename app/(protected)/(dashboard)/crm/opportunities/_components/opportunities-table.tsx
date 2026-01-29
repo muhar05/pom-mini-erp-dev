@@ -129,7 +129,6 @@ export default function OpportunitiesTable({
             <TableHead>No Opportunity</TableHead>
             <TableHead>Tanggal Input</TableHead>
             <TableHead>Nama Customer</TableHead>
-            <TableHead>Email</TableHead>
             <TableHead>Sales PIC</TableHead>
             <TableHead>Perusahaan</TableHead>
             <TableHead>Potensi Nilai</TableHead>
@@ -148,7 +147,6 @@ export default function OpportunitiesTable({
                   <TableCell>{item.opportunity_no}</TableCell>
                   <TableCell>{item.created_at}</TableCell>
                   <TableCell>{item.customer_name}</TableCell>
-                  <TableCell>{item.customer_email}</TableCell>
                   <TableCell>{item.sales_pic}</TableCell>
                   <TableCell>{item.company}</TableCell>
                   <TableCell>{formatCurrency(item.potential_value)}</TableCell>

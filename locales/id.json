@@ -232,6 +232,7 @@
                 "company": "Masukkan nama perusahaan",
                 "location": "Pilih lokasi",
                 "potential_value": "Contoh: 1.000.000",
+                "products": "Cari & pilih produk...",
                 "note": "Catatan tambahan (opsional)"
             },
             "unqualified_confirm_title": "Konfirmasi Unqualified",

@@ -217,7 +217,7 @@ export default function LeadForm({
       // Set potential_value ke BE dalam bentuk angka
       formData.set(
         "potential_value",
-        potentialValue ? potentialValue.replace(/[^0-9]/g, "") : "0",
+        potentialValue ? potentialValue.replace(/[^0-9]/g, "") : "",
       );
 
       await onSubmit(formData);
@@ -454,11 +454,12 @@ export default function LeadForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="contact">{t("form.lead.contact")}</Label>
+              <Label htmlFor="contact">{t("form.lead.contact")} *</Label>
               <Input
                 id="contact"
                 name="contact"
                 defaultValue={lead?.contact || ""}
+                required
                 disabled={loading}
                 maxLength={150}
                 className={formErrors.contact ? "border-red-500" : ""}
@@ -470,12 +471,13 @@ export default function LeadForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">{t("form.lead.email")}</Label>
+              <Label htmlFor="email">{t("form.lead.email")} *</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
                 defaultValue={lead?.email || ""}
+                required
                 disabled={loading}
                 maxLength={150}
                 className={formErrors.email ? "border-red-500" : ""}
@@ -487,11 +489,12 @@ export default function LeadForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">{t("form.lead.phone")}</Label>
+              <Label htmlFor="phone">{t("form.lead.phone")} *</Label>
               <Input
                 id="phone"
                 name="phone"
                 defaultValue={lead?.phone || ""}
+                required
                 disabled={loading}
                 maxLength={50}
                 className={formErrors.phone ? "border-red-500" : ""}
@@ -503,11 +506,12 @@ export default function LeadForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="company">{t("form.lead.company")}</Label>
+              <Label htmlFor="company">{t("form.lead.company")} *</Label>
               <Input
                 id="company"
                 name="company"
                 defaultValue={lead?.company || ""}
+                required
                 disabled={loading}
                 maxLength={150}
                 className={formErrors.company ? "border-red-500" : ""}
@@ -563,9 +567,8 @@ export default function LeadForm({
               )}
             </div>
 
-            {/* Type */}
             <div className="space-y-2">
-              <Label htmlFor="type">{t("form.lead.type")}</Label>
+              <Label htmlFor="type">{t("form.lead.type")} *</Label>
               {(() => {
                 let defaultVal = findOptionValue(
                   lead?.type ?? "",
@@ -593,7 +596,7 @@ export default function LeadForm({
                     : null;
 
                 return (
-                  <Select name="type" defaultValue={defaultVal} disabled={loading}>
+                  <Select name="type" defaultValue={defaultVal} disabled={loading} required>
                     <SelectTrigger
                       className={`w-full ${formErrors.type ? "border-red-500" : ""
                         }`}
@@ -625,7 +628,7 @@ export default function LeadForm({
 
             {/* Source */}
             <div className="space-y-2">
-              <Label htmlFor="source">{t("form.lead.source")}</Label>
+              <Label htmlFor="source">{t("form.lead.source")} *</Label>
               {(() => {
                 let defaultVal = findOptionValue(
                   lead?.source ?? "",
@@ -657,6 +660,7 @@ export default function LeadForm({
                     name="source"
                     defaultValue={defaultVal}
                     disabled={loading}
+                    required
                   >
                     <SelectTrigger
                       className={`w-full ${formErrors.source ? "border-red-500" : ""
@@ -689,18 +693,19 @@ export default function LeadForm({
 
             {/* Product Interest */}
             <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="product_interest">{t("form.lead.products")}</Label>
+              <Label htmlFor="product_interest">{t("form.lead.products")} *</Label>
               <div className="w-full">
                 <WindowedSelect
                   windowThreshold={100}
                   isMulti
+                  isSearchable={true}
                   name="product_interest"
                   options={productOptions}
                   value={productInterest}
                   onChange={(newValue) =>
-                    setProductInterest(Array.isArray(newValue) ? newValue : [])
+                    setProductInterest(newValue ? (newValue as any) : [])
                   }
-                  placeholder={t("common.select")}
+                  placeholder={t("form.lead.placeholders.products") || "Search & select products..."}
                   classNamePrefix="react-select"
                   styles={{
                     ...selectStyles,
@@ -713,7 +718,12 @@ export default function LeadForm({
                       width: "100%",
                       minWidth: "100%",
                     }),
+                    menuList: (provided) => ({
+                      ...provided,
+                      maxHeight: "250px",
+                    }),
                   }}
+                  noOptionsMessage={() => "Produk tidak ditemukan"}
                 />
               </div>
               {formErrors.product_interest && (
@@ -725,7 +735,7 @@ export default function LeadForm({
 
             {/* Potential Value */}
             <div className="space-y-2">
-              <Label htmlFor="potential_value">{t("form.lead.potential_value")}</Label>
+              <Label htmlFor="potential_value">{t("form.lead.potential_value")} *</Label>
               <Input
                 id="potential_value"
                 name="potential_value"
@@ -737,6 +747,7 @@ export default function LeadForm({
                   setPotentialValue(formatCurrency(Number(raw)));
                 }}
                 disabled={loading}
+                required
                 className={formErrors.potential_value ? "border-red-500" : ""}
                 placeholder={t("form.lead.placeholders.potential_value")}
               />
@@ -747,7 +758,7 @@ export default function LeadForm({
 
             {/* Notes */}
             <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="note">Notes</Label>
+              <Label htmlFor="note">Notes *</Label>
               <Textarea
                 id="note"
                 name="note"
@@ -756,7 +767,8 @@ export default function LeadForm({
                 disabled={loading}
                 maxLength={1000}
                 className={formErrors.note ? "border-red-500" : ""}
-                placeholder="Catatan tambahan (opsional)"
+                placeholder="Catatan tambahan"
+                required
               />
               {formErrors.note && (
                 <p className="text-sm text-red-500">{formErrors.note}</p>

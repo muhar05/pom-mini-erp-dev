@@ -550,14 +550,15 @@ export default function OpportunityForm({
                 <WindowedSelect
                   windowThreshold={100}
                   isMulti
+                  isSearchable={true}
                   name="product_interest"
                   options={productOptions}
                   value={productInterest}
                   isDisabled={(isManager && !isSuper) || !isFieldEditableForStatus("product_interest", formData.status) || loading}
                   onChange={(newValue) =>
-                    setProductInterest(Array.isArray(newValue) ? newValue : [])
+                    setProductInterest(newValue ? (newValue as any) : [])
                   }
-                  placeholder="Select products"
+                  placeholder="Cari & pilih produk..."
                   classNamePrefix="react-select"
                   styles={{
                     ...selectStyles,
@@ -570,7 +571,12 @@ export default function OpportunityForm({
                       width: "100%",
                       minWidth: "100%",
                     }),
+                    menuList: (provided) => ({
+                      ...provided,
+                      maxHeight: "250px",
+                    }),
                   }}
+                  noOptionsMessage={() => "Produk tidak ditemukan"}
                 />
               </div>
               <div>

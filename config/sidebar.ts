@@ -332,6 +332,19 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       items: [{ title: "Purchasing", labelKey: "sidebar.purchasing", url: "/dashboard/purchasing" }],
     },
     {
+      title: "Sales",
+      labelKey: "sidebar.sales_orders",
+      icon: ShoppingCart,
+      items: [
+        {
+          title: "Sales Order (SO)",
+          labelKey: "sidebar.sales_orders",
+          url: "/sales/sales-orders",
+          icon: ShoppingCart,
+        },
+      ],
+    },
+    {
       title: "Purchasing",
       labelKey: "sidebar.purchasing",
       icon: FileBox,
@@ -374,6 +387,19 @@ export const sidebarMenuByRole: Record<string, MenuItem[]> = {
       icon: LayoutDashboard,
       items: [
         { title: "Manager Purchasing", labelKey: "sidebar.manager_purchasing", url: "/dashboard/manager-purchasing" },
+      ],
+    },
+    {
+      title: "Sales",
+      labelKey: "sidebar.sales_orders",
+      icon: ShoppingCart,
+      items: [
+        {
+          title: "Sales Order (SO)",
+          labelKey: "sidebar.sales_orders",
+          url: "/sales/sales-orders",
+          icon: ShoppingCart,
+        },
       ],
     },
     {

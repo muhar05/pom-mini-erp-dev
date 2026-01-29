@@ -57,6 +57,12 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import dynamic from "next/dynamic";
+import { selectStyles } from "@/utils/leadFormHelpers";
+
+const WindowedSelect = dynamic(() => import("react-windowed-select"), {
+  ssr: false,
+});
 
 // 1. Ubah type Quotation (atau buat type baru)
 type QuotationFormData = {
@@ -942,38 +948,46 @@ export default function QuotationForm({
                       >
                         Customer <span className="text-red-500">*</span>
                       </Label>
-                      <Select
-                        value={formData.customer_id?.toString() || ""}
-                        onValueChange={(value) => {
-                          handleCustomerChange(value);
-                          setIsCustomerEditMode(false);
+                      <WindowedSelect
+                        windowThreshold={100}
+                        name="customer_id"
+                        options={customerOptions.map((c) => ({
+                          label: `${c.customer_name} ${c.company?.company_name ? `(${c.company.company_name})` : ""}`,
+                          value: c.id.toString(),
+                        }))}
+                        value={customerOptions
+                          .filter((c) => c.id.toString() === formData.customer_id?.toString())
+                          .map((c) => ({
+                            label: `${c.customer_name} ${c.company?.company_name ? `(${c.company.company_name})` : ""}`,
+                            value: c.id.toString(),
+                          }))[0] || null}
+                        onChange={(option: any) => {
+                          if (option) {
+                            handleCustomerChange(option.value);
+                            setIsCustomerEditMode(false);
+                          }
                         }}
-                        disabled={isFormDisabled}
-                      >
-                        <SelectTrigger className="h-11 dark:border-gray-600 dark:bg-gray-900 w-full">
-                          <SelectValue placeholder="Pilih customer" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customerOptions.map((c) => (
-                            <SelectItem
-                              key={c.id}
-                              value={c.id.toString()}
-                              className="py-2.5"
-                            >
-                              <div className="flex flex-row gap-2">
-                                <span className="font-medium">
-                                  {c.customer_name}
-                                </span>
-                                {c.company?.company_name && (
-                                  <span className="text-sm">
-                                    {c.company.company_name}
-                                  </span>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        isDisabled={isFormDisabled}
+                        placeholder="Cari & pilih customer"
+                        classNamePrefix="react-select"
+                        styles={{
+                          ...selectStyles,
+                          container: (provided) => ({
+                            ...provided,
+                            width: "100%",
+                          }),
+                          control: (provided) => ({
+                            ...provided,
+                            width: "100%",
+                            minWidth: "100%",
+                          }),
+                          menuList: (provided) => ({
+                            ...provided,
+                            maxHeight: "250px",
+                          }),
+                        }}
+                        noOptionsMessage={() => "Customer tidak ditemukan"}
+                      />
                     </div>
                   ) : customerLoading || customerLoadingDelay ? (
                     // SKELETON LOADER SAAT LOADING CUSTOMER DETAIL

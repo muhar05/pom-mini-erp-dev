@@ -18,6 +18,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency } from "@/utils/formatCurrency";
+import dynamic from "next/dynamic";
+import { selectStyles } from "@/utils/leadFormHelpers";
+
+const WindowedSelect = dynamic(() => import("react-windowed-select"), {
+  ssr: false,
+});
 
 export type BoqItem = {
   product_id?: number;
@@ -78,23 +84,23 @@ export default function BoqTable({ items, onChange, disabled }: BoqTableProps) {
       prev.map((item, i) =>
         i === idx
           ? {
-              ...item,
-              [field]: value,
-              // Auto update product_name, product_code, unit_price if product_id changed
-              ...(field === "product_id"
-                ? (() => {
-                    const selected = productOptions.find(
-                      (p) => Number(p.value) === value,
-                    );
-                    return {
-                      product_name: selected?.label || "",
-                      product_code: selected?.code || "",
-                      unit_price: selected?.price || 0,
-                      quantity: 1,
-                    };
-                  })()
-                : {}),
-            }
+            ...item,
+            [field]: value,
+            // Auto update product_name, product_code, unit_price if product_id changed
+            ...(field === "product_id"
+              ? (() => {
+                const selected = productOptions.find(
+                  (p) => Number(p.value) === value,
+                );
+                return {
+                  product_name: selected?.label || "",
+                  product_code: selected?.code || "",
+                  unit_price: selected?.price || 0,
+                  quantity: 1,
+                };
+              })()
+              : {}),
+          }
           : item,
       ),
     );
@@ -205,23 +211,45 @@ export default function BoqTable({ items, onChange, disabled }: BoqTableProps) {
           {drafts.map((draft, idx) => (
             <TableRow key={`draft-${idx}`}>
               <TableCell>
-                <Select
-                  value={draft.product_id ? draft.product_id.toString() : ""}
-                  onValueChange={(value) =>
-                    handleDraftChange(idx, "product_id", Number(value))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih produk" />
-                  </SelectTrigger>
-                  <SelectContent position="popper">
-                    {productOptions.map((p) => (
-                      <SelectItem key={p.value} value={p.value}>
-                        {p.label} {p.code ? `(${p.code})` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <WindowedSelect
+                  windowThreshold={100}
+                  name="product_id"
+                  options={productOptions.map((p) => ({
+                    label: `${p.label} ${p.code ? `(${p.code})` : ""}`,
+                    value: p.value,
+                  }))}
+                  value={productOptions
+                    .filter((p) => p.value === draft.product_id?.toString())
+                    .map((p) => ({
+                      label: `${p.label} ${p.code ? `(${p.code})` : ""}`,
+                      value: p.value,
+                    }))[0] || null}
+                  onChange={(option: any) => {
+                    if (option) {
+                      handleDraftChange(idx, "product_id", Number(option.value));
+                    }
+                  }}
+                  isDisabled={disabled}
+                  placeholder="Cari & pilih produk"
+                  classNamePrefix="react-select"
+                  styles={{
+                    ...selectStyles,
+                    container: (provided) => ({
+                      ...provided,
+                      width: "100%",
+                    }),
+                    control: (provided) => ({
+                      ...provided,
+                      width: "100%",
+                      minWidth: "100%",
+                    }),
+                    menuList: (provided) => ({
+                      ...provided,
+                      maxHeight: "150px",
+                    }),
+                  }}
+                  noOptionsMessage={() => "Produk tidak ditemukan"}
+                />
               </TableCell>
               <TableCell>
                 <Input

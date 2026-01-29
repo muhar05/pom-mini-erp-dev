@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingCart, FileText, Package, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { ShoppingCart, FileText, Package, CheckCircle, Clock, AlertCircle, Eye } from "lucide-react";
 import StatCard, { StatCardData } from "@/app/(protected)/(dashboard)/(homes)/dashboard/(components)/stat-card";
 import { useI18n } from "@/contexts/i18n-context";
 import { getPurchasingDashboardDataAction } from "@/app/actions/sales-orders";
@@ -95,7 +95,7 @@ export default function DashboardPurchasing() {
                                 <tr className="border-b bg-gray-50 dark:bg-gray-800">
                                     <th className="p-3">SO Number</th>
                                     <th className="p-3">Customer</th>
-                                    <th className="p-3 text-right">Total</th>
+                                    <th className="p-3 text-right">Grand Total</th>
                                     <th className="p-3">Sales Owner</th>
                                     <th className="p-3">Tanggal PR</th>
                                     <th className="p-3 text-center">Action</th>
@@ -107,13 +107,20 @@ export default function DashboardPurchasing() {
                                         <tr key={so.id} className="border-b hover:bg-gray-50/50">
                                             <td className="p-3 font-mono font-bold text-blue-600">{so.sale_no}</td>
                                             <td className="p-3">{so.customer_name}</td>
-                                            <td className="p-3 text-right font-medium">{formatCurrency(so.total)}</td>
+                                            <td className="p-3 text-right font-medium">{formatCurrency(so.grand_total)}</td>
                                             <td className="p-3">{so.sales_owner}</td>
                                             <td className="p-3">{format(new Date(so.created_at), "dd/MM/yyyy")}</td>
                                             <td className="p-3 text-center">
-                                                <Link href={`/purchasing/purchase-orders/new?sale_id=${so.id}`}>
-                                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-8 text-xs">Proses PO</Button>
-                                                </Link>
+                                                <div className="flex justify-center gap-2">
+                                                    <Link href={`/sales/sales-orders/${so.id}`}>
+                                                        <Button size="sm" variant="outline" title="Detail SO" className="h-8 w-8 p-0">
+                                                            <Eye className="w-4 h-4" />
+                                                        </Button>
+                                                    </Link>
+                                                    <Link href={`/purchasing/purchase-orders/new?sale_id=${so.id}`}>
+                                                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-8 text-xs">Proses PO</Button>
+                                                    </Link>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -180,6 +187,7 @@ export default function DashboardPurchasing() {
                                     <th className="p-2">Last Status</th>
                                     <th className="p-2">Sales Owner</th>
                                     <th className="p-2 text-right">Grand Total</th>
+                                    <th className="p-2 text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -191,7 +199,14 @@ export default function DashboardPurchasing() {
                                             <Badge variant="secondary" className="text-[10px] uppercase font-bold">{so.sale_status}</Badge>
                                         </td>
                                         <td className="p-2">{so.sales_owner}</td>
-                                        <td className="p-2 text-right">{formatCurrency(so.total)}</td>
+                                        <td className="p-2 text-right">{formatCurrency(so.grand_total)}</td>
+                                        <td className="p-2 text-center">
+                                            <Link href={`/sales/sales-orders/${so.id}`}>
+                                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Detail SO">
+                                                    <Eye className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </Link>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

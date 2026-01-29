@@ -232,6 +232,7 @@
                 "company": "Enter company name",
                 "location": "Select location",
                 "potential_value": "Example: 1,000,000",
+                "products": "Search & select products...",
                 "note": "Additional notes (optional)"
             },
             "unqualified_confirm_title": "Unqualified Confirmation",

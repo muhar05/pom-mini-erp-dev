@@ -1,13 +1,36 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { isSuperuser, isSales, isManagerSales } from "@/utils/leadHelpers";
+import {
+  isSuperuser,
+  isSales,
+  isManagerSales,
+  isPurchasing,
+  isManagerPurchasing,
+  isWarehouse,
+  isManagerWarehouse,
+  isFinance,
+  isManagerFinance
+} from "@/utils/userHelpers";
 import { getAllSalesOrdersDb, createSalesOrderDb } from "@/data/sales-orders";
 
 // GET: Ambil semua sales orders
 export async function GET(req: Request) {
   const session = await auth();
   const user = session?.user;
-  if (!user || (!isSuperuser(user) && !isSales(user) && !isManagerSales(user))) {
+
+  const hasAccess = user && (
+    isSuperuser(user) ||
+    isSales(user) ||
+    isManagerSales(user) ||
+    isPurchasing(user) ||
+    isManagerPurchasing(user) ||
+    isWarehouse(user) ||
+    isManagerWarehouse(user) ||
+    isFinance(user) ||
+    isManagerFinance(user)
+  );
+
+  if (!hasAccess) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

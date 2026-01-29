@@ -131,58 +131,31 @@ const statusSchema = z
   );
 
 // Main lead schema for CREATE (lead_name is required)
-export const createLeadSchema = z
-  .object({
-    lead_name: leadNameSchema,
-    company: companySchema.refine((val) => !!val && val.trim() !== "", {
-      message: "Company is required",
-    }),
-    contact: contactSchema,
-    email: emailSchema,
-    phone: phoneSchema,
-    type: typeSchema,
-    location: locationSchema,
-    product_interest: z
-      .string()
-      .optional()
-      .refine(
-        (val) => {
-          if (!val || val.trim() === "") return true;
-          return val.trim().length <= 200;
-        },
-        {
-          message: "Product interest must be less than 200 characters",
-        },
-      ),
-    source: sourceSchema,
-    note: z
-      .string()
-      .optional()
-      .refine(
-        (val) => {
-          if (!val || val.trim() === "") return true;
-          return val.trim().length <= 1000;
-        },
-        {
-          message: "Note must be less than 1000 characters",
-        },
-      ),
-    id_user: z.number().optional(),
-    assigned_to: z.number().optional(),
-    status: statusSchema,
-    reference_no: z.string().optional(),
-    potential_value: z.preprocess((val) => {
-      if (typeof val === "string") {
-        const num = Number(val.replace(/[^0-9.]/g, ""));
-        return isNaN(num) ? undefined : num;
-      }
-      return val;
-    }, z.number().min(0, "Potential value must be a positive number").optional()),
-  })
-  .refine((data) => !!data.email || !!data.phone, {
-    message: "At least one of email or phone is required",
-    path: ["email"],
-  });
+export const createLeadSchema = z.object({
+  lead_name: leadNameSchema,
+  company: companySchema.refine((val) => !!val && val.trim() !== "", {
+    message: "Company is required",
+  }),
+  contact: z.string().min(1, "Contact person is required").trim(),
+  email: z.string().email("Please enter a valid email address").min(1, "Email is required"),
+  phone: z.string().min(1, "Phone number is required").min(8, "Phone must be at least 8 digits").trim(),
+  type: z.string().min(1, "Type is required"),
+  location: z.string().min(1, "Location is required"),
+  product_interest: z.string().min(1, "At least one product must be selected"),
+  source: z.string().min(1, "Source is required"),
+  note: z.string().min(1, "Note is required").max(1000, "Note must be less than 1000 characters").trim(),
+  id_user: z.number().optional(),
+  assigned_to: z.number().optional(),
+  status: statusSchema,
+  reference_no: z.string().optional(),
+  potential_value: z.preprocess((val) => {
+    if (typeof val === "string") {
+      const num = Number(val.replace(/[^0-9.]/g, ""));
+      return isNaN(num) ? undefined : num;
+    }
+    return val;
+  }, z.number().min(1, "Potential value is required and must be at least 1")),
+});
 
 // Schema untuk update (all fields optional including lead_name)
 export const updateLeadSchema = z.object({
